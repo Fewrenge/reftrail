@@ -24,12 +24,8 @@ type Driver interface {
 
 	// 4. User/Account Methods (For your Login/Privileges)
 	CreateUser(ctx context.Context, create *CreateUser) (*User, error)
+	CountUsers(ctx context.Context) (int, error)
 	ListUsers(ctx context.Context, find *FindUser) ([]*User, error)
 	UpdateUser(ctx context.Context, update *UpdateUser) (*User, error)
 	DeleteUser(ctx context.Context, delete *DeleteUser) error
-}
-
-// DeleteWLEntry is a simple struct to tell the driver which ID to kill.
-type DeleteWLEntry struct {
-	ID int32 `json:"id"`
 }

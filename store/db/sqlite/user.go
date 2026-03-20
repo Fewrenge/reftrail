@@ -20,6 +20,12 @@ func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*sto
 	}, nil
 }
 
+func (d *Driver) CountUsers(ctx context.Context) (int, error) {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM user").Scan(&count) // FROM user, not users
+	return count, err
+}
+
 func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.User, error) {
 	var args []any
 	where := []string{"1 = 1"}

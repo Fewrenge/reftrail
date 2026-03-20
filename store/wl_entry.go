@@ -97,6 +97,10 @@ type UpdateWLEntry struct {
 	Force bool `json:"force"`
 }
 
+type DeleteWLEntry struct {
+	ID int32 `json:"id"`
+}
+
 // 1. Create: The "Guard"
 func (s *Store) CreateWLEntry(ctx context.Context, create *CreateWLEntry) (*WLEntry, error) {
 	// Logic Check: Don't let someone create a referral without a patient name
@@ -171,7 +175,20 @@ func (s *Store) UpdateWLEntry(ctx context.Context, update *UpdateWLEntry) error 
 
 // 5. Delete: The "Janitor"
 func (s *Store) DeleteWLEntry(ctx context.Context, delete *DeleteWLEntry) error {
-	// Memos style: Before deleting the entry, clean up related logs/comments
-	// (You'd call driver.DeleteWaitlistLogs here later)
+
+	// Logic Check: Don't try to delete nothing
+	if delete.ID == 0 {
+		return errors.New("valid ID is required for deletion")
+	}
+
+	// Optional: Check if user has permission (Admin role)
+	role, _ := ctx.Value("user-role").(string)
+	if role != "ADMIN" {
+		return errors.New("unauthorized: only admins can delete entries")
+	}
+
+	// Pass the whole struct to the worker (driver)
+	// Before deleting the entry, clean up related logs/comments
+	// So call driver.DeleteWaitlistLogs here later
 	return s.driver.DeleteWLEntry(ctx, delete)
 }

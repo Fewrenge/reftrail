@@ -40,23 +40,28 @@ func (s *Server) registerWaitlistRoutes() {
 
 	// PROTECTED (Requires JWT)
 	protected := s.Engine.Group("/api/v1")
-	protected.Use(auth.JWTMiddleware) // Keep this off until we see John Doe!
+	protected.Use(auth.JWTMiddleware)
 
 	// --- THE CLEAN LIST ---
-	// Rule 1: Get the whole list
+	// Get the whole list
 	protected.GET("/waitlist", v1Service.GetWaitlistHandler)
 
-	// Rule 2: Get ONE specific patient (The :id sniper)
+	// Get ONE specific waitlist entry (The :id sniper)
 	protected.GET("/waitlist/:id", v1Service.GetWLEntryHandler)
 
-	// Rule 3: Create a new patient
+	// Create a new waitlist entry
 	protected.POST("/waitlist", v1Service.CreateWLEntryHandler)
 
-	// Rule 4: Update a patient (The state switcher)
+	// Update a waitlist entry (The state switcher)
 	protected.PATCH("/waitlist/:id", v1Service.UpdateWLEntryHandler)
 
-	// Rule 5: Get the history logs
+	// Delete a waitlist entry
+	protected.DELETE("/waitlist/:id", v1Service.DeleteWLEntryHandler)
+
+	// Get the history logs
 	protected.GET("/waitlist/:id/logs", v1Service.ListWLLogsHandler)
 
+	// Create a user
 	protected.POST("/users", v1Service.CreateUserHandler)
+
 }

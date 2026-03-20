@@ -3,6 +3,9 @@ package store
 import (
 	"context"
 	"errors" // Needed for errors.New
+	"log"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -50,12 +53,41 @@ func (s *Store) Login(ctx context.Context, req *LoginRequest) (*User, error) {
 	}
 
 	// 2. Compare passwords
-	// (Note: In a real medical app, we would use bcrypt.CompareHashAndPassword here)
-	if req.Password != user.PasswordHash {
+	// Integrated the method of comparing Hash
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
+	if err != nil {
 		return nil, errors.New("invalid username or password")
 	}
 
 	return user, nil
+}
+
+func (s *Store) SeedAdminUser(ctx context.Context) error {
+	count, err := s.driver.CountUsers(ctx)
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+
+		// Fix: We need to use CreateUser struct because s.driver.CreateUser
+		// likely expects the "Create" form, not the final "User" form.
+		admin := &CreateUser{
+			Username: "admin",
+			Password: string(hashed), // This will be saved to password_hash in SQLite
+			Role:     "ADMIN",
+		}
+
+		// Fix: s.driver.CreateUser returns (*User, error),
+		// but SeedAdminUser only wants to return (error).
+		_, err := s.driver.CreateUser(ctx, admin)
+		if err == nil {
+			log.Println("✅ SEED SUCCESS: Created admin/admin123") // Add this!
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *Store) CreateUser(ctx context.Context, create *CreateUser) (*User, error) {

@@ -64,3 +64,25 @@ func (s *APIV1Service) UpdateWLEntryHandler(c *echo.Context) error {
 
 	return c.JSON(http.StatusOK, true)
 }
+
+func (s *APIV1Service) DeleteWLEntryHandler(c *echo.Context) error {
+	// 1. Get the ID from the URL (/api/v1/waitlist/15 -> 15)
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, "Invalid ID format")
+	}
+
+	// 2. Call the "Janitor" (Store.DeleteWLEntry)
+	// We wrap the ID into the struct your store expects
+	err = s.Store.DeleteWLEntry(c.Request().Context(), &store.DeleteWLEntry{
+		ID: int32(id),
+	})
+
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	// 3. Return "No Content" (Status 204) to say "It's gone!"
+	return c.NoContent(http.StatusNoContent)
+}

@@ -149,5 +149,28 @@ func (d *Driver) UpdateWLEntry(ctx context.Context, update *store.UpdateWLEntry)
 }
 
 func (d *Driver) DeleteWLEntry(ctx context.Context, delete *store.DeleteWLEntry) error {
-	return nil
+	// We pull the ID out of the struct's ID field
+	stmt := `DELETE FROM wl_entry WHERE id = ?`
+	_, err := d.db.ExecContext(ctx, stmt, delete.ID)
+	return err
 }
+
+/*
+func (d *Driver) DeleteWLEntries(ctx context.Context, ids []int32) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	// Create the (?, ?, ?) string based on how many IDs we have
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf("DELETE FROM wl_entry WHERE id IN (%s)", strings.Join(placeholders, ","))
+	_, err := d.db.ExecContext(ctx, query, args...)
+	return err
+}
+*/

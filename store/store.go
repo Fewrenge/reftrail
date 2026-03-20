@@ -1,5 +1,10 @@
 package store
 
+import (
+	"context"
+	"log"
+)
+
 // Store is the "Manager" that handles the database and cache.
 type Store struct {
 	driver Driver // This points to the interface in driver.go
@@ -10,7 +15,10 @@ type Store struct {
 
 // New creates a new Manager (Store) and gives them a Worker (Driver).
 func New(driver Driver) *Store {
-	return &Store{
-		driver: driver,
+	s := &Store{driver: driver}
+	// Fire the seeding logic right when the manager starts
+	if err := s.SeedAdminUser(context.Background()); err != nil {
+		log.Printf("Warning: Failed to seed admin user: %v", err)
 	}
+	return s
 }

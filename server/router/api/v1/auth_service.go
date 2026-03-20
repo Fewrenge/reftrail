@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"log"
 	"net/http"
 	"wl/server/auth" // Import your new auth package
 	"wl/store"
@@ -16,6 +17,8 @@ func (s *APIV1Service) LoginHandler(c *echo.Context) error {
 
 	user, err := s.Store.Login(c.Request().Context(), req)
 	if err != nil {
+		// ADD THIS LINE TEMPORARILY
+		log.Printf("LOGIN FAILED for %s: %v", req.Username, err)
 		return c.JSON(http.StatusUnauthorized, err.Error())
 	}
 
