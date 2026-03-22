@@ -4,7 +4,7 @@ import WLEntryCard from './components/WLEntryCard';
 import type { WLEntry } from './components/WLEntryCard';
 import AddEntryModal from './components/AddEntryModal';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import Profile from './pages/Profile';
+import Profile from './pages/Profile'
 
 export default function App() {
   // 1. Hooks (Memory)
@@ -22,7 +22,7 @@ export default function App() {
 
   const refreshData = () => {
     setLoading(true);
-    fetch('/api/v1/waitlist',{
+    fetch('/api/v1/waitlist', {
       credentials: 'same-origin'
     })
       .then(res => res.json())
@@ -44,25 +44,25 @@ export default function App() {
         credentials: 'same-origin'
       })
     ])
-    .then(async ([userRes, wlRes]) => {
-      // Only logout if BOTH explicitly say 401
-      if (userRes.status === 401 && wlRes.status === 401) {
-        handleLogout();
-        return;
-      }
+      .then(async ([userRes, wlRes]) => {
+        // Only logout if BOTH explicitly say 401
+        if (userRes.status === 401 && wlRes.status === 401) {
+          handleLogout();
+          return;
+        }
 
-      if (userRes.ok) {
-        const userData = await userRes.json();
-        setUser(userData);
-      }
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setUser(userData);
+        }
 
-      if (wlRes.ok) {
-        const wlData = await wlRes.json();
-        setPatients(Array.isArray(wlData) ? wlData : []);
-      }
-    })
-    .catch((err) => console.error("Connection glitch:", err))
-    .finally(() => setLoading(false));
+        if (wlRes.ok) {
+          const wlData = await wlRes.json();
+          setPatients(Array.isArray(wlData) ? wlData : []);
+        }
+      })
+      .catch((err) => console.error("Connection glitch:", err))
+      .finally(() => setLoading(false));
   }, []);
 
   // 4. Conditional Rendering (Auth Guard)
@@ -74,7 +74,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="flex min-h-screen bg-slate-50 text-slate-900">
-        
+
         <aside className="w-64 bg-white border-r border-slate-200 sticky top-0 h-screen p-6 hidden md:flex flex-col">
           <div className="flex items-center gap-3 mb-10">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">M</div>
@@ -91,7 +91,7 @@ export default function App() {
           </nav>
 
           <div className="pt-6 border-t border-slate-100 mt-auto">
-            <Link to="/profile" className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 transition-all group no-underline">
+            <Link to="/Settings" className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 transition-all group no-underline">
               <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-white">
                 {user ? user.username.charAt(0).toUpperCase() : '?'}
               </div>
@@ -142,9 +142,13 @@ export default function App() {
                 </div>
               </>
             } />
-            
-            <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} />} />
-          </Routes>
+
+              <Route
+                path="/settings"
+                element={<Profile user={user} onLogout={handleLogout} />}
+              />
+
+            </Routes>
         </main>
 
         <AddEntryModal

@@ -9,10 +9,6 @@ import (
 	echo "github.com/labstack/echo/v5"
 )
 
-type APIV1Service struct {
-	Store *store.Store
-}
-
 func (s *APIV1Service) GetWaitlistHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 

@@ -119,3 +119,8 @@ func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
 	}
 	return s.driver.DeleteUser(ctx, delete)
 }
+
+func (s *Store) ChangeUserPassword(ctx context.Context, userID int32, newHash string) error {
+	// Relay the command to the driver (the stove)
+	return s.driver.ChangeUserPassword(ctx, userID, newHash)
+}

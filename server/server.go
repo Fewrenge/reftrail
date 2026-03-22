@@ -70,4 +70,7 @@ func (s *Server) registerWaitlistRoutes() {
 
 	// Log out
 	protected.POST("/logout", v1Service.LogoutHandler)
+
+	// Change password
+	protected.PATCH("/users/password", v1Service.ChangePasswordHandler)
 }

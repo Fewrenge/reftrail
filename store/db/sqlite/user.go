@@ -66,3 +66,12 @@ func (d *Driver) DeleteUser(ctx context.Context, delete *store.DeleteUser) error
 	// Stub for now
 	return nil
 }
+
+func (d *Driver) ChangeUserPassword(ctx context.Context, userID int32, newHash string) error {
+	_, err := d.db.ExecContext(ctx, `
+		UPDATE user 
+		SET password_hash = ? 
+		WHERE id = ?
+	`, newHash, userID)
+	return err
+}

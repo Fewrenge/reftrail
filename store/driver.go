@@ -28,4 +28,5 @@ type Driver interface {
 	ListUsers(ctx context.Context, find *FindUser) ([]*User, error)
 	UpdateUser(ctx context.Context, update *UpdateUser) (*User, error)
 	DeleteUser(ctx context.Context, delete *DeleteUser) error
+	ChangeUserPassword(ctx context.Context, userID int32, newHash string) error
 }
