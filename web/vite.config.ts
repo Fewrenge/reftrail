@@ -10,6 +10,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080', // <-- Change this to your Go Port!
         changeOrigin: true,
+        cookieDomainRewrite: "localhost"
       },
     },
   },

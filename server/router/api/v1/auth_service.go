@@ -1,8 +1,8 @@
 package v1
 
 import (
-	"log"
 	"net/http"
+	"time"
 	"wl/server/auth" // Import your new auth package
 	"wl/store"
 
@@ -17,19 +17,38 @@ func (s *APIV1Service) LoginHandler(c *echo.Context) error {
 
 	user, err := s.Store.Login(c.Request().Context(), req)
 	if err != nil {
-		// ADD THIS LINE TEMPORARILY
-		log.Printf("LOGIN FAILED for %s: %v", req.Username, err)
 		return c.JSON(http.StatusUnauthorized, err.Error())
 	}
 
 	// USE THE NEW AUTH PACKAGE TO GENERATE TOKEN
 	token, err := auth.GenerateToken(user)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, "Token error")
-	}
+	/*
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, "Token error")
+		}*/
 
-	return c.JSON(http.StatusOK, map[string]any{
-		"token": token,
-		"user":  user,
-	})
+	cookie := &http.Cookie{
+		Name:     "auth_token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,                 // JavaScript can't read it
+		Secure:   false,                // Set to TRUE in production (HTTPS)
+		SameSite: http.SameSiteLaxMode, // Prevents some CSRF attacks
+		MaxAge:   3600 * 24 * 3,        // 3 days
+	}
+	c.SetCookie(cookie) // Send the cookie header
+	return c.JSON(http.StatusOK, map[string]string{"message": "Welcome!"})
+}
+
+func (s *APIV1Service) LogoutHandler(c *echo.Context) error {
+	cookie := &http.Cookie{
+		Name:     "auth_token",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0), // Expire it immediately
+		HttpOnly: true,
+		MaxAge:   -1, // Alternative way to tell browser to delete it
+	}
+	c.SetCookie(cookie)
+	return c.JSON(http.StatusOK, map[string]string{"message": "Logged out"})
 }

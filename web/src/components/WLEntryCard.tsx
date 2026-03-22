@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 
 interface Props {
   entry: WLEntry;
-  token: string;
   onRefresh: () => void;
 }
 
@@ -19,7 +18,7 @@ export interface WLEntry {
   triageNote: string;
 }
 
-export default function WLEntryCard({ entry, token, onRefresh }: Props) {
+export default function WLEntryCard({ entry, onRefresh }: Props) {
   const [showMenu, setShowMenu] = useState(false);
 
   const urgencyStyles = {
@@ -29,18 +28,12 @@ export default function WLEntryCard({ entry, token, onRefresh }: Props) {
   };
 
   const handleDelete = async () => {
-    // Check if we even have a token before trying
-    if (!token) {
-      console.error("No token found for delete request");
-      return;
-    }
 
     if (!window.confirm(`Permanently delete ${entry.patientName}?`)) return;
 
     try {
       const res = await fetch(`/api/v1/waitlist/${entry.id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'DELETE'
       });
 
       if (res.ok) {

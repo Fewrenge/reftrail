@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function Login({ onLoginSuccess }: { onLoginSuccess: (token: string) => void }) {
+export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
@@ -18,10 +18,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: (token: stri
     });
 
     if (res.ok) {
-      const data = await res.json();
-      // 'data.token' is the JWT badge from Go
-      localStorage.setItem('token', data.token);
-      onLoginSuccess(data.token);
+      onLoginSuccess();
     } else {
       alert("Login Failed! Check your Go logs.");
     }

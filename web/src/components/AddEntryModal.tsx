@@ -4,10 +4,9 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  token: string;
 }
 
-export default function AddEntryModal({ isOpen, onClose, onSuccess, token }: Props) {
+export default function AddEntryModal({ isOpen, onClose, onSuccess }: Props) {
   const [name, setName] = useState('');
   const [complaint, setComplaint] = useState('');
   const [urgency, setUrgency] = useState('Elective');
@@ -20,7 +19,6 @@ export default function AddEntryModal({ isOpen, onClose, onSuccess, token }: Pro
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         patientName: name,
