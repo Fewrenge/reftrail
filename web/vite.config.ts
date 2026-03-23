@@ -8,9 +8,9 @@ export default defineConfig({
     proxy: {
       // Any request starting with /api will go to your Go backend
       '/api': {
-        target: 'http://localhost:8080', // <-- Change this to your Go Port!
+        target: 'http://127.0.0.1:8080', // <-- Change this to your Go Port!
         changeOrigin: true,
-        cookieDomainRewrite: "localhost"
+        cookieDomainRewrite: "127.0.0.1"
       },
     },
   },

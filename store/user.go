@@ -8,6 +8,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	RoleSystemAdmin = "SYSTEM_ADMIN"
+	RoleBookingTeam = "BOOKING_TEAM"
+)
+
 type User struct {
 	ID           int32  `json:"id"`
 	Username     string `json:"username"`

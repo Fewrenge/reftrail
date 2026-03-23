@@ -4,7 +4,7 @@ import WLEntryCard from './components/WLEntryCard';
 import type { WLEntry } from './components/WLEntryCard';
 import AddEntryModal from './components/AddEntryModal';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import Profile from './pages/Profile'
+import Settings from './pages/Settings'
 
 export default function App() {
   // 1. Hooks (Memory)
@@ -91,7 +91,7 @@ export default function App() {
           </nav>
 
           <div className="pt-6 border-t border-slate-100 mt-auto">
-            <Link to="/Settings" className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 transition-all group no-underline">
+            <Link to="/settings" className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 transition-all group no-underline">
               <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-white">
                 {user ? user.username.charAt(0).toUpperCase() : '?'}
               </div>
@@ -145,7 +145,7 @@ export default function App() {
 
               <Route
                 path="/settings"
-                element={<Profile user={user} onLogout={handleLogout} />}
+                element={<Settings user={user} onLogout={handleLogout} />}
               />
 
             </Routes>

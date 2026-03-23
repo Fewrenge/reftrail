@@ -6,20 +6,21 @@ interface User {
   id?: string;
 }
 
-interface ProfileProps {
+interface SettingsProps {
   user: User | null;
   onLogout: () => void;
 }
 
 
 
-export default function Profile({ user, onLogout }: ProfileProps) {
+export default function Settings({ user, onLogout }: SettingsProps) {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [message, setMessage] = useState({ text: '', isError: false });
   const [isUpdating, setIsUpdating] = useState(false);
 
-  if (!user) return <div className="p-8 text-slate-400 italic">Loading profile...</div>;
+  if (!user) return <div className="p-8 text-slate-400 italic">Loading 
+  ...</div>;
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
