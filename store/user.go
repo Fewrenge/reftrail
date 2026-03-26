@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	RoleSystemAdmin = "SYSTEM_ADMIN"
-	RoleBookingTeam = "BOOKING_TEAM"
+	RoleWLSystemAdmin = "WL_SYSTEM_ADMIN"
+	RoleBookingTeam   = "BOOKING_TEAM"
 )
 
 type User struct {

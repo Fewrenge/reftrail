@@ -2,8 +2,14 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { getUserMe } from "../services/userService";
 
 // 1. Define what's in the "Backpack"
+interface User {
+  id: number;
+  username: string;
+  role: "ADMIN" | "USER"; // Matches your Go logic
+}
+
 interface AuthContextType {
-  user: any | null;
+  user: User | null; // Removed any to make it safer
   loading: boolean;
 }
 
