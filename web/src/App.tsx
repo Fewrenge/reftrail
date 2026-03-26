@@ -3,7 +3,8 @@ import Login from './pages/Login';
 import WLEntryCard from './components/WLEntryCard';
 import type { WLEntry } from './components/WLEntryCard';
 import AddEntryModal from './components/AddEntryModal';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
+import { HospitalIcon, ScrollTextIcon, ChartNoAxesCombinedIcon, SearchIcon } from "lucide-react";
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -77,22 +78,41 @@ export default function App() {
 
         <aside className="w-64 bg-white border-r border-slate-200 sticky top-0 h-screen p-6 hidden md:flex flex-col">
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">M</div>
+            <HospitalIcon size={30} strokeWidth={2.5} />
             <h1 className="font-bold text-lg tracking-tight text-slate-800">Medical Portal</h1>
           </div>
 
           <nav className="space-y-1 flex-1">
-            <Link to="/" className="flex items-center gap-3 bg-blue-50 text-blue-700 px-3 py-2.5 rounded-xl font-medium transition-all">
-              <span className="text-lg">📋</span> Waitlist
-            </Link>
-            <div className="flex items-center gap-3 text-slate-500 px-3 py-2.5 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer group">
-              <span className="text-lg">📊</span> Analytics
-            </div>
+            {/*WAITLIST*/}
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
+                }`
+              }
+            >
+              <ScrollTextIcon size={20} strokeWidth={2.5} />
+              <span>Waitlist</span>
+            </NavLink>
+
+
+            {/*ANALYTICS*/}
+            <NavLink
+              to="/analytics" // Give it a real (even if empty) path
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
+                }`
+              }
+            >
+              <ChartNoAxesCombinedIcon size={20} strokeWidth={2.5}/>
+              <span>Analytics</span>
+            </NavLink>
           </nav>
 
           <div className="pt-6 border-t border-slate-100 mt-auto">
-            <Link to="/settings" className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 transition-all group no-underline">
-              <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-white">
+            <NavLink to="/settings" className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 transition-all group no-underline">
+              <div className="w-9 h-9 bg-linear-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-white">
                 {user ? user.username.charAt(0).toUpperCase() : '?'}
               </div>
               <div className="flex flex-col overflow-hidden">
@@ -103,7 +123,7 @@ export default function App() {
                   {user ? user.role : 'Authorized'}
                 </span>
               </div>
-            </Link>
+            </NavLink>
           </div>
         </aside>
 
@@ -121,7 +141,9 @@ export default function App() {
                 </header>
 
                 <div className="relative mb-6 group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">🔍</div>
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <SearchIcon size={20} strokeWidth={2.5}/>
+                  </div>
                   <input
                     type="text"
                     placeholder="Search by name..."
@@ -143,12 +165,15 @@ export default function App() {
               </>
             } />
 
-              <Route
-                path="/settings"
-                element={<Settings user={user} onLogout={handleLogout} />}
-              />
+            <Route path="/settings/*" element={<Settings />} />
 
-            </Routes>
+            <Route path="*" element={
+              <div className="flex flex-col items-center justify-center py-20">
+                <h2 className="text-2xl font-bold">404 - Not Found</h2>
+                <Link to="/" className="text-blue-600 underline mt-2">Go back home</Link>
+              </div>
+            } />
+          </Routes>
         </main>
 
         <AddEntryModal

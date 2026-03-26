@@ -11,14 +11,21 @@ interface User {
 interface AuthContextType {
   user: User | null; // Removed any to make it safer
   loading: boolean;
+  onLogout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
+const AuthContext = createContext<AuthContextType>({ user: null, loading: true, onLogout: async () => {} });
 
 // 2. The Provider (The wrapper for your whole app)
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const onLogout = async () => {
+    await fetch('/api/v1/logout', { method: 'POST', credentials: 'same-origin' });
+    setUser(null);
+    // Optional: window.location.href = "/"; 
+  };
 
   useEffect(() => {
     getUserMe()
@@ -28,7 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, onLogout }}>
       {children}
     </AuthContext.Provider>
   );
