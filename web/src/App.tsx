@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Login from './pages/Login';
 import WLEntryCard from './components/WLEntryCard';
 import type { WLEntry } from './components/WLEntryCard';
