@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { getUserMe } from "../services/userService";
 
+export type UserRole = "WL_SYSTEM_ADMIN" | "BOOKING_TEAM";
+
 // 1. Define what's in the "Backpack"
 interface User {
   id: number;
   username: string;
-  role: "ADMIN" | "USER"; // Matches your Go logic
+  role: UserRole; // Matches your Go logic
 }
 
 interface AuthContextType {

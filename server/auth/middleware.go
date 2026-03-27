@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"wl/store"
 
 	"github.com/golang-jwt/jwt/v5"
 	echo "github.com/labstack/echo/v5"
@@ -32,11 +33,28 @@ func JWTMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid or expired badge"})
 		}
 
-		// 4. Pin the UserID and Role to the context memory
-		ctx := context.WithValue(c.Request().Context(), "user-id", claims.ID)
-		ctx = context.WithValue(ctx, "user-role", claims.Role)
+		userCtx := &UserContext{
+			ID:   claims.ID,
+			Role: claims.Role,
+		}
+
+		// 4. Pin the UserContext to the context memory
+		ctx := context.WithValue(c.Request().Context(), UserContextKey, userCtx)
 		c.SetRequest(c.Request().WithContext(ctx))
 
+		return next(c)
+	}
+}
+
+// The new Admin Guard
+func AdminOnlyMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		user, ok := GetUserContext(c.Request().Context())
+
+		// Match this to whatever string you use in SQLite (e.g., "ADMIN")
+		if !ok || user.Role != store.RoleWLSystemAdmin {
+			return c.JSON(http.StatusForbidden, map[string]string{"error": "Admin access required"})
+		}
 		return next(c)
 	}
 }

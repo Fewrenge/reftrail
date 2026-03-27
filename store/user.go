@@ -81,14 +81,14 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 		admin := &CreateUser{
 			Username: "admin",
 			Password: string(hashed), // This will be saved to password_hash in SQLite
-			Role:     "ADMIN",
+			Role:     RoleWLSystemAdmin,
 		}
 
 		// Fix: s.driver.CreateUser returns (*User, error),
 		// but SeedAdminUser only wants to return (error).
 		_, err := s.driver.CreateUser(ctx, admin)
 		if err == nil {
-			log.Println("✅ SEED SUCCESS: Created admin/admin123") // Add this!
+			log.Println("SEED SUCCESS: Created admin/admin123") // Add this!
 		}
 		return err
 	}

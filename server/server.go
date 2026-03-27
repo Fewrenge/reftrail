@@ -56,14 +56,8 @@ func (s *Server) registerWaitlistRoutes() {
 	// Update a waitlist entry (The state switcher)
 	protected.PATCH("/waitlist/:id", v1Service.UpdateWLEntryHandler)
 
-	// Delete a waitlist entry
-	protected.DELETE("/waitlist/:id", v1Service.DeleteWLEntryHandler)
-
 	// Get the history logs
 	protected.GET("/waitlist/:id/logs", v1Service.ListWLLogsHandler)
-
-	// Create a user
-	protected.POST("/users", v1Service.CreateUserHandler)
 
 	// Get current user
 	protected.GET("/users/me", v1Service.GetCurrentUserHandler)
@@ -73,4 +67,11 @@ func (s *Server) registerWaitlistRoutes() {
 
 	// Change password
 	protected.PATCH("/users/password", v1Service.ChangePasswordHandler)
+
+	admin := protected.Group("")
+	admin.Use(auth.AdminOnlyMiddleware)                           // Add the extra gatekeeper
+	admin.POST("/users", v1Service.CreateUserHandler)             // Create a user
+	admin.GET("/users", v1Service.ListUsersHandler)               // List Users
+	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)       // Delete a user
+	admin.DELETE("/waitlist/:id", v1Service.DeleteWLEntryHandler) // Delete a waitlist entry
 }

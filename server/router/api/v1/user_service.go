@@ -1,7 +1,9 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
+	"wl/server/auth"
 	"wl/store"
 
 	echo "github.com/labstack/echo/v5"
@@ -25,17 +27,15 @@ func (s *APIV1Service) CreateUserHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
-// GetCurrentUserHandler handles GET /api/v1/users/me
-// (Useful for the frontend to check its own "Badge")
+// GET /api/v1/users/me
 func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
-	// We'll use our GetUserID helper we wrote in auth/context.go
-	// But since store shouldn't import auth, we look at the context key directly
-	userID, ok := c.Request().Context().Value("user-id").(int32)
+	userCtx, ok := auth.GetUserContext(c.Request().Context())
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, "Not logged in")
 	}
 
-	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &userID})
+	// Now we use userCtx.ID directly
+	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &userCtx.ID})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
@@ -80,4 +80,34 @@ func (s *APIV1Service) ChangePasswordHandler(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Password updated successfully"})
+}
+
+// GET /api/v1/users
+func (s *APIV1Service) ListUsersHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	// Passing an empty FindUser gets everyone
+	users, err := s.Store.ListUsers(ctx, &store.FindUser{})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, users)
+}
+
+// DELETE /api/v1/users/:id
+func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	// Get ID from URL /api/v1/users/5
+	idParam := c.Param("id")
+	// Convert string "5" to int32
+	var id int32
+	fmt.Sscanf(idParam, "%d", &id)
+
+	err := s.Store.DeleteUser(ctx, &store.DeleteUser{ID: id})
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "User deleted"})
 }

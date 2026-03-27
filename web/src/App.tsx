@@ -4,7 +4,7 @@ import Settings from './pages/Settings';
 import Home from './pages/Home'; // New import
 import Sidebar from './components/Sidebar';
 import { useAuth } from './contexts/AuthContext';
-import { AlertCircle } from "lucide-react";
+import { AlertCircleIcon } from "lucide-react";
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -33,7 +33,7 @@ export default function App() {
             {/* 404 CATCH-ALL */}
             <Route path="*" element={
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 text-center">
-                <AlertCircle size={48} className="mb-4 text-slate-200" />
+                <AlertCircleIcon size={48} className="mb-4 text-slate-200" />
                 <h2 className="text-2xl font-bold text-slate-800">404 - Page Not Found</h2>
                 <p className="mt-1">We couldn't find the chart you were looking for.</p>
                 <Link to="/" className="text-blue-600 underline mt-4 font-medium">Return Home</Link>

@@ -2,6 +2,9 @@ import { useState, useMemo, useEffect } from "react";
 import { UserIcon, LogInIcon, UsersIcon } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { ROLES } from "../helpers/constants";
+import ProfileSection from "../components/Settings/ProfileSection";
+import MemberSection from "../components/Settings/MemberSection";
 
 // Define sections
 type SettingSection = "profile" | "login" | "member";
@@ -18,9 +21,9 @@ const SECTION_ICON_MAP: Record<SettingSection, any> = {
 
 // Sub-pages that swap out in the middle of the screen
 const SECTION_COMPONENT_MAP: Record<SettingSection, React.ComponentType> = {
-  profile: () => <div className="p-4">User Profile Form goes here</div>, // to be changed to ProfileSection.tsx, same with the following
+  profile: ProfileSection, // to be changed to ProfileSection.tsx, same with the following
   login: () => <div className="p-4">Password & Security settings</div>,
-  member: () => <div className="p-4">Member settings</div>,
+  member: MemberSection,
 };
 
 
@@ -32,7 +35,7 @@ const Setting = () => {
   const [selectedSection, setSelectedSection] = useState<SettingSection>("profile");
 
   // Figure out if the user is an Admin
-  const isHost = user?.role === "ADMIN";
+  const isHost = user?.role === ROLES.SYSTEM_ADMIN;
 
   // Create the list of menu items the user is allowed to see
   const settingsSectionList = useMemo(() => {
