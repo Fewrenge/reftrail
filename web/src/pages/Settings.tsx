@@ -70,7 +70,7 @@ const Setting = () => {
             <button
               key={sectionId}
               onClick={() => window.location.hash = sectionId} // Update the URL hash
-              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
                 isActive ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100"
               }`}
             >

@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Login from './pages/Login';
 import Settings from './pages/Settings';
 import Home from './pages/Home'; // New import
-import Sidebar from './components/Sidebar';
+import Sidebar from './components/Sidebar/Sidebar';
 import { useAuth } from './contexts/AuthContext';
 import { AlertCircleIcon } from "lucide-react";
 

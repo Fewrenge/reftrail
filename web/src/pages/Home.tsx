@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { SearchIcon, Plus } from "lucide-react";
-import WLEntryCard from '../components/WLEntryCard';
-import AddEntryModal from '../components/AddEntryModal';
-import type { WLEntry } from '../components/WLEntryCard';
+import WLEntryCard from '../components/WLEntry/WLEntryCard';
+import AddEntryModal from '../components/WLEntry/AddEntryModal';
+import type { WLEntry } from '../components/WLEntry/WLEntryCard';
 
 export default function Home() {
   const [patients, setPatients] = useState<WLEntry[]>([]);
