@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { HospitalIcon, ScrollTextIcon, ChartNoAxesCombinedIcon, SettingsIcon, LogOutIcon } from "lucide-react";
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { Button } from "@/components/ui";
 
 export default function Sidebar() {
   const { user, onLogout } = useAuth();
@@ -32,8 +33,7 @@ export default function Sidebar() {
           to="/"
           end
           className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${
-              isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
+            `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
             }`
           }
         >
@@ -44,8 +44,7 @@ export default function Sidebar() {
         <NavLink
           to="/analytics"
           className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${
-              isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
+            `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
             }`
           }
         >
@@ -58,22 +57,31 @@ export default function Sidebar() {
       <div className="pt-6 border-t border-slate-100 mt-auto relative" ref={menuRef}>
         {isMenuOpen && (
           <div className="absolute bottom-full left-0 w-full mb-2 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-bottom-2">
-            <button 
-              onClick={() => { navigate('/settings'); setIsMenuOpen(false); }}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm cursor-pointer text-slate-600 hover:bg-slate-50 transition-colors"
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 p-2 h-auto"
+              onClick={() => {
+                navigate('/settings'); // 1. Go to settings
+                setIsMenuOpen(false);  // 2. Close the menu
+              }}
             >
               <SettingsIcon size={16} /> Settings
-            </button>
-            <button 
-              onClick={() => { onLogout(); setIsMenuOpen(false); }}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 transition-colors"
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 p-2 h-auto"
+              onClick={() => {
+                onLogout();           // 1. Call the Go logout API
+                setIsMenuOpen(false); // 2. Close the menu
+              }}
             >
               <LogOutIcon size={16} /> Sign Out
-            </button>
+            </Button>
           </div>
         )}
 
-        <button 
+        <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className={`w-full flex items-center gap-3 p-2 rounded-xl transition-all text-left cursor-pointer ${isMenuOpen ? "bg-slate-100" : "hover:bg-slate-100"}`}
         >

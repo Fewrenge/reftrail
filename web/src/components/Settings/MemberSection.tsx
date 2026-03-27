@@ -1,15 +1,26 @@
 import { useState, useEffect } from "react";
-import { Users, UserPlus, Trash2, ShieldCheck, Loader2 } from "lucide-react";
+import { UsersIcon, UserPlusIcon, Trash2Icon, ShieldCheckIcon, Loader2Icon } from "lucide-react";
+import { ROLES } from "@/helpers/constants";
+import { Button } from "@/components/ui";
+
+type UserRole = typeof ROLES[keyof typeof ROLES];
 
 interface Member {
   id: number;
   username: string;
-  role: "ADMIN" | "USER";
+  role: UserRole;
 }
+
+
+
+
 
 const MemberSection = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false); // Controls the "Add Member" popup
+  const [deleteTarget, setDeleteTarget] = useState<Member | null>(null); // Stores WHO we are deleting
+
 
   // 1. Fetch all members from Go backend
   useEffect(() => {
@@ -20,18 +31,19 @@ const MemberSection = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin text-blue-600" /></div>;
+  if (loading) return <div className="flex justify-center p-10"><Loader2Icon className="animate-spin text-blue-600" /></div>;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-          <Users size={20} className="text-blue-600" />
+          <UsersIcon size={20} className="text-blue-600" />
           System Members ({members.length})
         </h3>
-        <button className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-all cursor-pointer">
-          <UserPlus size={16} /> Add Member
-        </button>
+        <Button onClick={() => setIsAdding(true)}>
+          <UserPlusIcon size={16} className="mr-2" />
+          Add Member
+        </Button>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
@@ -53,17 +65,20 @@ const MemberSection = () => {
                   <span className="font-medium text-slate-700">{member.username}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter ${
-                    member.role === "ADMIN" ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-600"
-                  }`}>
-                    {member.role === "ADMIN" && <ShieldCheck size={10} />}
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter ${member.role === ROLES.SYSTEM_ADMIN ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-600"
+                    }`}>
+                    {member.role === ROLES.SYSTEM_ADMIN && <ShieldCheckIcon size={10} />}
                     {member.role}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer">
-                    <Trash2 size={16} />
-                  </button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setDeleteTarget(member)}
+                  >
+                    <Trash2Icon size={16} />
+                  </Button>
                 </td>
               </tr>
             ))}

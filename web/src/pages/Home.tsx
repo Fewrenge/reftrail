@@ -3,6 +3,7 @@ import { SearchIcon, Plus } from "lucide-react";
 import WLEntryCard from '../components/WLEntry/WLEntryCard';
 import AddEntryModal from '../components/WLEntry/AddEntryModal';
 import type { WLEntry } from '../components/WLEntry/WLEntryCard';
+import { Button } from "@/components/ui";
 
 export default function Home() {
   const [patients, setPatients] = useState<WLEntry[]>([]);
@@ -31,13 +32,10 @@ export default function Home() {
     <>
       <header className="flex justify-between items-center mb-8">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">Active Waitlist</h2>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-xl font-medium shadow-sm hover:bg-blue-700 transition-all cursor-pointer flex items-center gap-2"
-        >
-          <Plus size={18} />
+        <Button onClick={() => setIsModalOpen(true)}>
+          <Plus size={18} className="mr-2"/>
           Add Waitlist Entry
-        </button>
+        </Button>
       </header>
 
       {/* SEARCH BAR */}

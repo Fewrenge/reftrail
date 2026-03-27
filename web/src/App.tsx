@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar/Sidebar';
 import { useAuth } from './contexts/AuthContext';
 import { AlertCircleIcon } from "lucide-react";
 
+
 export default function App() {
   const { user, loading } = useAuth();
 

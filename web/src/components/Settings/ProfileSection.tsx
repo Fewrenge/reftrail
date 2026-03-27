@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { User, Edit2, X, Check } from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 const ProfileSection = () => {
   const { user } = useAuth();
