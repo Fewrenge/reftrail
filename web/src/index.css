@@ -1,2 +1,34 @@
 @import "tailwindcss";
 
+@theme {
+  /* The Foundation */
+  --color-background: oklch(0.99 0.002 240);       /* Almost white, very soft */
+  --color-foreground: oklch(0.25 0.02 240);         /* Deep charcoal blue */
+  
+  /* Surfaces & Separation */
+  --color-card: oklch(1 0 0);                      /* Pure white for cards */
+  --color-border: oklch(0.92 0.005 240);           /* The "Soft Gray" border */
+  
+  /* Functional Grays */
+  --color-muted: oklch(0.97 0.002 240);            /* Very light gray for sidebar */
+  --color-muted-foreground: oklch(0.55 0.02 240);  /* Professional gray text */
+  
+  /* The Action Colors */
+  --color-primary: oklch(0.35 0.05 250);           /* Professional Deep Blue */
+  --color-primary-foreground: oklch(0.99 0 0);     /* White text for blue buttons */
+  
+  --color-secondary: oklch(0.95 0.005 240);        /* Soft gray for "Flat" selected state */
+  --color-secondary-foreground: oklch(0.2 0.02 240); 
+  
+  --color-accent: oklch(0.94 0.01 240);            /* Hover color */
+}
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-zinc-50 text-foreground;
+  }
+}
