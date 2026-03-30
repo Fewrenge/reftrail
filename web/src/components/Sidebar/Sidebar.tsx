@@ -81,9 +81,10 @@ export default function Sidebar() {
           </div>
         )}
 
-        <button
+        <Button
+          variant="ghost"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`w-full flex items-center gap-3 p-2 rounded-xl transition-all text-left cursor-pointer ${isMenuOpen ? "bg-slate-100" : "hover:bg-slate-100"}`}
+          className={`w-full justify-start text-left gap-3 h-auto p-2 rounded-xl transition-all ${isMenuOpen ? "bg-slate-100" : ""}`}
         >
           <div className="w-9 h-9 bg-linear-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-white shrink-0">
             {user?.username?.charAt(0).toUpperCase() || '?'}
@@ -92,7 +93,7 @@ export default function Sidebar() {
             <span className="text-sm font-semibold text-slate-700 truncate">{user?.username || 'Guest'}</span>
             <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">{user?.role || 'User'}</span>
           </div>
-        </button>
+        </Button>
       </div>
     </aside>
   );

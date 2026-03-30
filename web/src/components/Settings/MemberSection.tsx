@@ -1,9 +1,18 @@
 import { useState, useEffect } from "react";
-import { PlusIcon, MoreVerticalIcon, Loader2Icon } from "lucide-react";
+import { PlusIcon, Loader2Icon } from "lucide-react";
 import { ROLES } from "@/helpers/constants";
 import { Button } from "@/components/ui/button";
 import SettingSection from "./SettingSection";
 import SettingTable from "./SettingTable";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface Member {
   id: number;
@@ -16,6 +25,42 @@ interface Member {
 const MemberSection = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [formData, setFormData] = useState<{
+    username: string;
+    role: string;
+  }>({
+    username: "",
+    role: ROLES.SYSTEM_ADMIN,
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+
+  const handleCreateUser = async () => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/v1/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        const newUser = await response.json();
+        // Update the local list so the new user appears immediately
+        setMembers((prev) => [...prev, newUser]);
+        // Close the dialog and reset form
+        setIsCreateDialogOpen(false);
+        setFormData({ username: "", role: ROLES.SYSTEM_ADMIN });
+      } else {
+        console.error("Failed to create user");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     fetch("/api/v1/users")
@@ -54,10 +99,59 @@ const MemberSection = () => {
       title="Member list"
       className="p-1"
       actions={
-        <Button className="bg-primary text-primary-foreground hover:opacity-90 rounded-lg px-4 py-2 flex items-center gap-1 shadow-none border-none">
-          <PlusIcon className="w-4 h-4" />
-          <span>Create</span>
-        </Button>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary text-primary-foreground rounded-lg px-3 py-2 flex items-center gap-1 shadow-none border-none">
+              <PlusIcon className="w-4 h-4" />
+              <span>Create</span>
+            </Button>
+          </DialogTrigger>
+
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Member</DialogTitle>
+              <DialogDescription>
+                Fill in the details below to add a new member to your team.
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Form */}
+            <div className="py-4 space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Username</label>
+                <input
+                  className="border rounded-md p-2 bg-white text-slate-900"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="Enter username"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Role</label>
+                <select
+                  className="border rounded-md p-2 bg-white"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                >
+                  <option value={ROLES.BOOKING_TEAM}>{ROLES.BOOKING_TEAM}</option>
+                  <option value={ROLES.SYSTEM_ADMIN}>{ROLES.SYSTEM_ADMIN}</option>
+                </select>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateUser}
+                disabled={isSubmitting || !formData.username.trim()}
+              >
+                {isSubmitting ? "Creating..." : "Confirm"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       }
     >
       <div className="mt-4">
