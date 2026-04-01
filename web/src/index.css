@@ -8,6 +8,9 @@
   /* Surfaces & Separation */
   --color-card: oklch(1 0 0);                      /* Pure white for cards */
   --color-border: oklch(0.92 0.005 240);           /* The "Soft Gray" border */
+
+  --color-popover: oklch(1 0 0);               /* White background for dropdowns */
+  --color-popover-foreground: oklch(0.25 0.02 240);
   
   /* Functional Grays */
   --color-muted: oklch(0.97 0.002 240);            /* Very light gray for sidebar */
@@ -31,4 +34,5 @@
   body {
     @apply bg-zinc-50 text-foreground;
   }
+  
 }
