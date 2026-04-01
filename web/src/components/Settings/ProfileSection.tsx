@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UserIcon, MoreVerticalIcon, PenLineIcon, CheckIcon, XIcon, LockIcon } from "lucide-react";
+import { UserIcon, MoreVerticalIcon, PenLineIcon, CheckIcon, XIcon, LockIcon,  } from "lucide-react";
 import { Button } from "@/components/ui/button"; // Use your UI button or a plain <button>
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -8,14 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import ChangePasswordDialog from "@/components/Dialog/ChangePasswordDialog";
 
 const ProfileSection = () => {
   const { user } = useAuth();
@@ -95,27 +88,13 @@ const ProfileSection = () => {
         </div>
       </section>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
-            <DialogDescription>
-              Change password.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <input
-              type="password"
-              placeholder="New Password"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => setIsDialogOpen(false)}>Update Password</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ChangePasswordDialog 
+        open={isDialogOpen} 
+        onOpenChange={setIsDialogOpen} 
+        user={user} 
+        onSuccess={() => alert("Password updated successfully!")}
+      />
+
     </>
 
   );

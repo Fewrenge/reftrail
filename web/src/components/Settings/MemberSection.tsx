@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PlusIcon, Loader2Icon, Trash2Icon } from "lucide-react";
+import { PlusIcon, Loader2Icon } from "lucide-react";
 import { ROLES } from "@/helpers/constants";
 import { Button } from "@/components/ui/button";
 import SettingSection from "./SettingSection";
@@ -61,25 +61,6 @@ const MemberSection = () => {
       setIsSubmitting(false);
     }
   };
-
-  const handleDeleteUser = async (id: number) => {
-  if (!confirm("Are you sure you want to delete this member?")) return;
-
-  try {
-    const response = await fetch(`/api/v1/users/${id}`, {
-      method: "DELETE",
-    });
-
-    if (response.ok) {
-      // Remove the deleted member from the local state
-      setMembers((prev) => prev.filter((m) => m.id !== id));
-    } else {
-      console.error("Failed to delete user");
-    }
-  } catch (error) {
-    console.error("Error deleting user:", error);
-  }
-};
 
 
   useEffect(() => {
