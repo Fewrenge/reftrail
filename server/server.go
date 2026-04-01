@@ -37,7 +37,6 @@ func (s *Server) registerWaitlistRoutes() {
 
 	// PUBLIC
 	s.Engine.POST("/api/v1/login", v1Service.LoginHandler)
-	// s.Engine.GET("/api/v1/users/me", v1Service.GetCurrentUserHandler)
 
 	// PROTECTED (Requires JWT)
 	protected := s.Engine.Group("/api/v1")

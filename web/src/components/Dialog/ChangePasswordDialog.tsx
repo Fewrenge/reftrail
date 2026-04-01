@@ -23,11 +23,35 @@ const ChangePasswordDialog = ({ open, onOpenChange, user, onSuccess }: any) => {
     const handleUpdate = async () => {
         if (!user) return;
         setLoading(true);
-        // Backend simulation
-        await new Promise(r => setTimeout(r, 1000));
-        onSuccess?.();
-        onOpenChange(false);
-        setLoading(false);
+
+        try {
+            const response = await fetch("/api/v1/users/password", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    oldPassword: formData.oldPassword,
+                    newPassword: formData.newPassword,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to update password");
+            }
+
+            alert(data.message);
+
+            onSuccess?.(); // Trigger the success alert/toast
+            onOpenChange(false);
+
+            // Clear the form for security
+            setFormData({ oldPassword: "", newPassword: "", confirmPassword: "" });
+        } catch (error: any) {
+            alert(error.message); // Replace with a toast later
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (!user) return null;

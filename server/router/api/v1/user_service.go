@@ -34,7 +34,6 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, "Not logged in")
 	}
 
-	// Now we use userCtx.ID directly
 	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &userCtx.ID})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
@@ -43,40 +42,45 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
+// PATCH /api/v1/users/password
 func (s *APIV1Service) ChangePasswordHandler(c *echo.Context) error {
-	// 1. Define what we expect from React
+	ctx := c.Request().Context()
+
+	userCtx, ok := auth.GetUserContext(ctx)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
+	}
+
+	userID := userCtx.ID
+
 	var req struct {
 		OldPassword string `json:"oldPassword"`
 		NewPassword string `json:"newPassword"`
 	}
+
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, "Invalid request format")
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
 	}
 
-	// 2. Get the UserID from the context (the "Badge" we fixed)
-	userID, ok := c.Request().Context().Value("user-id").(int32)
-	if !ok {
-		return c.JSON(http.StatusUnauthorized, "Not logged in")
-	}
-
-	// 3. Fetch the current user to get their CURRENT hash
-	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &userID})
+	user, err := s.Store.GetUser(ctx, &store.FindUser{ID: &userID})
 	if err != nil {
-		return c.JSON(http.StatusNotFound, "User not found")
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
 	}
 
-	// 4. Verify: Does the 'OldPassword' match the one in the DB?
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword))
+	// Verify old password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Incorrect old password"})
+	}
+
+	// Hash new password
+	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, "Incorrect old password")
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
 	}
 
-	// 5. Hash the NEW password
-	newHash, _ := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
-
-	// 6. Tell the Store to save it
-	if err := s.Store.ChangeUserPassword(c.Request().Context(), userID, string(newHash)); err != nil {
-		return c.JSON(http.StatusInternalServerError, "Failed to save new password")
+	// Save
+	if err := s.Store.ChangeUserPassword(ctx, userID, string(newHash)); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Password updated successfully"})
