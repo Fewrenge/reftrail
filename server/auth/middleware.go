@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
-	"wl/store"
+	"wl/internal/types"
 
 	"github.com/golang-jwt/jwt/v5"
 	echo "github.com/labstack/echo/v5"
@@ -33,15 +33,15 @@ func JWTMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid or expired badge"})
 		}
 
-		userCtx := &UserContext{
-			ID:   claims.ID,
-			Role: claims.Role,
+		userCtx := &types.UserContext{
+			ID:   types.UserID(claims.ID),
+			Role: types.UserRole(claims.Role),
 		}
 
 		// 4. Pin the UserContext to the context memory
-		ctx := context.WithValue(c.Request().Context(), UserContextKey, userCtx)
-		ctx = context.WithValue(ctx, "user-id", claims.ID) // Added this line and it works. The whole authentication thing needs review
-		ctx = context.WithValue(ctx, "user-role", claims.Role)
+		ctx := context.WithValue(c.Request().Context(), types.UserKey, userCtx)
+		//ctx = context.WithValue(ctx, "user-id", claims.ID) // Added these two lines and it works. The whole authentication thing needs review
+		//ctx = context.WithValue(ctx, "user-role", claims.Role)
 		c.SetRequest(c.Request().WithContext(ctx))
 
 		return next(c)
@@ -54,7 +54,7 @@ func AdminOnlyMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		user, ok := GetUserContext(c.Request().Context())
 
 		// Match this to whatever string you use in SQLite
-		if !ok || user.Role != store.RoleWLSystemAdmin {
+		if !ok || user.Role != types.RoleWLSystemAdmin {
 			return c.JSON(http.StatusForbidden, map[string]string{"error": "Admin access required"})
 		}
 		return next(c)

@@ -3,6 +3,7 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"wl/internal/types"
 	"wl/server/auth"
 	"wl/store"
 
@@ -108,7 +109,7 @@ func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 	var id int32
 	fmt.Sscanf(idParam, "%d", &id)
 
-	err := s.Store.DeleteUser(ctx, &store.DeleteUser{ID: id})
+	err := s.Store.DeleteUser(ctx, &store.DeleteUser{ID: types.UserID(id)})
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}

@@ -4,20 +4,16 @@ import (
 	"context"
 	"errors" // Needed for errors.New
 	"log"
+	"wl/internal/types"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	RoleWLSystemAdmin = "WL_SYSTEM_ADMIN"
-	RoleBookingTeam   = "BOOKING_TEAM"
-)
-
 type User struct {
-	ID           int32  `json:"id"`
-	Username     string `json:"username"`
-	PasswordHash string `json:"-"`
-	Role         string `json:"role"`
+	ID           types.UserID   `json:"id"`
+	Username     string         `json:"username"`
+	PasswordHash string         `json:"-"`
+	Role         types.UserRole `json:"role"`
 }
 
 // The "Form" for logging in
@@ -27,25 +23,25 @@ type LoginRequest struct {
 }
 
 type CreateUser struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Role     string `json:"role"`
+	Username string         `json:"username"`
+	Password string         `json:"password"`
+	Role     types.UserRole `json:"role"`
 }
 
 type FindUser struct {
-	ID       *int32  `json:"id"`
-	Username *string `json:"username"`
+	ID       *types.UserID `json:"id"`
+	Username *string       `json:"username"`
 }
 
 type UpdateUser struct {
-	ID       int32   `json:"id"`
-	Username *string `json:"username"`
-	Password *string `json:"password"`
-	Role     *string `json:"role"`
+	ID       types.UserID    `json:"id"`
+	Username *string         `json:"username"`
+	Password *string         `json:"password"`
+	Role     *types.UserRole `json:"role"`
 }
 
 type DeleteUser struct {
-	ID int32 `json:"id"`
+	ID types.UserID `json:"id"`
 }
 
 // --- THE MANAGER LOGIC ---
@@ -81,7 +77,7 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 		admin := &CreateUser{
 			Username: "admin",
 			Password: string(hashed), // This will be saved to password_hash in SQLite
-			Role:     RoleWLSystemAdmin,
+			Role:     types.RoleWLSystemAdmin,
 		}
 
 		// Fix: s.driver.CreateUser returns (*User, error),
@@ -125,7 +121,7 @@ func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
 	return s.driver.DeleteUser(ctx, delete)
 }
 
-func (s *Store) ChangeUserPassword(ctx context.Context, userID int32, newHash string) error {
+func (s *Store) ChangeUserPassword(ctx context.Context, userID types.UserID, newHash string) error {
 	// Relay the command to the driver (the stove)
 	return s.driver.ChangeUserPassword(ctx, userID, newHash)
 }

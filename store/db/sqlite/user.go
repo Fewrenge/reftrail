@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"strings"
+	"wl/internal/types"
 	"wl/store"
 )
 
@@ -14,7 +15,7 @@ func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*sto
 	}
 	id, _ := result.LastInsertId()
 	return &store.User{
-		ID:       int32(id),
+		ID:       types.UserID(id), // Changes
 		Username: create.Username,
 		Role:     create.Role,
 	}, nil
@@ -67,7 +68,7 @@ func (d *Driver) DeleteUser(ctx context.Context, delete *store.DeleteUser) error
 	return nil
 }
 
-func (d *Driver) ChangeUserPassword(ctx context.Context, userID int32, newHash string) error {
+func (d *Driver) ChangeUserPassword(ctx context.Context, userID types.UserID, newHash string) error {
 	_, err := d.db.ExecContext(ctx, `
 		UPDATE user 
 		SET password_hash = ? 
