@@ -40,6 +40,8 @@ func JWTMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 		// 4. Pin the UserContext to the context memory
 		ctx := context.WithValue(c.Request().Context(), UserContextKey, userCtx)
+		ctx = context.WithValue(ctx, "user-id", claims.ID) // Added this line and it works. The whole authentication thing needs review
+		ctx = context.WithValue(ctx, "user-role", claims.Role)
 		c.SetRequest(c.Request().WithContext(ctx))
 
 		return next(c)
@@ -51,7 +53,7 @@ func AdminOnlyMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		user, ok := GetUserContext(c.Request().Context())
 
-		// Match this to whatever string you use in SQLite (e.g., "ADMIN")
+		// Match this to whatever string you use in SQLite
 		if !ok || user.Role != store.RoleWLSystemAdmin {
 			return c.JSON(http.StatusForbidden, map[string]string{"error": "Admin access required"})
 		}

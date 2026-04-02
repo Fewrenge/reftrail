@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { SearchIcon, Plus } from "lucide-react";
 import WLEntryCard from '../components/WLEntry/WLEntryCard';
-import AddEntryModal from '../components/WLEntry/AddEntryModal';
+import AddWLEntryDialog from '../components/WLEntry/AddWLEntryDialog';
 import type { WLEntry } from '../components/WLEntry/WLEntryCard';
 import { Button } from "@/components/ui";
 
@@ -24,7 +24,7 @@ export default function Home() {
   }, []);
 
   // Filter patients based on search input
-  const filteredPatients = patients.filter(p => 
+  const filteredPatients = patients.filter(p =>
     p.patientName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -33,7 +33,7 @@ export default function Home() {
       <header className="flex justify-between items-center mb-8">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">Active Waitlist</h2>
         <Button onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} className="mr-2"/>
+          <Plus size={18} className="mr-2" />
           Add Waitlist Entry
         </Button>
       </header>
@@ -67,7 +67,7 @@ export default function Home() {
         )}
       </div>
 
-      <AddEntryModal
+      <AddWLEntryDialog
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={refreshData}

@@ -38,7 +38,6 @@ func New(dbPath string) (*Driver, error) {
 		return nil, err
 	}
 
-	// 2. Set some "Memos-style" settings for speed and safety
 	db.SetMaxOpenConns(1) // SQLite works best if only one person writes at a time
 
 	return &Driver{

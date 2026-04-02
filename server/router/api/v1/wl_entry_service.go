@@ -12,18 +12,10 @@ import (
 func (s *APIV1Service) GetWaitlistHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
-	// 1. Log to the terminal so you can see if the request even arrived
-	// log.Println("Waitlist request received!")
-
 	list, err := s.Store.ListWLEntries(ctx, &store.FindWLEntry{})
 	if err != nil {
 		log.Printf("Database error: %v", err)
 		return c.JSON(http.StatusInternalServerError, err.Error())
-	}
-
-	// 2. If list is empty, log that too
-	if len(list) == 0 {
-		log.Println("Database is empty.")
 	}
 
 	return c.JSON(http.StatusOK, list)
@@ -41,7 +33,6 @@ func (s *APIV1Service) CreateWLEntryHandler(c *echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
-
 	return c.JSON(http.StatusOK, entry)
 }
 

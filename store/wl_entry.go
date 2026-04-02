@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
 type WLEntry struct {
@@ -109,9 +110,12 @@ func (s *Store) CreateWLEntry(ctx context.Context, create *CreateWLEntry) (*WLEn
 	}
 
 	userID, ok := ctx.Value("user-id").(int32)
+	// -----DEBUG-----
+	fmt.Printf("Value: %+v, Type: %T\n", ctx.Value("user-id"), ctx.Value("user-id"))
+
 	if !ok {
 		// If no ID, it might be an anonymous request or a bug
-		return nil, errors.New("unauthorized: creator id missing")
+		return nil, errors.New("unauthorized: creator id missing!!!!!")
 	}
 
 	// 2. Set the ID onto the form
@@ -183,7 +187,10 @@ func (s *Store) DeleteWLEntry(ctx context.Context, delete *DeleteWLEntry) error 
 
 	// Optional: Check if user has permission (Admin role)
 	role, _ := ctx.Value("user-role").(string)
-	if role != "ADMIN" {
+	// -----DEBUG-----
+	fmt.Printf("Value: %+v, Type: %T\n", ctx.Value("user-role"), ctx.Value("user-role"))
+
+	if role != RoleWLSystemAdmin {
 		return errors.New("unauthorized: only admins can delete entries")
 	}
 
