@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"wl/internal/types"
 )
 
@@ -16,9 +15,4 @@ const (
 type UserContext struct {
 	ID   types.UserID
 	Role types.UserRole
-}
-
-func GetUserContext(ctx context.Context) (*UserContext, bool) {
-	user, ok := ctx.Value(types.UserKey).(*UserContext)
-	return user, ok
 }

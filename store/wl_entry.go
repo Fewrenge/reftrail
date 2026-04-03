@@ -111,8 +111,6 @@ func (s *Store) CreateWLEntry(ctx context.Context, create *CreateWLEntry) (*WLEn
 	}
 
 	userCtx, ok := types.GetUserContext(ctx)
-	// -----DEBUG-----
-	fmt.Printf("Value: %+v, Type: %T\n", ctx.Value("user-id"), ctx.Value("user-id"))
 
 	if !ok {
 		return nil, errors.New("unauthorized: creator context missing")

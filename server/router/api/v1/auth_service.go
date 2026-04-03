@@ -12,20 +12,19 @@ import (
 func (s *APIV1Service) LoginHandler(c *echo.Context) error {
 	req := &store.LoginRequest{}
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
 	}
 
 	user, err := s.Store.Login(c.Request().Context(), req)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, err.Error())
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
 	}
 
 	// USE THE NEW AUTH PACKAGE TO GENERATE TOKEN
 	token, err := auth.GenerateToken(user)
-	/*
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, "Token error")
-		}*/
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to generate authentication token"})
+	}
 
 	cookie := &http.Cookie{
 		Name:     "auth_token",
