@@ -3,7 +3,7 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"wl/server/auth"
+	"wl/internal/types"
 	"wl/store"
 
 	echo "github.com/labstack/echo/v5"
@@ -16,12 +16,12 @@ func (s *APIV1Service) CreateUserHandler(c *echo.Context) error {
 	create := &store.CreateUser{}
 
 	if err := c.Bind(create); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
 	}
 
 	user, err := s.Store.CreateUser(ctx, create)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, user)
@@ -29,12 +29,12 @@ func (s *APIV1Service) CreateUserHandler(c *echo.Context) error {
 
 // GET /api/v1/users/me
 func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
-	userCtx, ok := auth.GetUserContext(c.Request().Context())
+	ctx, ok := types.GetUserContext(c.Request().Context())
 	if !ok {
-		return c.JSON(http.StatusUnauthorized, "Not logged in")
+		return c.JSON(http.StatusUnauthorized, "Not logged in - user_service.go")
 	}
 
-	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &userCtx.ID})
+	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &ctx.ID})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
@@ -46,7 +46,7 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 func (s *APIV1Service) ChangePasswordHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
-	userCtx, ok := auth.GetUserContext(ctx)
+	userCtx, ok := types.GetUserContext(ctx)
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
@@ -108,7 +108,7 @@ func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 	var id int32
 	fmt.Sscanf(idParam, "%d", &id)
 
-	err := s.Store.DeleteUser(ctx, &store.DeleteUser{ID: id})
+	err := s.Store.DeleteUser(ctx, &store.DeleteUser{ID: types.UserID(id)})
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}

@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"wl/internal/types"
 )
 
 type WLEntry struct {
-	ID        int32 `json:"id"`
-	CreatorID int32 `json:"creatorId"`
-	CreatedTs int64 `json:"createdTs"`
-	UpdatedTs int64 `json:"updatedTs"`
+	ID        int32        `json:"id"`
+	CreatorID types.UserID `json:"creatorId"`
+	CreatedTs int64        `json:"createdTs"`
+	UpdatedTs int64        `json:"updatedTs"`
 
 	// 2. Patient Info (Matches your requirement #1)
 	PatientName string `json:"patientName"`
@@ -56,7 +57,7 @@ type CreateWLEntry struct {
 	State   string `json:"state"` // Usually defaults to "READY_TO_BOOK"
 
 	// Accountability
-	CreatorID int32 `json:"creatorId"`
+	CreatorID types.UserID `json:"creatorId"`
 }
 
 // FindWLEntry is the "Search Filter" for your waitlist.
@@ -109,17 +110,14 @@ func (s *Store) CreateWLEntry(ctx context.Context, create *CreateWLEntry) (*WLEn
 		return nil, errors.New("patient name is required")
 	}
 
-	userID, ok := ctx.Value("user-id").(int32)
-	// -----DEBUG-----
-	fmt.Printf("Value: %+v, Type: %T\n", ctx.Value("user-id"), ctx.Value("user-id"))
+	userCtx, ok := types.GetUserContext(ctx)
 
 	if !ok {
-		// If no ID, it might be an anonymous request or a bug
-		return nil, errors.New("unauthorized: creator id missing!!!!!")
+		return nil, errors.New("unauthorized: creator context missing")
 	}
 
 	// 2. Set the ID onto the form
-	create.CreatorID = userID
+	create.CreatorID = userCtx.ID
 
 	// Pass it to the worker (driver)
 	return s.driver.CreateWLEntry(ctx, create)
@@ -158,12 +156,15 @@ func (s *Store) UpdateWLEntry(ctx context.Context, update *UpdateWLEntry) error 
 	// 2. ONLY create a log if the state is actually changing
 	if update.State != nil && *update.State != current.State {
 		// Grab UserID from the context "mailbox" (set by the Bouncer)
-		userID, _ := ctx.Value("user-id").(int32)
+		userCtx, ok := types.GetUserContext(ctx)
+		if !ok {
+			return errors.New("unauthorized")
+		}
 
 		// 3. Tell the Worker to write the history
 		_, err := s.driver.CreateWLLog(ctx, &WLLog{
 			EntryID:  update.ID,
-			UserID:   userID,
+			UserID:   int32(userCtx.ID),
 			OldState: current.State,
 			NewState: *update.State,
 			Note:     "Status updated via dashboard",
@@ -186,12 +187,17 @@ func (s *Store) DeleteWLEntry(ctx context.Context, delete *DeleteWLEntry) error 
 	}
 
 	// Optional: Check if user has permission (Admin role)
-	role, _ := ctx.Value("user-role").(string)
+	userCtx, ok := types.GetUserContext(ctx)
 	// -----DEBUG-----
 	fmt.Printf("Value: %+v, Type: %T\n", ctx.Value("user-role"), ctx.Value("user-role"))
+	fmt.Printf("Looking for key: %T(%v)\n", types.UserKey, types.UserKey)
+	fmt.Printf("Actually in context: %+v\n", ctx)
 
-	if role != RoleWLSystemAdmin {
-		return errors.New("unauthorized: only admins can delete entries")
+	if !ok || userCtx.Role != types.RoleWLSystemAdmin {
+		if !ok {
+			return errors.New("unauthorized: only admins can delete entries, not ok!")
+		}
+		return errors.New("unauthorized: only admins can delete entries, but ok!")
 	}
 
 	// Pass the whole struct to the worker (driver)
