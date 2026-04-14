@@ -6,57 +6,61 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Call your Go Auth endpoint
     const res = await fetch('/api/v1/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-    username: username, // 'username' key in JSON
-    password: password  // 'password' key in JSON
-  }),
+      body: JSON.stringify({ username, password }),
     });
 
     if (res.ok) {
       onLoginSuccess();
     } else {
-      alert("Login Failed! Check your Go logs.");
+      alert("Login Failed!");
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold mx-auto mb-4 text-xl">M</div>
-          <h2 className="text-2xl font-bold text-slate-900">Medical Portal</h2>
-          <p className="text-slate-500 text-sm mt-1">Please sign in to access the waitlist</p>
+    <div className="py-4 sm:py-8 w-80 max-w-full min-h-svh mx-auto flex flex-col justify-start items-center">
+      <div className="w-full py-4 grow flex flex-col justify-center items-center">
+        
+        {/* Header Section */}
+        <div className="w-full flex flex-row justify-center items-center mb-6">
+          <p className="ml-2 text-5xl text-foreground opacity-80 font-tight">Waitlist System</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Username</label>
+        {/* Form Section */}
+        <form onSubmit={handleSubmit} className="w-full space-y-4">
+          <div className="w-full">
             <input 
               type="text" 
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+              placeholder="Username"
+              className="w-full bg-background border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Password</label>
+          <div className="w-full">
             <input 
               type="password" 
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+              placeholder="Password"
+              className="w-full bg-background border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20">
+          
+          <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:opacity-90 transition-all shadow-sm">
             Sign In
           </button>
         </form>
+
+        {/* Optional Sign Up Link */}
+        <p className="w-full mt-4 text-sm text-left">
+          <span className="text-muted-foreground">Don't have an account?</span>
+          <span className="cursor-pointer ml-2 text-blue-600 hover:underline">Contact the System Admin</span>
+        </p>
       </div>
+      
     </div>
   );
 }

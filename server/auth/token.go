@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"wl/internal/types"
 	"wl/store"
 
 	"github.com/joho/godotenv"
@@ -27,8 +28,8 @@ func getSecret() []byte {
 }
 
 type Claims struct {
-	ID   int32  `json:"id"`
-	Role string `json:"role"`
+	ID   types.UserID   `json:"id"`
+	Role types.UserRole `json:"role"`
 	jwt.RegisteredClaims
 }
 

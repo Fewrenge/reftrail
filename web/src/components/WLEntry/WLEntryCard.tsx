@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import {Trash2Icon} from "lucide-react";
 
 
 interface Props {
@@ -87,7 +88,8 @@ export default function WLEntryCard({ entry, onRefresh }: Props) {
                     onClick={() => { handleDelete(); setShowMenu(false); }}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold transition-colors flex items-center gap-2"
                   >
-                    🗑️ Delete Entry
+                    <Trash2Icon size={15} strokeWidth={2}/>
+                  <span>Delete Entry</span>
                   </button>
                 </div>
               </>
