@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func (d *Driver) CreateWLLog(ctx context.Context, create *store.WLLog) (*store.WLLog, error) {
+func (d *Driver) CreateReferralLog(ctx context.Context, create *store.ReferralLog) (*store.ReferralLog, error) {
 	ts := time.Now().Unix()
 	stmt := `INSERT INTO wl_log (entry_id, user_id, old_state, new_state, note, created_ts) 
 			 VALUES (?, ?, ?, ?, ?, ?)`
@@ -24,7 +24,7 @@ func (d *Driver) CreateWLLog(ctx context.Context, create *store.WLLog) (*store.W
 	return create, nil
 }
 
-func (d *Driver) ListWLLogs(ctx context.Context, entryID int32) ([]*store.WLLog, error) {
+func (d *Driver) ListReferralLogs(ctx context.Context, entryID int32) ([]*store.ReferralLog, error) {
 	query := `SELECT id, entry_id, user_id, old_state, new_state, note, created_ts 
 			  FROM wl_log WHERE entry_id = ? ORDER BY created_ts DESC`
 
@@ -34,9 +34,9 @@ func (d *Driver) ListWLLogs(ctx context.Context, entryID int32) ([]*store.WLLog,
 	}
 	defer rows.Close()
 
-	var logs []*store.WLLog
+	var logs []*store.ReferralLog
 	for rows.Next() {
-		var l store.WLLog
+		var l store.ReferralLog
 		if err := rows.Scan(&l.ID, &l.EntryID, &l.UserID, &l.OldState, &l.NewState, &l.Note, &l.CreatedTs); err != nil {
 			return nil, err
 		}

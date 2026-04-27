@@ -14,14 +14,14 @@ type Driver interface {
 
 	// 2. Waitlist Entry Methods
 	// Notice we use the "Form" structs we just created!
-	CreateWLEntry(ctx context.Context, create *CreateWLEntry) (*WLEntry, error)
-	ListWLEntries(ctx context.Context, find *FindWLEntry) ([]*WLEntry, error)
-	UpdateWLEntry(ctx context.Context, update *UpdateWLEntry) error
-	DeleteWLEntry(ctx context.Context, delete *DeleteWLEntry) error
+	CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error)
+	ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error)
+	UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error
+	DeleteReferralEntry(ctx context.Context, delete *DeleteReferralEntry) error
 
 	// 3. Accountability (Optional but recommended for your logs)
-	CreateWLLog(ctx context.Context, create *WLLog) (*WLLog, error)
-	ListWLLogs(ctx context.Context, entryID int32) ([]*WLLog, error)
+	CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error)
+	ListReferralLogs(ctx context.Context, entryID int32) ([]*ReferralLog, error)
 
 	// 4. User/Account Methods (For your Login/Privileges)
 	CreateUser(ctx context.Context, create *CreateUser) (*User, error)

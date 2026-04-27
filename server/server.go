@@ -47,16 +47,16 @@ func (s *Server) registerWaitlistRoutes() {
 	protected.GET("/waitlist", v1Service.GetWaitlistHandler)
 
 	// Get ONE specific waitlist entry (The :id sniper)
-	protected.GET("/waitlist/:id", v1Service.GetWLEntryHandler)
+	protected.GET("/waitlist/:id", v1Service.GetReferralEntryHandler)
 
 	// Create a new waitlist entry
-	protected.POST("/waitlist", v1Service.CreateWLEntryHandler)
+	protected.POST("/waitlist", v1Service.CreateReferralEntryHandler)
 
 	// Update a waitlist entry (The state switcher)
-	protected.PATCH("/waitlist/:id", v1Service.UpdateWLEntryHandler)
+	protected.PATCH("/waitlist/:id", v1Service.UpdateReferralEntryHandler)
 
 	// Get the history logs
-	protected.GET("/waitlist/:id/logs", v1Service.ListWLLogsHandler)
+	protected.GET("/waitlist/:id/logs", v1Service.ListReferralLogsHandler)
 
 	// Get current user
 	protected.GET("/users/me", v1Service.GetCurrentUserHandler)
@@ -68,9 +68,9 @@ func (s *Server) registerWaitlistRoutes() {
 	protected.PATCH("/users/password", v1Service.ChangePasswordHandler)
 
 	admin := protected.Group("")
-	admin.Use(auth.AdminOnlyMiddleware)                           // Add the extra gatekeeper
-	admin.POST("/users", v1Service.CreateUserHandler)             // Create a user
-	admin.GET("/users", v1Service.ListUsersHandler)               // List Users
-	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)       // Delete a user
-	admin.DELETE("/waitlist/:id", v1Service.DeleteWLEntryHandler) // Delete a waitlist entry
+	admin.Use(auth.AdminOnlyMiddleware)                                 // Add the extra gatekeeper
+	admin.POST("/users", v1Service.CreateUserHandler)                   // Create a user
+	admin.GET("/users", v1Service.ListUsersHandler)                     // List Users
+	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)             // Delete a user
+	admin.DELETE("/waitlist/:id", v1Service.DeleteReferralEntryHandler) // Delete a waitlist entry
 }

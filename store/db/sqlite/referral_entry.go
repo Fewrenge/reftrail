@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
-func (d *Driver) CreateWLEntry(ctx context.Context, create *store.CreateWLEntry) (*store.WLEntry, error) {
+func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (*store.ReferralEntry, error) {
 	// 1. Get the current time for our timestamps
 	ts := time.Now().Unix()
 
 	// 2. Write the SQL command
 	// We use "?" as placeholders to prevent "SQL Injection" (Hacking)
-	stmt := `INSERT INTO wl_entry (
+	stmt := `INSERT INTO referral_entry (
 		creator_id, created_ts, updated_ts, 
 		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
 		referring_physician, complaint, triage_note, urgency, state
@@ -36,7 +36,7 @@ func (d *Driver) CreateWLEntry(ctx context.Context, create *store.CreateWLEntry)
 	}
 
 	// 5. Return the "Finished" object back to the Manager
-	return &store.WLEntry{
+	return &store.ReferralEntry{
 		ID:                 int32(id),
 		CreatorID:          create.CreatorID,
 		CreatedTs:          ts,
@@ -53,7 +53,7 @@ func (d *Driver) CreateWLEntry(ctx context.Context, create *store.CreateWLEntry)
 	}, nil
 }
 
-func (d *Driver) ListWLEntries(ctx context.Context, find *store.FindWLEntry) ([]*store.WLEntry, error) {
+func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferralEntry) ([]*store.ReferralEntry, error) {
 	// 1. The Base Query
 	// "WHERE 1 = 1" is a classic trick. It does nothing, but lets us
 	// safely add "AND ..." to the end of the string later.
@@ -65,7 +65,7 @@ func (d *Driver) ListWLEntries(ctx context.Context, find *store.FindWLEntry) ([]
 		IFNULL(appt_time,''),
 		IFNULL(practitioner, ''), 
 		IFNULL(juvonno_appt_id,'')
-	FROM wl_entry WHERE 1 = 1`
+	FROM referral_entry WHERE 1 = 1`
 
 	// 2. The "Arguments" list
 	// This stores the values we will plug into the "?" placeholders
@@ -102,11 +102,11 @@ func (d *Driver) ListWLEntries(ctx context.Context, find *store.FindWLEntry) ([]
 	defer rows.Close()
 
 	// 6. The "Bucket" for our results
-	var list []*store.WLEntry
+	var list []*store.ReferralEntry
 
 	// 7. Loop through the database rows
 	for rows.Next() {
-		var entry store.WLEntry
+		var entry store.ReferralEntry
 		// Scan matches the columns in our SELECT statement to our Go struct
 		err := rows.Scan(
 			&entry.ID, &entry.CreatorID, &entry.CreatedTs, &entry.UpdatedTs,
@@ -123,7 +123,7 @@ func (d *Driver) ListWLEntries(ctx context.Context, find *store.FindWLEntry) ([]
 	return list, nil
 }
 
-func (d *Driver) UpdateWLEntry(ctx context.Context, update *store.UpdateWLEntry) error {
+func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateReferralEntry) error {
 	// 1. Build the "SET" part of our SQL dynamically
 	set, args := []string{}, []any{}
 
@@ -143,14 +143,14 @@ func (d *Driver) UpdateWLEntry(ctx context.Context, update *store.UpdateWLEntry)
 	args = append(args, update.ID)
 
 	// 3. Execute: UPDATE wl_entry SET state = ?, updated_ts = ? WHERE id = ?
-	query := `UPDATE wl_entry SET ` + strings.Join(set, ", ") + ` WHERE id = ?`
+	query := `UPDATE referral_entry SET ` + strings.Join(set, ", ") + ` WHERE id = ?`
 	_, err := d.db.ExecContext(ctx, query, args...)
 	return err
 }
 
-func (d *Driver) DeleteWLEntry(ctx context.Context, delete *store.DeleteWLEntry) error {
+func (d *Driver) DeleteReferralEntry(ctx context.Context, delete *store.DeleteReferralEntry) error {
 	// We pull the ID out of the struct's ID field
-	stmt := `DELETE FROM wl_entry WHERE id = ?`
+	stmt := `DELETE FROM referral_entry WHERE id = ?`
 	_, err := d.db.ExecContext(ctx, stmt, delete.ID)
 	return err
 }

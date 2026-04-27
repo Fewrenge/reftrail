@@ -7,7 +7,7 @@ import (
 	"reftrail/internal/types"
 )
 
-type WLEntry struct {
+type ReferralEntry struct {
 	ID        int32        `json:"id"`
 	CreatorID types.UserID `json:"creatorId"`
 	CreatedTs int64        `json:"createdTs"`
@@ -39,7 +39,7 @@ type WLEntry struct {
 	JuvonnoApptID string `json:"juvonnoApptId"` // e.g., #18752
 }
 
-type CreateWLEntry struct {
+type CreateReferralEntry struct {
 	// Patient & Juvonno Info
 	PatientName      string `json:"patientName"`
 	PatientDOB       string `json:"patientDob"`
@@ -60,8 +60,8 @@ type CreateWLEntry struct {
 	CreatorID types.UserID `json:"creatorId"`
 }
 
-// FindWLEntry is the "Search Filter" for your waitlist.
-type FindWLEntry struct {
+// FindReferralEntry is the "Search Filter" for your waitlist.
+type FindReferralEntry struct {
 	// 1. Basic Filters
 	ID        *int32 `json:"id"`
 	CreatorID *int32 `json:"creatorId"`
@@ -81,8 +81,8 @@ type FindWLEntry struct {
 	Offset *int `json:"offset"`
 }
 
-// UpdateWLEntry defines which fields are allowed to be changed.
-type UpdateWLEntry struct {
+// UpdateReferralEntry defines which fields are allowed to be changed.
+type UpdateReferralEntry struct {
 	ID int32 `json:"id"`
 
 	// Fields that change during the workflow
@@ -99,12 +99,12 @@ type UpdateWLEntry struct {
 	Force bool `json:"force"`
 }
 
-type DeleteWLEntry struct {
+type DeleteReferralEntry struct {
 	ID int32 `json:"id"`
 }
 
 // 1. Create: The "Guard"
-func (s *Store) CreateWLEntry(ctx context.Context, create *CreateWLEntry) (*WLEntry, error) {
+func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error) {
 	// Logic Check: Don't let someone create a referral without a patient name
 	if create.PatientName == "" {
 		return nil, errors.New("patient name is required")
@@ -120,19 +120,19 @@ func (s *Store) CreateWLEntry(ctx context.Context, create *CreateWLEntry) (*WLEn
 	create.CreatorID = userCtx.ID
 
 	// Pass it to the worker (driver)
-	return s.driver.CreateWLEntry(ctx, create)
+	return s.driver.CreateReferralEntry(ctx, create)
 }
 
 // 2. List: The "Broadcaster"
-func (s *Store) ListWLEntries(ctx context.Context, find *FindWLEntry) ([]*WLEntry, error) {
+func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error) {
 	// This just asks the driver for a list based on your filters (Urgent, etc.)
-	return s.driver.ListWLEntries(ctx, find)
+	return s.driver.ListReferralEntries(ctx, find)
 }
 
 // 3. Get: The "Sniper"
-func (s *Store) GetWLEntry(ctx context.Context, find *FindWLEntry) (*WLEntry, error) {
+func (s *Store) GetReferralEntry(ctx context.Context, find *FindReferralEntry) (*ReferralEntry, error) {
 	// Instead of writing new SQL, it just reuses "List"
-	list, err := s.ListWLEntries(ctx, find)
+	list, err := s.ListReferralEntries(ctx, find)
 	if err != nil {
 		return nil, err
 	}
@@ -146,9 +146,9 @@ func (s *Store) GetWLEntry(ctx context.Context, find *FindWLEntry) (*WLEntry, er
 }
 
 // 4. Update: The "Editor"
-func (s *Store) UpdateWLEntry(ctx context.Context, update *UpdateWLEntry) error {
+func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error {
 	// 1. Get the CURRENT state before it changes
-	current, err := s.GetWLEntry(ctx, &FindWLEntry{ID: &update.ID})
+	current, err := s.GetReferralEntry(ctx, &FindReferralEntry{ID: &update.ID})
 	if err != nil || current == nil {
 		return errors.New("entry not found")
 	}
@@ -162,7 +162,7 @@ func (s *Store) UpdateWLEntry(ctx context.Context, update *UpdateWLEntry) error 
 		}
 
 		// 3. Tell the Worker to write the history
-		_, err := s.driver.CreateWLLog(ctx, &WLLog{
+		_, err := s.driver.CreateReferralLog(ctx, &ReferralLog{
 			EntryID:  update.ID,
 			UserID:   int32(userCtx.ID),
 			OldState: current.State,
@@ -175,11 +175,11 @@ func (s *Store) UpdateWLEntry(ctx context.Context, update *UpdateWLEntry) error 
 	}
 
 	// 4. Finally, update the actual patient record
-	return s.driver.UpdateWLEntry(ctx, update)
+	return s.driver.UpdateReferralEntry(ctx, update)
 }
 
 // 5. Delete: The "Janitor"
-func (s *Store) DeleteWLEntry(ctx context.Context, delete *DeleteWLEntry) error {
+func (s *Store) DeleteReferralEntry(ctx context.Context, delete *DeleteReferralEntry) error {
 
 	// Logic Check: Don't try to delete nothing
 	if delete.ID == 0 {
@@ -203,5 +203,5 @@ func (s *Store) DeleteWLEntry(ctx context.Context, delete *DeleteWLEntry) error 
 	// Pass the whole struct to the worker (driver)
 	// Before deleting the entry, clean up related logs/comments
 	// So call driver.DeleteWaitlistLogs here later
-	return s.driver.DeleteWLEntry(ctx, delete)
+	return s.driver.DeleteReferralEntry(ctx, delete)
 }
