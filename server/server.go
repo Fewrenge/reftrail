@@ -22,7 +22,7 @@ func NewServer(s *store.Store) *Server {
 	}
 
 	// Now this will work because we define it below
-	srv.registerWaitlistRoutes()
+	srv.registerReferralRoutes()
 
 	return srv
 }
@@ -32,7 +32,7 @@ func (s *Server) Start(address string) error {
 	return s.Engine.Start(address)
 }
 
-func (s *Server) registerWaitlistRoutes() {
+func (s *Server) registerReferralRoutes() {
 	v1Service := &v1.APIV1Service{Store: s.Store}
 
 	// PUBLIC
@@ -44,19 +44,19 @@ func (s *Server) registerWaitlistRoutes() {
 
 	// --- THE CLEAN LIST ---
 	// Get the whole list
-	protected.GET("/waitlist", v1Service.GetWaitlistHandler)
+	protected.GET("/referrals", v1Service.GetReferralsHandler)
 
-	// Get ONE specific waitlist entry (The :id sniper)
-	protected.GET("/waitlist/:id", v1Service.GetReferralEntryHandler)
+	// Get ONE specific referrals entry (The :id sniper)
+	protected.GET("/referrals/:id", v1Service.GetReferralEntryHandler)
 
-	// Create a new waitlist entry
-	protected.POST("/waitlist", v1Service.CreateReferralEntryHandler)
+	// Create a new referrals entry
+	protected.POST("/referrals", v1Service.CreateReferralEntryHandler)
 
-	// Update a waitlist entry (The state switcher)
-	protected.PATCH("/waitlist/:id", v1Service.UpdateReferralEntryHandler)
+	// Update a referrals entry (The state switcher)
+	protected.PATCH("/referrals/:id", v1Service.UpdateReferralEntryHandler)
 
 	// Get the history logs
-	protected.GET("/waitlist/:id/logs", v1Service.ListReferralLogsHandler)
+	protected.GET("/referrals/:id/logs", v1Service.ListReferralLogsHandler)
 
 	// Get current user
 	protected.GET("/users/me", v1Service.GetCurrentUserHandler)
@@ -68,9 +68,9 @@ func (s *Server) registerWaitlistRoutes() {
 	protected.PATCH("/users/password", v1Service.ChangePasswordHandler)
 
 	admin := protected.Group("")
-	admin.Use(auth.AdminOnlyMiddleware)                                 // Add the extra gatekeeper
-	admin.POST("/users", v1Service.CreateUserHandler)                   // Create a user
-	admin.GET("/users", v1Service.ListUsersHandler)                     // List Users
-	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)             // Delete a user
-	admin.DELETE("/waitlist/:id", v1Service.DeleteReferralEntryHandler) // Delete a waitlist entry
+	admin.Use(auth.AdminOnlyMiddleware)                                  // Add the extra gatekeeper
+	admin.POST("/users", v1Service.CreateUserHandler)                    // Create a user
+	admin.GET("/users", v1Service.ListUsersHandler)                      // List Users
+	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)              // Delete a user
+	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler) // Delete a referral entry
 }

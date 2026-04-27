@@ -1,2 +1,2 @@
-# WL
-An internal system for waitlisting, data analysis, and (hopefully) other functionalities.
+# Reftrail
+An internal system for referral handling, data analysis, and (hopefully) other functionalities.

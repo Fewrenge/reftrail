@@ -12,7 +12,7 @@ type Driver interface {
 	GetDB() *sql.DB
 	Close() error
 
-	// 2. Waitlist Entry Methods
+	// 2. Referral Entry Methods
 	// Notice we use the "Form" structs we just created!
 	CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error)
 	ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error)

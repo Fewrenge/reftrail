@@ -60,7 +60,7 @@ type CreateReferralEntry struct {
 	CreatorID types.UserID `json:"creatorId"`
 }
 
-// FindReferralEntry is the "Search Filter" for your waitlist.
+// FindReferralEntry is the "Search Filter" for your referrals.
 type FindReferralEntry struct {
 	// 1. Basic Filters
 	ID        *int32 `json:"id"`
@@ -202,6 +202,6 @@ func (s *Store) DeleteReferralEntry(ctx context.Context, delete *DeleteReferralE
 
 	// Pass the whole struct to the worker (driver)
 	// Before deleting the entry, clean up related logs/comments
-	// So call driver.DeleteWaitlistLogs here later
+	// So call driver.DeleteReferralLogs here later
 	return s.driver.DeleteReferralEntry(ctx, delete)
 }

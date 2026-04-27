@@ -9,7 +9,7 @@ import (
 	echo "github.com/labstack/echo/v5"
 )
 
-func (s *APIV1Service) GetWaitlistHandler(c *echo.Context) error {
+func (s *APIV1Service) GetReferralsHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
 	list, err := s.Store.ListReferralEntries(ctx, &store.FindReferralEntry{})
@@ -37,7 +37,7 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 }
 
 func (s *APIV1Service) UpdateReferralEntryHandler(c *echo.Context) error {
-	// 1. Get the ID from the URL (e.g., /api/v1/waitlist/1)
+	// 1. Get the ID from the URL (e.g., /api/v1/referrals/1)
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	update := &store.UpdateReferralEntry{ID: int32(id)}
@@ -53,7 +53,7 @@ func (s *APIV1Service) UpdateReferralEntryHandler(c *echo.Context) error {
 }
 
 func (s *APIV1Service) DeleteReferralEntryHandler(c *echo.Context) error {
-	// 1. Get the ID from the URL (/api/v1/waitlist/15 -> 15)
+	// 1. Get the ID from the URL (/api/v1/referrals/15 -> 15)
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {

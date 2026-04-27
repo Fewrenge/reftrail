@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS user (
     role TEXT NOT NULL DEFAULT 'BOOKING_TEAM'
 );
 
--- 2. Waitlist Table (Requirement #1 through #10)
+-- 2. Referral Table (Requirement #1 through #10)
 CREATE TABLE IF NOT EXISTS referral_entry (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_ts BIGINT NOT NULL,

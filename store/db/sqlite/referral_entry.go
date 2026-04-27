@@ -142,7 +142,7 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 	// 2. Add the ID for the WHERE clause
 	args = append(args, update.ID)
 
-	// 3. Execute: UPDATE wl_entry SET state = ?, updated_ts = ? WHERE id = ?
+	// 3. Execute: UPDATE referral_entry SET state = ?, updated_ts = ? WHERE id = ?
 	query := `UPDATE referral_entry SET ` + strings.Join(set, ", ") + ` WHERE id = ?`
 	_, err := d.db.ExecContext(ctx, query, args...)
 	return err
@@ -156,7 +156,7 @@ func (d *Driver) DeleteReferralEntry(ctx context.Context, delete *store.DeleteRe
 }
 
 /*
-func (d *Driver) DeleteWLEntries(ctx context.Context, ids []int32) error {
+func (d *Driver) DeleteReferralEntries(ctx context.Context, ids []int32) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -169,7 +169,7 @@ func (d *Driver) DeleteWLEntries(ctx context.Context, ids []int32) error {
 		args[i] = id
 	}
 
-	query := fmt.Sprintf("DELETE FROM wl_entry WHERE id IN (%s)", strings.Join(placeholders, ","))
+	query := fmt.Sprintf("DELETE FROM referral_entry WHERE id IN (%s)", strings.Join(placeholders, ","))
 	_, err := d.db.ExecContext(ctx, query, args...)
 	return err
 }

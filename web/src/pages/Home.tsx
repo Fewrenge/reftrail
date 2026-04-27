@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
 import { SearchIcon, Plus } from "lucide-react";
-import WLEntryCard from '../components/WLEntry/WLEntryCard';
-import AddWLEntryDialog from '../components/WLEntry/AddWLEntryDialog';
-import type { WLEntry } from '../components/WLEntry/WLEntryCard';
+import ReferralEntryCard from '../components/ReferralEntry/ReferralEntryCard';
+import AddReferralEntryDialog from '../components/ReferralEntry/AddReferralEntryDialog';
+import type { ReferralEntry } from '../components/ReferralEntry/ReferralEntryCard';
 import { Button } from "@/components/ui";
 
 export default function Home() {
-  const [patients, setPatients] = useState<WLEntry[]>([]);
+  const [patients, setPatients] = useState<ReferralEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const refreshData = () => {
     setLoading(true);
-    fetch('/api/v1/waitlist', { credentials: 'same-origin' })
+    fetch('/api/v1/referrals', { credentials: 'same-origin' })
       .then(res => res.json())
       .then(data => setPatients(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
@@ -31,10 +31,10 @@ export default function Home() {
   return (
     <>
       <header className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Active Waitlist</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Active Referrals</h2>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus size={18} className="mr-2" />
-          Add Waitlist Entry
+          Add Referral
         </Button>
       </header>
 
@@ -58,7 +58,7 @@ export default function Home() {
           <p className="text-center text-slate-400 animate-pulse py-10">Syncing database...</p>
         ) : filteredPatients.length > 0 ? (
           filteredPatients.map((p) => (
-            <WLEntryCard key={p.id} entry={p} onRefresh={refreshData} />
+            <ReferralEntryCard key={p.id} entry={p} onRefresh={refreshData} />
           ))
         ) : (
           <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 italic">
@@ -67,7 +67,7 @@ export default function Home() {
         )}
       </div>
 
-      <AddWLEntryDialog
+      <AddReferralEntryDialog
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={refreshData}

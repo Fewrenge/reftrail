@@ -19,4 +19,4 @@ func (s *Store) ListReferralLogs(ctx context.Context, entryID int32) ([]*Referra
 }
 
 // We don't even need a CreateReferralLog function here!
-// The Manager calls s.driver.CreateReferralLog directly inside the UpdateWLEntry function.
+// The Manager calls s.driver.CreateReferralLog directly inside the UpdateReferralEntry function.
