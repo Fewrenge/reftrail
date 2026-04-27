@@ -52,8 +52,8 @@ func (s *Server) registerReferralRoutes() {
 	// Create a new referrals entry
 	protected.POST("/referrals", v1Service.CreateReferralEntryHandler)
 
-	// Update a referrals entry (The state switcher)
-	protected.PATCH("/referrals/:id", v1Service.UpdateReferralEntryHandler)
+	// Update a referrals entry (The status switcher)
+	protected.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler)
 
 	// Get the history logs
 	protected.GET("/referrals/:id/logs", v1Service.ListReferralLogsHandler)

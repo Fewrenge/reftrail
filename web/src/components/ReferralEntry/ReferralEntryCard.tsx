@@ -13,7 +13,7 @@ export interface ReferralEntry {
   patientName: string;
   patientDob: string;
   urgency: 'ASAP' | 'Urgent' | 'Elective';
-  state: string;
+  status: string;
   referringPhysician: string;
   complaint: string;
   triageNote: string;
@@ -67,7 +67,7 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
               {entry.urgency}
             </span>
             <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase border bg-blue-50 text-blue-700 border-blue-100">
-              {entry.state}
+              {entry.status}
             </span>
           </div>
 

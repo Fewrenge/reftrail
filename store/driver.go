@@ -18,6 +18,8 @@ type Driver interface {
 	ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error)
 	UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error
 	DeleteReferralEntry(ctx context.Context, delete *DeleteReferralEntry) error
+	GetReferralEntryStatusByID(ctx context.Context, id int32) (domain.ReferralStatus, error)
+	UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error
 
 	// 3. Accountability (Optional but recommended for your logs)
 	CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error)

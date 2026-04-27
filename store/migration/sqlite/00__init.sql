@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     complaint TEXT,
     triage_note TEXT,
     urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')),
-    state TEXT NOT NULL DEFAULT 'READY_TO_BOOK',
+    status TEXT NOT NULL DEFAULT 'READY_TO_BOOK',
     
     -- Appointment Info (Requirement #11)
     appt_date TEXT,
@@ -31,13 +31,13 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     FOREIGN KEY (creator_id) REFERENCES user(id)
 );
 
--- 3. Audit Log (Requirement #9 - Tracking who changed the state)
+-- 3. Audit Log (Requirement #9 - Tracking who changed the status)
 CREATE TABLE IF NOT EXISTS referral_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entry_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
-    old_state TEXT,
-    new_state TEXT,
+    old_status TEXT,
+    new_status TEXT,
     note TEXT,
     created_ts BIGINT NOT NULL,
     FOREIGN KEY (entry_id) REFERENCES referral_entry(id),

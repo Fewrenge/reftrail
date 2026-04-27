@@ -30,9 +30,9 @@ type ReferralEntry struct {
 
 	// 5. Workflow & Urgency (Matches #8, #9, #11)
 	Urgency string `json:"urgency"` // Elective, Urgent, ASAP
-	State   string `json:"state"`   // Ready to book, 1st call, etc.
+	Status  string `json:"status"`  // Ready to book, 1st call, etc.
 
-	// Appointment Info (If state is "Booked")
+	// Appointment Info (If status is "Booked")
 	ApptDate      string `json:"apptDate"`
 	ApptTime      string `json:"apptTime"`
 	Practitioner  string `json:"practitioner"`
@@ -54,7 +54,7 @@ type CreateReferralEntry struct {
 
 	// Status
 	Urgency string `json:"urgency"`
-	State   string `json:"state"` // Usually defaults to "READY_TO_BOOK"
+	Status  string `json:"status"` // Usually defaults to "READY_TO_BOOK"
 
 	// Accountability
 	CreatorID domain.UserID `json:"creatorId"`
@@ -70,7 +70,7 @@ type FindReferralEntry struct {
 	// We use pointers (*) so we can tell the difference between
 	// "Filter by this" and "Don't filter at all" (nil).
 	Urgency *string `json:"urgency"`
-	State   *string `json:"state"`
+	Status  *string `json:"status"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
 	PatientName        *string `json:"patientName"`
@@ -86,7 +86,7 @@ type UpdateReferralEntry struct {
 	ID int32 `json:"id"`
 
 	// Fields that change during the workflow
-	State      *string `json:"state"`
+	Status     *string `json:"status"`
 	TriageNote *string `json:"triageNote"`
 	Urgency    *string `json:"urgency"`
 
@@ -147,14 +147,14 @@ func (s *Store) GetReferralEntry(ctx context.Context, find *FindReferralEntry) (
 
 // 4. Update: The "Editor"
 func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error {
-	// 1. Get the CURRENT state before it changes
+	// 1. Get the CURRENT status before it changes
 	current, err := s.GetReferralEntry(ctx, &FindReferralEntry{ID: &update.ID})
 	if err != nil || current == nil {
 		return errors.New("entry not found")
 	}
 
-	// 2. ONLY create a log if the state is actually changing
-	if update.State != nil && *update.State != current.State {
+	// 2. ONLY create a log if the status is actually changing
+	if update.Status != nil && *update.Status != current.Status {
 		// Grab UserID from the context "mailbox" (set by the Bouncer)
 		userCtx, ok := domain.GetUserContext(ctx)
 		if !ok {
@@ -163,11 +163,11 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 
 		// 3. Tell the Worker to write the history
 		_, err := s.driver.CreateReferralLog(ctx, &ReferralLog{
-			EntryID:  update.ID,
-			UserID:   int32(userCtx.ID),
-			OldState: current.State,
-			NewState: *update.State,
-			Note:     "Status updated via dashboard",
+			EntryID:   update.ID,
+			UserID:    int32(userCtx.ID),
+			OldStatus: current.Status,
+			NewStatus: *update.Status,
+			Note:      "Status updated via dashboard",
 		})
 		if err != nil {
 			return err // Stop if we can't record history!
@@ -176,6 +176,14 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 
 	// 4. Finally, update the actual patient record
 	return s.driver.UpdateReferralEntry(ctx, update)
+}
+
+func (s *Store) GetReferralEntryStatusByID(ctx context.Context, id int32) (domain.ReferralStatus, error) {
+	return s.driver.GetReferralEntryStatusByID(ctx, id)
+}
+
+func (s *Store) UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error {
+	return s.driver.UpdateReferralEntryStatus(ctx, id, status)
 }
 
 // 5. Delete: The "Janitor"
