@@ -3,9 +3,9 @@ package auth
 import (
 	"log"
 	"os"
+	"reftrail/internal/types"
+	"reftrail/store"
 	"time"
-	"wl/internal/types"
-	"wl/store"
 
 	"github.com/joho/godotenv"
 

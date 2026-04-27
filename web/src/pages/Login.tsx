@@ -25,7 +25,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
         
         {/* Header Section */}
         <div className="w-full flex flex-row justify-center items-center mb-6">
-          <p className="ml-2 text-5xl text-foreground opacity-80 font-tight">Waitlist System</p>
+          <p className="ml-2 text-5xl text-foreground opacity-80 font-tight">Referral System</p>
         </div>
 
         {/* Form Section */}

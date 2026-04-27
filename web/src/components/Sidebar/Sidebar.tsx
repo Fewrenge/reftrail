@@ -39,7 +39,7 @@ export default function Sidebar() {
           }
         >
           <ScrollTextIcon size={20} strokeWidth={2.5} />
-          <span>Waitlist</span>
+          <span>Referrals</span>
         </NavLink>
 
         <NavLink

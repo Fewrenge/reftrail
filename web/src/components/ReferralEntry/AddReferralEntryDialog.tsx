@@ -13,7 +13,7 @@ interface Props {
   onSuccess: () => void;
 }
 
-export default function AddWLEntryDialog({ isOpen, onClose, onSuccess }: Props) {
+export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: Props) {
   const [name, setName] = useState('');
   const [complaint, setComplaint] = useState('');
   const [urgency, setUrgency] = useState('Elective');
@@ -24,7 +24,7 @@ export default function AddWLEntryDialog({ isOpen, onClose, onSuccess }: Props) 
     setLoading(true);
 
     try {
-      const res = await fetch('/api/v1/waitlist', {
+      const res = await fetch('/api/v1/referrals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -104,7 +104,7 @@ export default function AddWLEntryDialog({ isOpen, onClose, onSuccess }: Props) 
               disabled={loading}
               className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all disabled:opacity-50"
             >
-              {loading ? "Saving..." : "Save to Waitlist"}
+              {loading ? "Saving..." : "Save to Referrals"}
             </button>
           </DialogFooter>
         </form>

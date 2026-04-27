@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS user (
     role TEXT NOT NULL DEFAULT 'BOOKING_TEAM'
 );
 
--- 2. Waitlist Table (Requirement #1 through #10)
-CREATE TABLE IF NOT EXISTS wl_entry (
+-- 2. Referral Table (Requirement #1 through #10)
+CREATE TABLE IF NOT EXISTS referral_entry (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_ts BIGINT NOT NULL,
     updated_ts BIGINT NOT NULL, 
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS wl_entry (
 );
 
 -- 3. Audit Log (Requirement #9 - Tracking who changed the state)
-CREATE TABLE IF NOT EXISTS wl_log (
+CREATE TABLE IF NOT EXISTS referral_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entry_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
@@ -40,6 +40,6 @@ CREATE TABLE IF NOT EXISTS wl_log (
     new_state TEXT,
     note TEXT,
     created_ts BIGINT NOT NULL,
-    FOREIGN KEY (entry_id) REFERENCES wl_entry(id),
+    FOREIGN KEY (entry_id) REFERENCES referral_entry(id),
     FOREIGN KEY (user_id) REFERENCES user(id)
 );

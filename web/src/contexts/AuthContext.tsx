@@ -1,14 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { getUserMe } from "../services/userService";
 
-export type UserRole = "WL_SYSTEM_ADMIN" | "BOOKING_TEAM";
+import type { User } from "../types/users";
 
-// 1. Define what's in the "Backpack"
-interface User {
-  id: number;
-  username: string;
-  role: UserRole; // Matches your Go logic
-}
 
 interface AuthContextType {
   user: User | null; // Removed any to make it safer
@@ -20,7 +14,7 @@ const AuthContext = createContext<AuthContextType>({ user: null, loading: true, 
 
 // 2. The Provider (The wrapper for your whole app)
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const onLogout = async () => {

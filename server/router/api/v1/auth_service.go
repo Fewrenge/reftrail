@@ -2,9 +2,9 @@ package v1
 
 import (
 	"net/http"
+	"reftrail/server/auth" // Import your new auth package
+	"reftrail/store"
 	"time"
-	"wl/server/auth" // Import your new auth package
-	"wl/store"
 
 	echo "github.com/labstack/echo/v5"
 )

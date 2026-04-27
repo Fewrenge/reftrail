@@ -3,12 +3,12 @@ import {Trash2Icon} from "lucide-react";
 
 
 interface Props {
-  entry: WLEntry;
+  entry: ReferralEntry;
   onRefresh: () => void;
 }
 
 // This is the "Blueprint" for what data one entry needs
-export interface WLEntry {
+export interface ReferralEntry {
   id: number;
   patientName: string;
   patientDob: string;
@@ -19,7 +19,7 @@ export interface WLEntry {
   triageNote: string;
 }
 
-export default function WLEntryCard({ entry, onRefresh }: Props) {
+export default function ReferralEntryCard({ entry, onRefresh }: Props) {
   const [showMenu, setShowMenu] = useState(false);
 
   const urgencyStyles = {
@@ -33,7 +33,7 @@ export default function WLEntryCard({ entry, onRefresh }: Props) {
     if (!window.confirm(`Permanently delete ${entry.patientName}?`)) return;
 
     try {
-      const res = await fetch(`/api/v1/waitlist/${entry.id}`, {
+      const res = await fetch(`/api/v1/referrals/${entry.id}`, {
         method: 'DELETE'
       });
 
