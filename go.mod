@@ -1,4 +1,4 @@
-module wl
+module reftrail
 
 go 1.26.1
 

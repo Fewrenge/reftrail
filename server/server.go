@@ -1,9 +1,9 @@
 package server
 
 import (
-	"wl/server/auth"
-	v1 "wl/server/router/api/v1" // This is your v1 package
-	"wl/store"
+	"reftrail/server/auth"
+	v1 "reftrail/server/router/api/v1" // This is your v1 package
+	"reftrail/store"
 
 	echo "github.com/labstack/echo/v5"
 )

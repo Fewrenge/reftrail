@@ -2,9 +2,9 @@ package sqlite
 
 import (
 	"context"
+	"reftrail/internal/types"
+	"reftrail/store"
 	"strings"
-	"wl/internal/types"
-	"wl/store"
 )
 
 func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*store.User, error) {

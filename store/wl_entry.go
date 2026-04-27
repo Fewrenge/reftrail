@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"wl/internal/types"
+	"reftrail/internal/types"
 )
 
 type WLEntry struct {
@@ -193,7 +193,7 @@ func (s *Store) DeleteWLEntry(ctx context.Context, delete *DeleteWLEntry) error 
 	fmt.Printf("Looking for key: %T(%v)\n", types.UserKey, types.UserKey)
 	fmt.Printf("Actually in context: %+v\n", ctx)
 
-	if !ok || userCtx.Role != types.RoleWLSystemAdmin {
+	if !ok || userCtx.Role != types.RoleReftrailAdmin {
 		if !ok {
 			return errors.New("unauthorized: only admins can delete entries, not ok!")
 		}

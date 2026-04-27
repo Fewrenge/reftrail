@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors" // Needed for errors.New
 	"log"
-	"wl/internal/types"
+	"reftrail/internal/types"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -77,7 +77,7 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 		admin := &CreateUser{
 			Username: "admin",
 			Password: string(hashed), // This will be saved to password_hash in SQLite
-			Role:     types.RoleWLSystemAdmin,
+			Role:     types.RoleReftrailAdmin,
 		}
 
 		// Fix: s.driver.CreateUser returns (*User, error),

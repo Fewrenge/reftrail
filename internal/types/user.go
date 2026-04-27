@@ -6,7 +6,7 @@ type UserID int32
 type UserRole string
 
 const (
-	RoleWLSystemAdmin = "WL_SYSTEM_ADMIN"
+	RoleReftrailAdmin = "REFTRAIL_ADMIN"
 	RoleBookingTeam   = "BOOKING_TEAM"
 )
 

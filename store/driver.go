@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
-	"wl/internal/types"
+	"reftrail/internal/types"
 )
 
 // Driver is the interface that any database must implement.

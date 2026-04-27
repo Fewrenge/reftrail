@@ -2,8 +2,8 @@ package sqlite
 
 import (
 	"context"
+	"reftrail/store"
 	"time"
-	"wl/store"
 )
 
 func (d *Driver) CreateWLLog(ctx context.Context, create *store.WLLog) (*store.WLLog, error) {

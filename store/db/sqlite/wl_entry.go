@@ -2,9 +2,9 @@ package sqlite
 
 import (
 	"context"
+	"reftrail/store" // Import your main store for the object definitions
 	"strings"
 	"time"
-	"wl/store" // Import your main store for the object definitions
 )
 
 func (d *Driver) CreateWLEntry(ctx context.Context, create *store.CreateWLEntry) (*store.WLEntry, error) {

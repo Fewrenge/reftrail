@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
-	"wl/internal/types"
+	"reftrail/internal/types"
 
 	"github.com/golang-jwt/jwt/v5"
 	echo "github.com/labstack/echo/v5"
@@ -55,7 +55,7 @@ func AdminOnlyMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		user, ok := types.GetUserContext(c.Request().Context())
 
 		// Match this to whatever string you use in SQLite
-		if !ok || user.Role != types.RoleWLSystemAdmin {
+		if !ok || user.Role != types.RoleReftrailAdmin {
 			return c.JSON(http.StatusForbidden, map[string]string{"error": "Admin access required"})
 		}
 		return next(c)

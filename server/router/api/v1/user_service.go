@@ -3,8 +3,8 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"wl/internal/types"
-	"wl/store"
+	"reftrail/internal/types"
+	"reftrail/store"
 
 	echo "github.com/labstack/echo/v5"
 	"golang.org/x/crypto/bcrypt"

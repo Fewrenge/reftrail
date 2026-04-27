@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"log"
-	"wl/server"
-	"wl/store"
-	sqlite "wl/store/db/sqlite"
+	"reftrail/server"
+	"reftrail/store"
+	sqlite "reftrail/store/db/sqlite"
 
 	_ "github.com/mattn/go-sqlite3"
 )
