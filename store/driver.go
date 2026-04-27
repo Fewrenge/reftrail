@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
-	"reftrail/internal/types"
+	"reftrail/internal/domain"
 )
 
 // Driver is the interface that any database must implement.
@@ -29,5 +29,5 @@ type Driver interface {
 	ListUsers(ctx context.Context, find *FindUser) ([]*User, error)
 	UpdateUser(ctx context.Context, update *UpdateUser) (*User, error)
 	DeleteUser(ctx context.Context, delete *DeleteUser) error
-	ChangeUserPassword(ctx context.Context, userID types.UserID, newHash string) error
+	ChangeUserPassword(ctx context.Context, userID domain.UserID, newHash string) error
 }

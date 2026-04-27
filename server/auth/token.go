@@ -3,7 +3,7 @@ package auth
 import (
 	"log"
 	"os"
-	"reftrail/internal/types"
+	"reftrail/internal/domain"
 	"reftrail/store"
 	"time"
 
@@ -28,8 +28,8 @@ func getSecret() []byte {
 }
 
 type Claims struct {
-	ID   types.UserID   `json:"id"`
-	Role types.UserRole `json:"role"`
+	ID   domain.UserID   `json:"id"`
+	Role domain.UserRole `json:"role"`
 	jwt.RegisteredClaims
 }
 

@@ -3,7 +3,7 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"reftrail/internal/types"
+	"reftrail/internal/domain"
 	"reftrail/store"
 
 	echo "github.com/labstack/echo/v5"
@@ -29,7 +29,7 @@ func (s *APIV1Service) CreateUserHandler(c *echo.Context) error {
 
 // GET /api/v1/users/me
 func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
-	ctx, ok := types.GetUserContext(c.Request().Context())
+	ctx, ok := domain.GetUserContext(c.Request().Context())
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, "Not logged in - user_service.go")
 	}
@@ -46,7 +46,7 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 func (s *APIV1Service) ChangePasswordHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
-	userCtx, ok := types.GetUserContext(ctx)
+	userCtx, ok := domain.GetUserContext(ctx)
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
@@ -108,7 +108,7 @@ func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 	var id int32
 	fmt.Sscanf(idParam, "%d", &id)
 
-	err := s.Store.DeleteUser(ctx, &store.DeleteUser{ID: types.UserID(id)})
+	err := s.Store.DeleteUser(ctx, &store.DeleteUser{ID: domain.UserID(id)})
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}

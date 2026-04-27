@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reftrail/internal/types"
+	"reftrail/internal/domain"
 )
 
 type ReferralEntry struct {
-	ID        int32        `json:"id"`
-	CreatorID types.UserID `json:"creatorId"`
-	CreatedTs int64        `json:"createdTs"`
-	UpdatedTs int64        `json:"updatedTs"`
+	ID        int32         `json:"id"`
+	CreatorID domain.UserID `json:"creatorId"`
+	CreatedTs int64         `json:"createdTs"`
+	UpdatedTs int64         `json:"updatedTs"`
 
 	// 2. Patient Info (Matches your requirement #1)
 	PatientName string `json:"patientName"`
@@ -57,7 +57,7 @@ type CreateReferralEntry struct {
 	State   string `json:"state"` // Usually defaults to "READY_TO_BOOK"
 
 	// Accountability
-	CreatorID types.UserID `json:"creatorId"`
+	CreatorID domain.UserID `json:"creatorId"`
 }
 
 // FindReferralEntry is the "Search Filter" for your referrals.
@@ -110,7 +110,7 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		return nil, errors.New("patient name is required")
 	}
 
-	userCtx, ok := types.GetUserContext(ctx)
+	userCtx, ok := domain.GetUserContext(ctx)
 
 	if !ok {
 		return nil, errors.New("unauthorized: creator context missing")
@@ -156,7 +156,7 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 	// 2. ONLY create a log if the state is actually changing
 	if update.State != nil && *update.State != current.State {
 		// Grab UserID from the context "mailbox" (set by the Bouncer)
-		userCtx, ok := types.GetUserContext(ctx)
+		userCtx, ok := domain.GetUserContext(ctx)
 		if !ok {
 			return errors.New("unauthorized")
 		}
@@ -187,13 +187,13 @@ func (s *Store) DeleteReferralEntry(ctx context.Context, delete *DeleteReferralE
 	}
 
 	// Optional: Check if user has permission (Admin role)
-	userCtx, ok := types.GetUserContext(ctx)
+	userCtx, ok := domain.GetUserContext(ctx)
 	// -----DEBUG-----
 	fmt.Printf("Value: %+v, Type: %T\n", ctx.Value("user-role"), ctx.Value("user-role"))
-	fmt.Printf("Looking for key: %T(%v)\n", types.UserKey, types.UserKey)
+	fmt.Printf("Looking for key: %T(%v)\n", domain.UserKey, domain.UserKey)
 	fmt.Printf("Actually in context: %+v\n", ctx)
 
-	if !ok || userCtx.Role != types.RoleReftrailAdmin {
+	if !ok || userCtx.Role != domain.RoleReftrailAdmin {
 		if !ok {
 			return errors.New("unauthorized: only admins can delete entries, not ok!")
 		}

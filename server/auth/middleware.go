@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
-	"reftrail/internal/types"
+	"reftrail/internal/domain"
 
 	"github.com/golang-jwt/jwt/v5"
 	echo "github.com/labstack/echo/v5"
@@ -33,13 +33,13 @@ func JWTMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid or expired token"})
 		}
 
-		userCtx := &types.UserContext{
+		userCtx := &domain.UserContext{
 			ID:   claims.ID,
 			Role: claims.Role,
 		}
 
 		// 4. Pin the UserContext to the context memory
-		ctx := context.WithValue(c.Request().Context(), types.UserKey, userCtx)
+		ctx := context.WithValue(c.Request().Context(), domain.UserKey, userCtx)
 		// userCtx.ID gets saved to context
 		//ctx = context.WithValue(ctx, "user-id", claims.ID) // Added these two lines and it works. The whole authentication thing needs review
 		//ctx = context.WithValue(ctx, "user-role", claims.Role)
@@ -52,10 +52,10 @@ func JWTMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 // The new Admin Guard
 func AdminOnlyMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c *echo.Context) error {
-		user, ok := types.GetUserContext(c.Request().Context())
+		user, ok := domain.GetUserContext(c.Request().Context())
 
 		// Match this to whatever string you use in SQLite
-		if !ok || user.Role != types.RoleReftrailAdmin {
+		if !ok || user.Role != domain.RoleReftrailAdmin {
 			return c.JSON(http.StatusForbidden, map[string]string{"error": "Admin access required"})
 		}
 		return next(c)
