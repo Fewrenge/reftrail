@@ -73,5 +73,5 @@ func (s *Server) registerReferralRoutes() {
 	admin.GET("/users", v1Service.ListUsersHandler)                      // List Users
 	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)              // Delete a user
 	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler) // Delete a referral entry
-	// admin.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler)
+	// admin.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler) // Gotta change the URL?
 }
