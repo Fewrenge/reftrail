@@ -108,7 +108,11 @@ func (s *APIV1Service) UpdateReferralEntryStatusHandler(c *echo.Context) error {
 		if err.Error() == "illegal status transition" {
 			return c.JSON(http.StatusForbidden, err.Error())
 		}
-		return c.JSON(http.StatusInternalServerError, "Failed to update status")
+		//return c.JSON(http.StatusInternalServerError, "Failed to update status")
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Internal Error",
+			"debug":   err.Error(),
+		})
 	}
 
 	return c.JSON(http.StatusOK, true)

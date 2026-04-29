@@ -159,7 +159,7 @@ func (d *Driver) GetReferralEntryStatusByID(ctx context.Context, id int32) (doma
 // Only updates referral entry status
 func (d *Driver) UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error {
 	query := `UPDATE referral_entry SET status = ?, updated_ts = ? WHERE id = ?`
-	_, err := d.conn(ctx).ExecContext(ctx, query, string(status), time.Now().Unix, id)
+	_, err := d.conn(ctx).ExecContext(ctx, query, string(status), time.Now().Unix(), id)
 	return err
 }
 
