@@ -3,7 +3,6 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"os"
 	"sync"
 
@@ -23,10 +22,8 @@ type commonExec interface {
 // conn is the "magic" helper. It checks if there is a transaction in the context.
 func (d *Driver) conn(ctx context.Context) commonExec {
 	if tx, ok := ctx.Value(txKey).(*sql.Tx); ok {
-		fmt.Println("DEBUG: Using TRANSACTION")
 		return tx
 	}
-	fmt.Println("DEBUG: Using DB POOL")
 	return d.db
 }
 
