@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import {Trash2Icon} from "lucide-react";
+import { Trash2Icon, MessageSquareIcon, XIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
+} from "@/components/ui/dropdown";
 
 
 interface Props {
@@ -22,11 +31,42 @@ export interface ReferralEntry {
 export default function ReferralEntryCard({ entry, onRefresh }: Props) {
   const [showMenu, setShowMenu] = useState(false);
 
+  // --- States ---
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
   const urgencyStyles = {
     ASAP: "bg-red-50 text-red-700 border-red-100",
     Urgent: "bg-amber-50 text-amber-700 border-amber-100",
     Elective: "bg-emerald-50 text-emerald-700 border-emerald-100",
   };
+
+  // Logic to send the update to your Go backend
+  const handleStatusUpdate = async () => {
+    try {
+      const res = await fetch(`/api/v1/referrals/${entry.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          newStatus: selectedStatus,
+          note: note || "Status updated" // Default note if empty
+        })
+      });
+
+      if (res.ok) {
+        setSelectedStatus(null);
+        setNote("");
+        onRefresh();
+      } else {
+        const err = await res.text();
+        alert(`Update failed: ${err}`);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
 
   const handleDelete = async () => {
 
@@ -50,7 +90,7 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-blue-300 transition-all shadow-sm relative group">
-      
+
       {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
       <div className="flex justify-between items-start mb-6">
         <div>
@@ -60,41 +100,55 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
           </p>
         </div>
 
-        {/* This container holds badges AND the dots side-by-side */}
         <div className="flex items-center gap-3">
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 items-center">
+            {/* URGENCY BADGE */}
             <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${urgencyStyles[entry.urgency as keyof typeof urgencyStyles]}`}>
               {entry.urgency}
             </span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase border bg-blue-50 text-blue-700 border-blue-100">
-              {entry.status}
-            </span>
+
+            {/* STATUS DROPDOWN */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] font-black uppercase bg-blue-50 text-blue-700 border-blue-100 rounded-md">
+                  {entry.status.replace(/_/g, ' ')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Transition To...</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {['1ST_CALL_COMPLETE', 'BOOKED', 'UNABLE_TO_CONTACT', 'DECLINED'].map((s) => (
+                  <DropdownMenuItem key={s} onSelect={() => setSelectedStatus(s)}>
+                    {s.replace(/_/g, ' ')}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+
+
 
           {/* THE DOTS MENU */}
-          <div className="relative">
-            <button 
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors cursor-pointer"
-            >
-              <span className="text-xl leading-none font-bold">⋮</span>
-            </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors cursor-pointer outline-none">
+                <span className="text-xl leading-none font-bold">⋮</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl shadow-xl border-slate-200">
+              <DropdownMenuItem
+                onSelect={() => { handleDelete(); }}
+                className="text-red-600 hover:bg-red-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
+              >
+                <Trash2Icon size={16} strokeWidth={2.5} />
+                <span>Delete Entry</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-            {showMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)}></div>
-                <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden">
-                  <button 
-                    onClick={() => { handleDelete(); setShowMenu(false); }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold transition-colors flex items-center gap-2"
-                  >
-                    <Trash2Icon size={15} strokeWidth={2}/>
-                  <span>Delete Entry</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+
+
+
         </div>
       </div>
 
@@ -116,6 +170,66 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
           {entry.triageNote ? `"${entry.triageNote}"` : "No triage notes recorded."}
         </p>
       </div>
+
+      {/* --- QUICK NOTE OVERLAY --- */}
+      {/* This only appears AFTER they select a status from the dropdown */}
+      {selectedStatus && (
+        <>
+          {/* 1. Backdrop: Clicking anywhere else closes the window */}
+          <div
+            className="fixed inset-0 z-40 bg-slate-900/5 backdrop-blur-[1px]"
+            onClick={() => { setSelectedStatus(null); setNote(""); }}
+          />
+
+          {/* 2. The Square Pad: Positioned relative to the card, but z-50 to stay on top */}
+          <div className="absolute top-2 right-2 w-80 h-80 bg-white border border-blue-200 shadow-2xl z-50 rounded-2xl flex flex-col p-5 animate-in zoom-in-95 duration-150">
+
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                  <MessageSquareIcon size={16} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 leading-none">Updating Status To</p>
+                  <p className="text-xs font-bold text-slate-700">{selectedStatus.replace(/_/g, ' ')}</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedStatus(null)} className="text-slate-300 hover:text-slate-600 transition-colors">
+                <XIcon size={18} />
+              </button>
+            </div>
+
+            <textarea
+              className="flex-1 w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none mb-4 font-medium text-slate-700"
+              placeholder="Write a note about this status update."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleStatusUpdate();
+                }
+              }}
+            />
+
+            {/* TODO: Quick note function */}
+
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                className="flex-1 shadow-lg shadow-blue-200"
+                onClick={handleStatusUpdate}
+                disabled={isLoading}
+              >
+                {isLoading ? "Saving..." : "Confirm & Log"}
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+
+
+
     </div>
   );
 }
