@@ -45,4 +45,4 @@ CREATE TABLE IF NOT EXISTS referral_log (
     FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
-CREATE INDEX idx_referral_log_entry_id ON referral_log(entry_id);
+CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(entry_id);

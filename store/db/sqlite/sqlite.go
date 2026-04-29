@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"sync"
 
@@ -22,8 +23,10 @@ type commonExec interface {
 // conn is the "magic" helper. It checks if there is a transaction in the context.
 func (d *Driver) conn(ctx context.Context) commonExec {
 	if tx, ok := ctx.Value(txKey).(*sql.Tx); ok {
+		fmt.Println("DEBUG: Using TRANSACTION")
 		return tx
 	}
+	fmt.Println("DEBUG: Using DB POOL")
 	return d.db
 }
 
@@ -36,12 +39,24 @@ func (d *Driver) RunInTransaction(ctx context.Context, fn func(ctx context.Conte
 	if err != nil {
 		return err
 	}
+	_, _ = tx.Exec("BEGIN IMMEDIATE")
 
 	txCtx := context.WithValue(ctx, txKey, tx)
+
 	if err := fn(txCtx); err != nil {
-		tx.Rollback()
+		// Only rollback if the context is still "alive"
+		// If ctx.Err() is not nil, the driver already rolled back for us
+		if ctx.Err() == nil {
+			tx.Rollback()
+		}
 		return err
 	}
+
+	// Only commit if the context hasn't been cancelled/timed out
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }
 
@@ -73,6 +88,8 @@ func New(dbPath string) (*Driver, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// _, _ = db.Exec("PRAGMA journal_mode=WAL;")
 
 	db.SetMaxOpenConns(1) // SQLite works best if only one person writes at a time
 

@@ -29,7 +29,6 @@ export interface ReferralEntry {
 }
 
 export default function ReferralEntryCard({ entry, onRefresh }: Props) {
-  const [showMenu, setShowMenu] = useState(false);
 
   // --- States ---
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
@@ -44,6 +43,8 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
 
   // Logic to send the update to your Go backend
   const handleStatusUpdate = async () => {
+    setIsLoading(true);
+
     try {
       const res = await fetch(`/api/v1/referrals/${entry.id}/status`, {
         method: 'PATCH',
@@ -64,6 +65,8 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
       }
     } catch (err) {
       console.error(err);
+    }finally{
+     setIsLoading(false);
     }
   };
 

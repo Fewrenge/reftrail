@@ -11,7 +11,7 @@ func (d *Driver) CreateReferralLog(ctx context.Context, create *store.ReferralLo
 	stmt := `INSERT INTO referral_log (entry_id, user_id, old_status, new_status, note, created_ts) 
 			 VALUES (?, ?, ?, ?, ?, ?)`
 
-	result, err := d.db.ExecContext(ctx, stmt,
+	result, err := d.conn(ctx).ExecContext(ctx, stmt,
 		create.EntryID, create.UserID, create.OldStatus, create.NewStatus, create.Note, ts,
 	)
 	if err != nil {
@@ -28,7 +28,7 @@ func (d *Driver) ListReferralLogs(ctx context.Context, entryID int32) ([]*store.
 	query := `SELECT id, entry_id, user_id, old_status, new_status, note, created_ts 
 			  FROM referral_log WHERE entry_id = ? ORDER BY created_ts DESC`
 
-	rows, err := d.db.QueryContext(ctx, query, entryID)
+	rows, err := d.conn(ctx).QueryContext(ctx, query, entryID)
 	if err != nil {
 		return nil, err
 	}

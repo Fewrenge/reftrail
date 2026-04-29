@@ -9,7 +9,7 @@ import (
 
 func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*store.User, error) {
 	stmt := `INSERT INTO user (username, password_hash, role) VALUES (?, ?, ?)`
-	result, err := d.db.ExecContext(ctx, stmt, create.Username, create.Password, create.Role)
+	result, err := d.conn(ctx).ExecContext(ctx, stmt, create.Username, create.Password, create.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*sto
 
 func (d *Driver) CountUsers(ctx context.Context) (int, error) {
 	var count int
-	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM user").Scan(&count) // FROM user, not users
+	err := d.conn(ctx).QueryRowContext(ctx, "SELECT COUNT(*) FROM user").Scan(&count) // FROM user, not users
 	return count, err
 }
 
@@ -41,7 +41,7 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 	}
 
 	query := `SELECT id, username, password_hash, role FROM user WHERE ` + strings.Join(where, " AND ")
-	rows, err := d.db.QueryContext(ctx, query, args...)
+	rows, err := d.conn(ctx).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (d *Driver) DeleteUser(ctx context.Context, delete *store.DeleteUser) error
 }
 
 func (d *Driver) ChangeUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
-	_, err := d.db.ExecContext(ctx, `
+	_, err := d.conn(ctx).ExecContext(ctx, `
 		UPDATE user 
 		SET password_hash = ? 
 		WHERE id = ?

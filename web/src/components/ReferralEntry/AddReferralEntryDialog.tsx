@@ -32,7 +32,7 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
           patientName: name,
           complaint: complaint,
           urgency: urgency,
-          status: "Ready to book"
+          status: "READY_TO_BOOK"
         }),
       });
 
