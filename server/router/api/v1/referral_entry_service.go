@@ -3,7 +3,6 @@ package v1
 import (
 	"log"
 	"net/http"
-	"reftrail/internal/domain"
 	"reftrail/store"
 	"strconv"
 
@@ -95,35 +94,20 @@ func (s *APIV1Service) UpdateReferralEntryStatusHandler(c *echo.Context) error {
 	}
 
 	// 2. Bind Request (Only the status)
-	var req struct {
-		Status domain.ReferralStatus `json:"status"`
-	}
+	var req store.UpdateReferralEntryStatus
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, "Invalid request body")
 	}
+	req.ID = int32(id)
 
-	// 3. Get User Context (The "Who")
-	user, ok := domain.GetUserContext(c.Request().Context())
-	if !ok {
-		return c.JSON(http.StatusUnauthorized, "User context missing")
-	}
-
-	// 4. Fetch CURRENT status from DB
-	// We need to know where we are to know if we can move
-	currentStatus, err := s.Store.GetReferralEntryStatusByID(c.Request().Context(), int32(id))
+	// 3. Update the DB
+	// The Store now handles: Transaction, Old Status Check, Role Logic, and Logging
+	err = s.Store.UpdateReferralEntryStatus(c.Request().Context(), &req)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, "Referral not found")
-	}
-
-	// 5. Check State Machine & God Mode
-	if !domain.CanTransition(currentStatus, req.Status, user.Role) {
-		return c.JSON(http.StatusForbidden, "Illegal status transition for your role")
-	}
-
-	// 6. Update the DB
-	// We pass user.ID so the Store can eventually handle the "Who" in the logs
-	err = s.Store.UpdateReferralEntryStatus(c.Request().Context(), int32(id), req.Status)
-	if err != nil {
+		// You can check the error type here to return 403 vs 500
+		if err.Error() == "illegal status transition" {
+			return c.JSON(http.StatusForbidden, err.Error())
+		}
 		return c.JSON(http.StatusInternalServerError, "Failed to update status")
 	}
 

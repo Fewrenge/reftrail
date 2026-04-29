@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS user (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'BOOKING_TEAM'
+    role TEXT NOT NULL DEFAULT 'BOOKING_TEAM' check (role IN ('BOOKING_TEAM', 'REFTRAIL_ADMIN'))
 );
 
 -- 2. Referral Table (Requirement #1 through #10)
@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     complaint TEXT,
     triage_note TEXT,
     urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')),
-    status TEXT NOT NULL DEFAULT 'READY_TO_BOOK',
+    status TEXT NOT NULL DEFAULT 'READY_TO_BOOK' check (status IN ('READY_TO_BOOK', '1ST_CALL_COMPLETE', '2ND_CALL_COMPLETE',
+    '3RD_CALL_COMPLETE', 'BOOKED', 'UNABLE_TO_CONTACT', 'PATIENT_TO_CALL_BACK', 'DECLINED', 'SUSPENDED','CLOSED')),
     
     -- Appointment Info (Requirement #11)
     appt_date TEXT,
@@ -43,3 +44,5 @@ CREATE TABLE IF NOT EXISTS referral_log (
     FOREIGN KEY (entry_id) REFERENCES referral_entry(id),
     FOREIGN KEY (user_id) REFERENCES user(id)
 );
+
+CREATE INDEX idx_referral_log_entry_id ON referral_log(entry_id);

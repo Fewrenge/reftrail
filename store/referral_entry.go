@@ -99,6 +99,12 @@ type UpdateReferralEntry struct {
 	Force bool `json:"force"`
 }
 
+type UpdateReferralEntryStatus struct {
+	ID        int32                 `json:"id"`
+	NewStatus domain.ReferralStatus `json:"newStatus"`
+	Note      string                `json:"note"`
+}
+
 type DeleteReferralEntry struct {
 	ID int32 `json:"id"`
 }
@@ -147,43 +153,85 @@ func (s *Store) GetReferralEntry(ctx context.Context, find *FindReferralEntry) (
 
 // 4. Update: The "Editor"
 func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error {
-	// 1. Get the CURRENT status before it changes
-	current, err := s.GetReferralEntry(ctx, &FindReferralEntry{ID: &update.ID})
-	if err != nil || current == nil {
-		return errors.New("entry not found")
-	}
-
-	// 2. ONLY create a log if the status is actually changing
-	if update.Status != nil && *update.Status != current.Status {
-		// Grab UserID from the context "mailbox" (set by the Bouncer)
-		userCtx, ok := domain.GetUserContext(ctx)
-		if !ok {
-			return errors.New("unauthorized")
+	// Wrap the whole operation in a transaction
+	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
+		// 1. Get the CURRENT status before it changes
+		current, err := s.GetReferralEntry(ctx, &FindReferralEntry{ID: &update.ID})
+		if err != nil || current == nil {
+			return errors.New("entry not found")
 		}
 
-		// 3. Tell the Worker to write the history
-		_, err := s.driver.CreateReferralLog(ctx, &ReferralLog{
-			EntryID:   update.ID,
-			UserID:    int32(userCtx.ID),
-			OldStatus: current.Status,
-			NewStatus: *update.Status,
-			Note:      "Status updated via dashboard",
-		})
-		if err != nil {
-			return err // Stop if we can't record history!
-		}
-	}
+		// 2. ONLY create a log if the status is actually changing
+		if update.Status != nil && *update.Status != current.Status {
+			// Grab UserID from the context "mailbox" (set by the Bouncer)
+			userCtx, ok := domain.GetUserContext(ctx)
+			if !ok {
+				return errors.New("unauthorized")
+			}
 
-	// 4. Finally, update the actual patient record
-	return s.driver.UpdateReferralEntry(ctx, update)
+			// 3. Tell the Worker to write the history
+			_, err := s.driver.CreateReferralLog(ctx, &ReferralLog{
+				EntryID:   update.ID,
+				UserID:    int32(userCtx.ID),
+				OldStatus: current.Status,
+				NewStatus: *update.Status,
+				Note:      "Status updated via dashboard",
+			})
+			if err != nil {
+				return err // Stop if we can't record history!
+			}
+		}
+
+		// 4. Finally, update the actual patient record
+		return s.driver.UpdateReferralEntry(ctx, update)
+	})
 }
 
 func (s *Store) GetReferralEntryStatusByID(ctx context.Context, id int32) (domain.ReferralStatus, error) {
 	return s.driver.GetReferralEntryStatusByID(ctx, id)
 }
 
-func (s *Store) UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error {
-	return s.driver.UpdateReferralEntryStatus(ctx, id, status)
+func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateReferralEntryStatus) error {
+	// You are looking at an anonymous function
+	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
+		// 1. Get the "Who" (User Context)
+		user, ok := domain.GetUserContext(txCtx)
+		if !ok {
+			return errors.New("unauthorized: user context missing")
+		}
+
+		// 2. Get the "Where we are" (Old Status)
+		// We use the driver directly because we are already inside a transaction
+		oldStatus, err := s.driver.GetReferralEntryStatusByID(txCtx, update.ID)
+		if err != nil {
+			return fmt.Errorf("failed to fetch current status: %w", err)
+		}
+
+		// 3. THE RULE CHECK (Calling your domain code)
+		// We convert update.NewStatus to domain.ReferralStatus type
+		newStatus := domain.ReferralStatus(update.NewStatus)
+
+		if !domain.CanTransition(oldStatus, newStatus, user.Role) {
+			return fmt.Errorf("illegal status transition from %s to %s for role %s",
+				oldStatus, newStatus, user.Role)
+		}
+
+		// 4. Update the Status
+		if err := s.driver.UpdateReferralEntryStatus(txCtx, update.ID, newStatus); err != nil {
+			return err
+		}
+
+		// 5. Create the Log
+		_, err = s.driver.CreateReferralLog(txCtx, &ReferralLog{
+			EntryID:   update.ID,
+			UserID:    int32(user.ID),
+			OldStatus: string(oldStatus),
+			NewStatus: string(newStatus),
+			Note:      update.Note,
+		})
+
+		return err // If this is nil, transaction commits!
+	})
 }
 
 // 5. Delete: The "Janitor"

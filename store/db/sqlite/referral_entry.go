@@ -21,7 +21,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// 3. Execute the command
-	result, err := d.db.ExecContext(ctx, stmt,
+	result, err := d.conn(ctx).ExecContext(ctx, stmt,
 		create.CreatorID, ts, ts,
 		create.PatientName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
 		create.ReferringPhysician, create.Complaint, create.TriageNote, create.Urgency, create.Status,
@@ -96,7 +96,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	query += " ORDER BY created_ts DESC"
 
 	// 5. Run the Query
-	rows, err := d.db.QueryContext(ctx, query, args...)
+	rows, err := d.conn(ctx).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -124,6 +124,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	return list, nil
 }
 
+// For miscellaneous updates
 func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateReferralEntry) error {
 	// 1. Build the "SET" part of our SQL dynamically
 	set, args := []string{}, []any{}
@@ -145,26 +146,27 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 
 	// 3. Execute: UPDATE referral_entry SET status = ?, updated_ts = ? WHERE id = ?
 	query := `UPDATE referral_entry SET ` + strings.Join(set, ", ") + ` WHERE id = ?`
-	_, err := d.db.ExecContext(ctx, query, args...)
+	_, err := d.conn(ctx).ExecContext(ctx, query, args...)
 	return err
 }
 
 func (d *Driver) GetReferralEntryStatusByID(ctx context.Context, id int32) (domain.ReferralStatus, error) {
 	var status domain.ReferralStatus
-	err := d.db.QueryRowContext(ctx, "SELECT status FROM referrals WHERE id = $1", id).Scan(&status)
+	err := d.conn(ctx).QueryRowContext(ctx, "SELECT status FROM referrals WHERE id = $1", id).Scan(&status)
 	return status, err
 }
 
+// Only updates referral entry status
 func (d *Driver) UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error {
 	query := `UPDATE referrals SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-	_, err := d.db.ExecContext(ctx, query, string(status), id)
+	_, err := d.conn(ctx).ExecContext(ctx, query, string(status), id)
 	return err
 }
 
 func (d *Driver) DeleteReferralEntry(ctx context.Context, delete *store.DeleteReferralEntry) error {
 	// We pull the ID out of the struct's ID field
 	stmt := `DELETE FROM referral_entry WHERE id = ?`
-	_, err := d.db.ExecContext(ctx, stmt, delete.ID)
+	_, err := d.conn(ctx).ExecContext(ctx, stmt, delete.ID)
 	return err
 }
 
@@ -183,7 +185,7 @@ func (d *Driver) DeleteReferralEntries(ctx context.Context, ids []int32) error {
 	}
 
 	query := fmt.Sprintf("DELETE FROM referral_entry WHERE id IN (%s)", strings.Join(placeholders, ","))
-	_, err := d.db.ExecContext(ctx, query, args...)
+	_, err := d.conn(ctx).ExecContext(ctx, query, args...)
 	return err
 }
 */

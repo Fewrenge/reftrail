@@ -32,4 +32,7 @@ type Driver interface {
 	UpdateUser(ctx context.Context, update *UpdateUser) (*User, error)
 	DeleteUser(ctx context.Context, delete *DeleteUser) error
 	ChangeUserPassword(ctx context.Context, userID domain.UserID, newHash string) error
+
+	// 5. Transaction methods
+	RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error
 }
