@@ -68,8 +68,9 @@ func (s *Server) registerReferralRoutes() {
 	protected.PATCH("/users/password", v1Service.ChangePasswordHandler)
 
 	admin := protected.Group("")
-	admin.Use(auth.AdminOnlyMiddleware)                                  // Add the extra gatekeeper
-	admin.POST("/users", v1Service.CreateUserHandler)                    // Create a user
+	admin.Use(auth.AdminOnlyMiddleware)               // Add the extra gatekeeper
+	admin.POST("/users", v1Service.CreateUserHandler) // Create a user
+	admin.POST("/referrals/batch", v1Service.BatchCreateReferralEntriesHandler)
 	admin.GET("/users", v1Service.ListUsersHandler)                      // List Users
 	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)              // Delete a user
 	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler) // Delete a referral entry

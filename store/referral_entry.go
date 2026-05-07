@@ -9,7 +9,7 @@ import (
 
 type ReferralEntry struct {
 	ID        int32         `json:"id"`
-	CreatorID domain.UserID `json:"creatorId"`
+	CreatorID domain.UserID `json:"-"`
 	CreatedTs int64         `json:"createdTs"`
 	UpdatedTs int64         `json:"updatedTs"`
 
@@ -58,6 +58,10 @@ type CreateReferralEntry struct {
 
 	// Accountability
 	CreatorID domain.UserID `json:"creatorId"`
+}
+
+type BatchCreateReferralEntries struct {
+	ReferralEntries []CreateReferralEntry `json:"referralEntries"`
 }
 
 // FindReferralEntry is the "Search Filter" for your referrals.
@@ -116,17 +120,40 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		return nil, errors.New("patient name is required")
 	}
 
-	userCtx, ok := domain.GetUserContext(ctx)
+	user, ok := domain.GetUserContext(ctx)
 
 	if !ok {
 		return nil, errors.New("unauthorized: creator context missing")
 	}
 
 	// 2. Set the ID onto the form
-	create.CreatorID = userCtx.ID
+	create.CreatorID = user.ID
 
 	// Pass it to the worker (driver)
 	return s.driver.CreateReferralEntry(ctx, create)
+}
+
+func (s *Store) BatchCreateReferralEntries(ctx context.Context, batch *BatchCreateReferralEntries) error {
+	// 1. Run everything in one transaction
+	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
+		user, ok := domain.GetUserContext(txCtx)
+		if !ok {
+			return errors.New("unauthorized: user context missing")
+		}
+
+		// 2. Loop through the entries
+		for _, create := range batch.ReferralEntries {
+			create.CreatorID = domain.UserID(user.ID)
+			// 3. Reuse your existing driver method!
+			_, err := s.driver.CreateReferralEntry(txCtx, &create)
+			if err != nil {
+				// If one fails, the whole transaction returns an error and rolls back
+				return fmt.Errorf("batch failed at entry for %s: %w", create.PatientName, err)
+			}
+		}
+
+		return nil
+	})
 }
 
 // 2. List: The "Broadcaster"

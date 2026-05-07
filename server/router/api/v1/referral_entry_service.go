@@ -70,6 +70,28 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, entry)
 }
 
+func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error {
+	var req store.BatchCreateReferralEntries
+
+	// 1. Bind the JSON body to our struct
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, "Invalid batch data format")
+	}
+
+	// 2. Optional: Basic validation (e.g., check if empty)
+	if len(req.ReferralEntries) == 0 {
+		return c.JSON(http.StatusBadRequest, "No entries provided")
+	}
+
+	// 3. Call the Store
+	err := s.Store.BatchCreateReferralEntries(c.Request().Context(), &req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusCreated, map[string]string{"message": "Batch import successful"})
+}
+
 func (s *APIV1Service) UpdateReferralEntryHandler(c *echo.Context) error {
 	// 1. Get the ID from the URL (e.g., /api/v1/referrals/1)
 	id, _ := strconv.Atoi(c.Param("id"))
