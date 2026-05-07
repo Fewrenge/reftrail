@@ -1,3 +1,4 @@
 # db
-reftrail.db
+reftrail.db*
 .env
+api_test.http

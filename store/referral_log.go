@@ -6,8 +6,8 @@ type ReferralLog struct {
 	ID        int32  `json:"id"`
 	EntryID   int32  `json:"entryId"`
 	UserID    int32  `json:"userId"`
-	OldState  string `json:"oldState"`
-	NewState  string `json:"newState"`
+	OldStatus string `json:"oldStatus"`
+	NewStatus string `json:"newStatus"`
 	Note      string `json:"note"`
 	CreatedTs int64  `json:"createdTs"`
 }

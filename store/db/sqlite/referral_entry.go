@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"reftrail/internal/domain"
 	"reftrail/store" // Import your main store for the object definitions
 	"strings"
 	"time"
@@ -16,14 +17,14 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 	stmt := `INSERT INTO referral_entry (
 		creator_id, created_ts, updated_ts, 
 		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
-		referring_physician, complaint, triage_note, urgency, state
+		referring_physician, complaint, triage_note, urgency, status
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// 3. Execute the command
-	result, err := d.db.ExecContext(ctx, stmt,
+	result, err := d.conn(ctx).ExecContext(ctx, stmt,
 		create.CreatorID, ts, ts,
 		create.PatientName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
-		create.ReferringPhysician, create.Complaint, create.TriageNote, create.Urgency, create.State,
+		create.ReferringPhysician, create.Complaint, create.TriageNote, create.Urgency, create.Status,
 	)
 	if err != nil {
 		return nil, err
@@ -49,7 +50,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		Complaint:          create.Complaint,
 		TriageNote:         create.TriageNote,
 		Urgency:            create.Urgency,
-		State:              create.State,
+		Status:             create.Status,
 	}, nil
 }
 
@@ -60,7 +61,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	query := `SELECT 
 		id, creator_id, created_ts, updated_ts, 
 		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
-		referring_physician, complaint, triage_note, urgency, state,
+		referring_physician, complaint, triage_note, urgency, status,
 		IFNULL(appt_date, ''),
 		IFNULL(appt_time,''),
 		IFNULL(practitioner, ''), 
@@ -80,9 +81,9 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		query += " AND urgency = ?"
 		args = append(args, *find.Urgency)
 	}
-	if find.State != nil {
-		query += " AND state = ?"
-		args = append(args, *find.State)
+	if find.Status != nil {
+		query += " AND status = ?"
+		args = append(args, *find.Status)
 	}
 
 	// Fuzzy Matching for Patient Name (Requirement #1)
@@ -95,7 +96,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	query += " ORDER BY created_ts DESC"
 
 	// 5. Run the Query
-	rows, err := d.db.QueryContext(ctx, query, args...)
+	rows, err := d.conn(ctx).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,11 +108,11 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	// 7. Loop through the database rows
 	for rows.Next() {
 		var entry store.ReferralEntry
-		// Scan matches the columns in our SELECT statement to our Go struct
+		// Scan matches the columns in our SELECT statusment to our Go struct
 		err := rows.Scan(
 			&entry.ID, &entry.CreatorID, &entry.CreatedTs, &entry.UpdatedTs,
 			&entry.PatientName, &entry.PatientDOB, &entry.TxtCustomerID, &entry.IntCustomerDocID,
-			&entry.ReferringPhysician, &entry.Complaint, &entry.TriageNote, &entry.Urgency, &entry.State,
+			&entry.ReferringPhysician, &entry.Complaint, &entry.TriageNote, &entry.Urgency, &entry.Status,
 			&entry.ApptDate, &entry.ApptTime, &entry.Practitioner, &entry.JuvonnoApptID,
 		)
 		if err != nil {
@@ -123,12 +124,13 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	return list, nil
 }
 
+// For miscellaneous updates
 func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateReferralEntry) error {
 	// 1. Build the "SET" part of our SQL dynamically
 	set, args := []string{}, []any{}
 
-	if v := update.State; v != nil {
-		set = append(set, "state = ?")
+	if v := update.Status; v != nil {
+		set = append(set, "status = ?")
 		args = append(args, *v)
 	}
 	if v := update.TriageNote; v != nil {
@@ -142,16 +144,29 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 	// 2. Add the ID for the WHERE clause
 	args = append(args, update.ID)
 
-	// 3. Execute: UPDATE referral_entry SET state = ?, updated_ts = ? WHERE id = ?
+	// 3. Execute: UPDATE referral_entry SET status = ?, updated_ts = ? WHERE id = ?
 	query := `UPDATE referral_entry SET ` + strings.Join(set, ", ") + ` WHERE id = ?`
-	_, err := d.db.ExecContext(ctx, query, args...)
+	_, err := d.conn(ctx).ExecContext(ctx, query, args...)
+	return err
+}
+
+func (d *Driver) GetReferralEntryStatusByID(ctx context.Context, id int32) (domain.ReferralStatus, error) {
+	var status domain.ReferralStatus
+	err := d.conn(ctx).QueryRowContext(ctx, "SELECT status FROM referral_entry WHERE id = $1", id).Scan(&status)
+	return status, err
+}
+
+// Only updates referral entry status
+func (d *Driver) UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error {
+	query := `UPDATE referral_entry SET status = ?, updated_ts = ? WHERE id = ?`
+	_, err := d.conn(ctx).ExecContext(ctx, query, string(status), time.Now().Unix(), id)
 	return err
 }
 
 func (d *Driver) DeleteReferralEntry(ctx context.Context, delete *store.DeleteReferralEntry) error {
 	// We pull the ID out of the struct's ID field
 	stmt := `DELETE FROM referral_entry WHERE id = ?`
-	_, err := d.db.ExecContext(ctx, stmt, delete.ID)
+	_, err := d.conn(ctx).ExecContext(ctx, stmt, delete.ID)
 	return err
 }
 
@@ -170,7 +185,7 @@ func (d *Driver) DeleteReferralEntries(ctx context.Context, ids []int32) error {
 	}
 
 	query := fmt.Sprintf("DELETE FROM referral_entry WHERE id IN (%s)", strings.Join(placeholders, ","))
-	_, err := d.db.ExecContext(ctx, query, args...)
+	_, err := d.conn(ctx).ExecContext(ctx, query, args...)
 	return err
 }
 */

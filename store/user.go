@@ -4,16 +4,16 @@ import (
 	"context"
 	"errors" // Needed for errors.New
 	"log"
-	"reftrail/internal/types"
+	"reftrail/internal/domain"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	ID           types.UserID   `json:"id"`
-	Username     string         `json:"username"`
-	PasswordHash string         `json:"-"`
-	Role         types.UserRole `json:"role"`
+	ID           domain.UserID   `json:"id"`
+	Username     string          `json:"username"`
+	PasswordHash string          `json:"-"`
+	Role         domain.UserRole `json:"role"`
 }
 
 // The "Form" for logging in
@@ -23,25 +23,25 @@ type LoginRequest struct {
 }
 
 type CreateUser struct {
-	Username string         `json:"username"`
-	Password string         `json:"password"`
-	Role     types.UserRole `json:"role"`
+	Username string          `json:"username"`
+	Password string          `json:"password"`
+	Role     domain.UserRole `json:"role"`
 }
 
 type FindUser struct {
-	ID       *types.UserID `json:"id"`
-	Username *string       `json:"username"`
+	ID       *domain.UserID `json:"id"`
+	Username *string        `json:"username"`
 }
 
 type UpdateUser struct {
-	ID       types.UserID    `json:"id"`
-	Username *string         `json:"username"`
-	Password *string         `json:"password"`
-	Role     *types.UserRole `json:"role"`
+	ID       domain.UserID    `json:"id"`
+	Username *string          `json:"username"`
+	Password *string          `json:"password"`
+	Role     *domain.UserRole `json:"role"`
 }
 
 type DeleteUser struct {
-	ID types.UserID `json:"id"`
+	ID domain.UserID `json:"id"`
 }
 
 // --- THE MANAGER LOGIC ---
@@ -77,7 +77,7 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 		admin := &CreateUser{
 			Username: "admin",
 			Password: string(hashed), // This will be saved to password_hash in SQLite
-			Role:     types.RoleReftrailAdmin,
+			Role:     domain.RoleReftrailAdmin,
 		}
 
 		// Fix: s.driver.CreateUser returns (*User, error),
@@ -121,7 +121,7 @@ func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
 	return s.driver.DeleteUser(ctx, delete)
 }
 
-func (s *Store) ChangeUserPassword(ctx context.Context, userID types.UserID, newHash string) error {
+func (s *Store) ChangeUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
 	// Relay the command to the driver (the stove)
 	return s.driver.ChangeUserPassword(ctx, userID, newHash)
 }

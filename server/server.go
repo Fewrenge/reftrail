@@ -52,8 +52,8 @@ func (s *Server) registerReferralRoutes() {
 	// Create a new referrals entry
 	protected.POST("/referrals", v1Service.CreateReferralEntryHandler)
 
-	// Update a referrals entry (The state switcher)
-	protected.PATCH("/referrals/:id", v1Service.UpdateReferralEntryHandler)
+	// Update a referral entry's status
+	protected.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryStatusHandler)
 
 	// Get the history logs
 	protected.GET("/referrals/:id/logs", v1Service.ListReferralLogsHandler)
@@ -73,4 +73,5 @@ func (s *Server) registerReferralRoutes() {
 	admin.GET("/users", v1Service.ListUsersHandler)                      // List Users
 	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)              // Delete a user
 	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler) // Delete a referral entry
+	// admin.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler) // Gotta change the URL?
 }

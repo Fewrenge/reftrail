@@ -33,11 +33,11 @@ const Setting = () => {
   const { user, loading } = useAuth();
   const [selectedSection, setSelectedSection] = useState<SettingSection>("profile");
 
-  const isHost = user?.role === ROLES.SYSTEM_ADMIN;
+  const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
 
   const settingsSectionList = useMemo(() => {
-    return isHost ? [...BASIC_SECTIONS, ...ADMIN_SECTIONS] : BASIC_SECTIONS;
-  }, [isHost]);
+    return isAdmin ? [...BASIC_SECTIONS, ...ADMIN_SECTIONS] : BASIC_SECTIONS;
+  }, [isAdmin]);
 
   useEffect(() => {
     const hash = location.hash.slice(1) as SettingSection;

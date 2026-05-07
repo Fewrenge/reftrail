@@ -9,6 +9,7 @@ import (
 	echo "github.com/labstack/echo/v5"
 )
 
+// Get all referrals
 func (s *APIV1Service) GetReferralsHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -19,6 +20,39 @@ func (s *APIV1Service) GetReferralsHandler(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, list)
+}
+
+// GetReferralEntryHandler handles GET /api/v1/referrals/:id
+// Focuses on one referral
+func (s *APIV1Service) GetReferralEntryHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	// 1. Extract the "id" from the URL path parameter
+	idStr := c.Param("id")
+
+	log.Printf("Sniper Handler triggered with ID: [%s]", idStr)
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid ID format"})
+	}
+
+	// 2. Ask the Manager (Store) to find this specific entry
+	// We use our 'Find' blueprint here
+	entry, err := s.Store.GetReferralEntry(ctx, &store.FindReferralEntry{
+		ID: ptrInt32(int32(id)),
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	// 3. If no patient was found, return a 404
+	if entry == nil {
+		return c.JSON(http.StatusNotFound, map[string]any{"message": "Patient entry not found"})
+	}
+
+	// 4. Return the patient data as JSON
+	return c.JSON(http.StatusOK, entry)
 }
 
 func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
@@ -47,6 +81,38 @@ func (s *APIV1Service) UpdateReferralEntryHandler(c *echo.Context) error {
 
 	if err := s.Store.UpdateReferralEntry(c.Request().Context(), update); err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, true)
+}
+
+func (s *APIV1Service) UpdateReferralEntryStatusHandler(c *echo.Context) error {
+	// 1. Get ID from URL
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, "Invalid referral ID")
+	}
+
+	// 2. Bind Request (Only the status)
+	var req store.UpdateReferralEntryStatus
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, "Invalid request body")
+	}
+	req.ID = int32(id)
+
+	// 3. Update the DB
+	// The Store now handles: Transaction, Old Status Check, Role Logic, and Logging
+	err = s.Store.UpdateReferralEntryStatus(c.Request().Context(), &req)
+	if err != nil {
+		// You can check the error type here to return 403 vs 500
+		if err.Error() == "illegal status transition" {
+			return c.JSON(http.StatusForbidden, err.Error())
+		}
+		//return c.JSON(http.StatusInternalServerError, "Failed to update status")
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Internal Error",
+			"debug":   err.Error(),
+		})
 	}
 
 	return c.JSON(http.StatusOK, true)

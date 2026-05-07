@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
-	"reftrail/internal/types"
+	"reftrail/internal/domain"
 )
 
 // Driver is the interface that any database must implement.
@@ -18,6 +18,8 @@ type Driver interface {
 	ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error)
 	UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error
 	DeleteReferralEntry(ctx context.Context, delete *DeleteReferralEntry) error
+	GetReferralEntryStatusByID(ctx context.Context, id int32) (domain.ReferralStatus, error)
+	UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error
 
 	// 3. Accountability (Optional but recommended for your logs)
 	CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error)
@@ -29,5 +31,8 @@ type Driver interface {
 	ListUsers(ctx context.Context, find *FindUser) ([]*User, error)
 	UpdateUser(ctx context.Context, update *UpdateUser) (*User, error)
 	DeleteUser(ctx context.Context, delete *DeleteUser) error
-	ChangeUserPassword(ctx context.Context, userID types.UserID, newHash string) error
+	ChangeUserPassword(ctx context.Context, userID domain.UserID, newHash string) error
+
+	// 5. Transaction methods
+	RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error
 }
