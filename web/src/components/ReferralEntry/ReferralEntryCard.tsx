@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { ROLES, ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
+import { useAuth } from "@/contexts/AuthContext";
 import { Trash2Icon, MessageSquareIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +36,17 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
+
+  const allowedStatuses = useMemo(() => {
+    if (isAdmin) {
+      // Admins can move to any status except the one they are currently in
+      return ALL_STATUSES.filter(s => s !== entry.status);
+    }
+    // Booking team follows the matrix
+    return STATUS_RULES[entry.status] || [];
+  }, [isAdmin, entry.status]);
 
   const urgencyStyles = {
     ASAP: "bg-red-50 text-red-700 border-red-100",
@@ -65,8 +78,8 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
       }
     } catch (err) {
       console.error(err);
-    }finally{
-     setIsLoading(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -113,20 +126,34 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
             {/* STATUS DROPDOWN */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] font-black uppercase bg-blue-50 text-blue-700 border-blue-100 rounded-md">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  // Disable the button if the user has no allowed transitions
+                  disabled={allowedStatuses.length === 0}
+                  className="h-6 px-2 text-[10px] font-black uppercase bg-blue-50 text-blue-700 border-blue-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   {entry.status.replace(/_/g, ' ')}
                 </Button>
               </DropdownMenuTrigger>
+
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Transition To...</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  {isAdmin ? "Admin: Change Status" : "Transition To..."}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {['1ST_CALL_COMPLETE', 'BOOKED', 'UNABLE_TO_CONTACT', 'DECLINED'].map((s) => (
-                  <DropdownMenuItem key={s} onSelect={() => setSelectedStatus(s)}>
+                {allowedStatuses.map((s) => (
+                  <DropdownMenuItem
+                    key={s}
+                    onSelect={() => setSelectedStatus(s)}
+                    className="text-[11px] font-medium"
+                  >
                     {s.replace(/_/g, ' ')}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
           </div>
 
 

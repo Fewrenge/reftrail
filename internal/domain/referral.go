@@ -45,6 +45,7 @@ var statusRules = map[ReferralStatus]TransitionRule{
 	// The Booking Team cannot move them once they are in these final statuses.
 	StatusBooked:   {AllowedTo: []ReferralStatus{}},
 	StatusDeclined: {AllowedTo: []ReferralStatus{}},
+	StatusClosed:   {AllowedTo: []ReferralStatus{}},
 }
 
 func CanTransition(old, next ReferralStatus, role UserRole) bool {
