@@ -8,7 +8,13 @@ import (
 	"time"
 )
 
-func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (*store.ReferralEntry, error) {
+func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID int32, complaint *store.CreateReferralComplaint) error {
+	stmt := `INSERT INTO referral_complaint (referral_id, body_part, side, details) VALUES (?, ?, ?, ?)`
+	_, err := d.conn(ctx).ExecContext(ctx, stmt, referralID, complaint.BodyPart, complaint.Side, complaint.Details)
+	return err
+}
+
+func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (int32, error) {
 	// 1. Get the current time for our timestamps
 	ts := time.Now().Unix()
 
@@ -17,55 +23,34 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 	stmt := `INSERT INTO referral_entry (
 		creator_id, created_ts, updated_ts, 
 		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
-		referring_physician, complaint, triage_note, urgency, status
+		referring_physician, triage_note, urgency, status, source
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// 3. Execute the command
 	result, err := d.conn(ctx).ExecContext(ctx, stmt,
 		create.CreatorID, ts, ts,
 		create.PatientName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
-		create.ReferringPhysician, create.Complaint, create.TriageNote, create.Urgency, create.Status,
+		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source,
 	)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	// 4. Get the ID that SQLite just generated automatically
 	id, err := result.LastInsertId()
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	// 5. Return the "Finished" object back to the Manager
-	return &store.ReferralEntry{
-		ID:                 int32(id),
-		CreatorID:          create.CreatorID,
-		CreatedTs:          ts,
-		UpdatedTs:          ts,
-		PatientName:        create.PatientName,
-		PatientDOB:         create.PatientDOB,
-		TxtCustomerID:      create.TxtCustomerID,
-		IntCustomerDocID:   create.IntCustomerDocID,
-		ReferringPhysician: create.ReferringPhysician,
-		Complaint:          create.Complaint,
-		TriageNote:         create.TriageNote,
-		Urgency:            create.Urgency,
-		Status:             create.Status,
-	}, nil
+	return int32(id), err
 }
 
 func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferralEntry) ([]*store.ReferralEntry, error) {
 	// 1. The Base Query
-	// "WHERE 1 = 1" is a classic trick. It does nothing, but lets us
-	// safely add "AND ..." to the end of the string later.
 	query := `SELECT 
 		id, creator_id, created_ts, updated_ts, 
 		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
-		referring_physician, complaint, triage_note, urgency, status,
-		IFNULL(appt_date, ''),
-		IFNULL(appt_time,''),
-		IFNULL(practitioner, ''), 
-		IFNULL(juvonno_appt_id,'')
+		referring_physician, triage_note, urgency, status, source
 	FROM referral_entry WHERE 1 = 1`
 
 	// 2. The "Arguments" list
@@ -112,8 +97,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		err := rows.Scan(
 			&entry.ID, &entry.CreatorID, &entry.CreatedTs, &entry.UpdatedTs,
 			&entry.PatientName, &entry.PatientDOB, &entry.TxtCustomerID, &entry.IntCustomerDocID,
-			&entry.ReferringPhysician, &entry.Complaint, &entry.TriageNote, &entry.Urgency, &entry.Status,
-			&entry.ApptDate, &entry.ApptTime, &entry.Practitioner, &entry.JuvonnoApptID,
+			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source,
 		)
 		if err != nil {
 			return nil, err

@@ -86,13 +86,14 @@ func New(dbPath string) (*Driver, error) {
 		return nil, err
 	}
 
-	// _, _ = db.Exec("PRAGMA journal_mode=WAL;")
+	return NewWithDB(db), nil
+}
 
-	db.SetMaxOpenConns(1) // SQLite works best if only one person writes at a time
-
+func NewWithDB(db *sql.DB) *Driver {
+	db.SetMaxOpenConns(1)
 	return &Driver{
 		db: db,
-	}, nil
+	}
 }
 
 // GetDB lets the Manager see the raw connection if needed.
