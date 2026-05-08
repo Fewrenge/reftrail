@@ -18,7 +18,7 @@ func setupTestStore(t *testing.T) *store.Store {
 		t.Fatalf("failed to open test db: %v", err)
 	}
 
-	// 2. Run your schema (the SQL you showed me earlier)
+	// 2. Run schema
 	schema := `
 	CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password_hash TEXT, role TEXT);
 	CREATE TABLE referral_entry (
@@ -34,8 +34,7 @@ func setupTestStore(t *testing.T) *store.Store {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	// 3. Initialize your real Driver and Store using this memory DB
-	// Note: Adjust "NewDriver" to match whatever your constructor is named
+	// 3. Initialize real Driver and Store using this memory DB
 	driver := NewWithDB(db)
 	return store.NewStore(driver)
 }

@@ -55,7 +55,7 @@ type CreateReferralEntry struct {
 
 	// Clinical Info
 	ReferringPhysician string                    `json:"referringPhysician"`
-	Complaints         []CreateReferralComplaint `json:"complaints" validate:"required,dive,min=1"`
+	Complaints         []CreateReferralComplaint `json:"complaints" validate:"required,min=1,dive"`
 	TriageNote         string                    `json:"triageNote"`
 	// XRayClinic         string `json:"xrayClinic"`
 

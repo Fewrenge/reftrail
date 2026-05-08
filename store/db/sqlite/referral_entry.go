@@ -15,20 +15,18 @@ func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID int32, 
 }
 
 func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (int32, error) {
-	// 1. Get the current time for our timestamps
+	// Get the current time for our timestamps
 	ts := time.Now().Unix()
 
-	// 2. Write the SQL command
-	// We use "?" as placeholders to prevent "SQL Injection" (Hacking)
 	stmt := `INSERT INTO referral_entry (
 		creator_id, created_ts, updated_ts, 
 		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
 		referring_physician, triage_note, urgency, status, source
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	// 3. Execute the command
+	// Execute the command
 	result, err := d.conn(ctx).ExecContext(ctx, stmt,
-		create.CreatorID, ts, ts,
+		int32(create.CreatorID), ts, ts,
 		create.PatientName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
 		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source,
 	)
@@ -36,7 +34,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		return 0, err
 	}
 
-	// 4. Get the ID that SQLite just generated automatically
+	// Get the ID that SQLite just generated automatically
 	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, err
