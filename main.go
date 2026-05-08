@@ -23,7 +23,7 @@ func main() {
 	}
 
 	// 2. Hire the Manager (Create Store)
-	st := store.New(driver)
+	st := store.NewStore(driver)
 
 	// 3. Open the Front Desk (Create Server)
 	srv := server.NewServer(st)

@@ -14,7 +14,8 @@ type Driver interface {
 
 	// 2. Referral Entry Methods
 	// Notice we use the "Form" structs we just created!
-	CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error)
+	CreateReferralComplaint(ctx context.Context, referralID int32, c *CreateReferralComplaint) error
+	CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (int32, error)
 	ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error)
 	UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error
 	DeleteReferralEntry(ctx context.Context, delete *DeleteReferralEntry) error

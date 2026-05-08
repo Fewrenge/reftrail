@@ -14,7 +14,7 @@ type Store struct {
 }
 
 // New creates a new Manager (Store) and gives them a Worker (Driver).
-func New(driver Driver) *Store {
+func NewStore(driver Driver) *Store {
 	s := &Store{driver: driver}
 	// Fire the seeding logic right when the manager starts
 	if err := s.SeedAdminUser(context.Background()); err != nil {

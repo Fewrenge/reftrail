@@ -3,6 +3,7 @@ package v1
 import (
 	"log"
 	"net/http"
+	"reftrail/internal/domain"
 	"reftrail/store"
 	"strconv"
 
@@ -10,7 +11,7 @@ import (
 )
 
 // Get all referrals
-func (s *APIV1Service) GetReferralsHandler(c *echo.Context) error {
+func (s *APIV1Service) GetReferralEntriesHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
 	list, err := s.Store.ListReferralEntries(ctx, &store.FindReferralEntry{})
@@ -30,7 +31,7 @@ func (s *APIV1Service) GetReferralEntryHandler(c *echo.Context) error {
 	// 1. Extract the "id" from the URL path parameter
 	idStr := c.Param("id")
 
-	log.Printf("Sniper Handler triggered with ID: [%s]", idStr)
+	//log.Printf("Sniper Handler triggered with ID: [%s]", idStr)
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -61,6 +62,13 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 
 	if err := c.Bind(create); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	if err := domain.ValidateStruct(create); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"message": "Validation failed",
+			"details": err.Error(), // You can make this prettier later
+		})
 	}
 
 	entry, err := s.Store.CreateReferralEntry(ctx, create)

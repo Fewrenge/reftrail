@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reftrail/internal/domain"
+	"time"
 )
 
 type ReferralEntry struct {
@@ -24,13 +25,13 @@ type ReferralEntry struct {
 
 	// 4. Clinical Details (Matches #4, #6, #7, #10)
 	ReferringPhysician string `json:"referringPhysician"`
-	Complaint          string `json:"complaint"` // e.g., "Left Knee"
 	TriageNote         string `json:"triageNote"`
 	XRayClinic         string `json:"xrayClinic"`
 
 	// 5. Workflow & Urgency (Matches #8, #9, #11)
 	Urgency string `json:"urgency"` // Elective, Urgent, ASAP
 	Status  string `json:"status"`  // Ready to book, 1st call, etc.
+	Source  string `json:"source"`
 
 	// Appointment Info (If status is "Booked")
 	ApptDate      string `json:"apptDate"`
@@ -39,22 +40,29 @@ type ReferralEntry struct {
 	JuvonnoApptID string `json:"juvonnoApptId"` // e.g., #18752
 }
 
+type CreateReferralComplaint struct {
+	BodyPart string `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
+	Side     string `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL"`
+	Details  string `json:"details"`
+}
+
 type CreateReferralEntry struct {
 	// Patient & Juvonno Info
-	PatientName      string `json:"patientName"`
+	PatientName      string `json:"patientName" validate:"required,min=2"`
 	PatientDOB       string `json:"patientDob"`
 	TxtCustomerID    string `json:"txtCustomerId"`
 	IntCustomerDocID int32  `json:"intCustomerDocId"`
 
 	// Clinical Info
-	ReferringPhysician string `json:"referringPhysician"`
-	Complaint          string `json:"complaint"`
-	TriageNote         string `json:"triageNote"`
+	ReferringPhysician string                    `json:"referringPhysician"`
+	Complaints         []CreateReferralComplaint `json:"complaints" validate:"required,dive,min=1"`
+	TriageNote         string                    `json:"triageNote"`
 	// XRayClinic         string `json:"xrayClinic"`
 
 	// Status
 	Urgency string `json:"urgency"`
 	Status  string `json:"status"` // Usually defaults to "READY_TO_BOOK"
+	Source  string `json:"source"`
 
 	// Accountability
 	CreatorID domain.UserID `json:"creatorId"`
@@ -115,22 +123,54 @@ type DeleteReferralEntry struct {
 
 // 1. Create: The "Guard"
 func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error) {
-	// Logic Check: Don't let someone create a referral without a patient name
-	if create.PatientName == "" {
-		return nil, errors.New("patient name is required")
+	var newID int32
+	ts := time.Now().Unix()
+
+	err := s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
+		// 1. Get User
+		user, ok := domain.GetUserContext(txCtx)
+		if !ok {
+			return errors.New("unauthorized")
+		}
+		create.CreatorID = domain.UserID(user.ID)
+
+		// 2. Insert Main Entry
+		id, err := s.driver.CreateReferralEntry(txCtx, create)
+		if err != nil {
+			return err
+		}
+		newID = id
+
+		// 3. Insert Complaints
+		for _, c := range create.Complaints {
+			if err := s.driver.CreateReferralComplaint(txCtx, newID, &c); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
-	user, ok := domain.GetUserContext(ctx)
-
-	if !ok {
-		return nil, errors.New("unauthorized: creator context missing")
-	}
-
-	// 2. Set the ID onto the form
-	create.CreatorID = user.ID
-
-	// Pass it to the worker (driver)
-	return s.driver.CreateReferralEntry(ctx, create)
+	// 4. Return the full object that the Handler expects
+	return &ReferralEntry{
+		ID:                 newID,
+		CreatorID:          create.CreatorID,
+		CreatedTs:          ts,
+		UpdatedTs:          ts,
+		PatientName:        create.PatientName,
+		PatientDOB:         create.PatientDOB,
+		TxtCustomerID:      create.TxtCustomerID,
+		IntCustomerDocID:   create.IntCustomerDocID,
+		ReferringPhysician: create.ReferringPhysician,
+		TriageNote:         create.TriageNote,
+		Urgency:            create.Urgency,
+		Status:             create.Status,
+		Source:             create.Source,
+		// Note: Usually we'd fetch complaints back here if the UI needs them immediately
+	}, nil
 }
 
 func (s *Store) BatchCreateReferralEntries(ctx context.Context, batch *BatchCreateReferralEntries) error {
