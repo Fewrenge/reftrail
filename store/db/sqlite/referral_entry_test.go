@@ -50,7 +50,7 @@ func TestCreateReferralEntry_Integration(t *testing.T) {
 		req := &store.CreateReferralEntry{
 			PatientName: "Test Gopher",
 			Source:      "REGULAR",
-			Complaints: []store.CreateReferralComplaint{
+			Complaints: []store.ReferralComplaint{
 				{BodyPart: "KNEE", Side: "LEFT"},
 			},
 		}

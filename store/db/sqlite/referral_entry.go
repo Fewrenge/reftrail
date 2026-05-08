@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID int32, complaint *store.CreateReferralComplaint) error {
+func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID int32, complaint *store.ReferralComplaint) error {
 	stmt := `INSERT INTO referral_complaint (referral_id, body_part, side, details) VALUES (?, ?, ?, ?)`
 	_, err := d.conn(ctx).ExecContext(ctx, stmt, referralID, complaint.BodyPart, complaint.Side, complaint.Details)
 	return err
@@ -41,6 +41,25 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 	}
 
 	return int32(id), err
+}
+
+func (d *Driver) ListAllComplaints(ctx context.Context) ([]*store.ReferralComplaint, error) {
+	query := `SELECT id, referral_id, body_part, side, details FROM referral_complaint`
+	rows, err := d.conn(ctx).QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []*store.ReferralComplaint
+	for rows.Next() {
+		var c store.ReferralComplaint
+		if err := rows.Scan(&c.ID, &c.ReferralID, &c.BodyPart, &c.Side, &c.Details); err != nil {
+			return nil, err
+		}
+		list = append(list, &c)
+	}
+	return list, nil
 }
 
 func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferralEntry) ([]*store.ReferralEntry, error) {

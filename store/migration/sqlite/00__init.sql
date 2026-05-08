@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS referral_log (
 
 CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(entry_id);
 
-CREATE TABLE IF NOT EXISTS appointment (
+CREATE TABLE IF NOT EXISTS referral_appointment (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     referral_id INTEGER NOT NULL,
     complaint_target TEXT NOT NULL,

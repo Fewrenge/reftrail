@@ -15,8 +15,9 @@ type ReferralEntry struct {
 	UpdatedTs int64         `json:"updatedTs"`
 
 	// 2. Patient Info (Matches your requirement #1)
-	PatientName string `json:"patientName"`
-	PatientDOB  string `json:"patientDob"`
+	PatientName string               `json:"patientName"`
+	PatientDOB  string               `json:"patientDob"`
+	Complaints  []*ReferralComplaint `json:"complaints"`
 
 	// 3. Juvonno Integration (Matches your requirements #2 & #3)
 	// We use string for TxtCustomerID because Juvonno IDs can sometimes be alphanumeric
@@ -40,10 +41,12 @@ type ReferralEntry struct {
 	JuvonnoApptID string `json:"juvonnoApptId"` // e.g., #18752
 }
 
-type CreateReferralComplaint struct {
-	BodyPart string `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
-	Side     string `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL"`
-	Details  string `json:"details"`
+type ReferralComplaint struct {
+	ID         int32  `json:"id"`
+	ReferralID int32  `json:"referralId"`
+	BodyPart   string `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
+	Side       string `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL"`
+	Details    string `json:"details"`
 }
 
 type CreateReferralEntry struct {
@@ -54,9 +57,9 @@ type CreateReferralEntry struct {
 	IntCustomerDocID int32  `json:"intCustomerDocId"`
 
 	// Clinical Info
-	ReferringPhysician string                    `json:"referringPhysician"`
-	Complaints         []CreateReferralComplaint `json:"complaints" validate:"required,min=1,dive"`
-	TriageNote         string                    `json:"triageNote"`
+	ReferringPhysician string              `json:"referringPhysician"`
+	Complaints         []ReferralComplaint `json:"complaints" validate:"required,min=1,dive"`
+	TriageNote         string              `json:"triageNote"`
 	// XRayClinic         string `json:"xrayClinic"`
 
 	// Status
@@ -198,8 +201,31 @@ func (s *Store) BatchCreateReferralEntries(ctx context.Context, batch *BatchCrea
 
 // 2. List: The "Broadcaster"
 func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error) {
-	// This just asks the driver for a list based on your filters (Urgent, etc.)
-	return s.driver.ListReferralEntries(ctx, find)
+	// 1. Get the list of referrals (Your existing query)
+	entries, err := s.driver.ListReferralEntries(ctx, find)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Get EVERY complaint
+	allComplaints, err := s.driver.ListAllComplaints(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Group complaints by ReferralID using a Map
+	// Key: ReferralID, Value: Slice of complaints
+	complaintMap := make(map[int32][]*ReferralComplaint)
+	for _, c := range allComplaints {
+		complaintMap[c.ReferralID] = append(complaintMap[c.ReferralID], c)
+	}
+
+	// 4. Attach complaints to each entry
+	for _, entry := range entries {
+		entry.Complaints = complaintMap[entry.ID]
+	}
+
+	return entries, nil
 }
 
 // 3. Get: The "Sniper"
