@@ -7,7 +7,7 @@ import (
 )
 
 func (d *Driver) CreateReferralLog(ctx context.Context, create *store.ReferralLog) (*store.ReferralLog, error) {
-	ts := time.Now().Unix()
+	ts := time.Now().Format(time.RFC3339)
 	stmt := `INSERT INTO referral_log (entry_id, user_id, old_status, new_status, note, created_ts) 
 			 VALUES (?, ?, ?, ?, ?, ?)`
 

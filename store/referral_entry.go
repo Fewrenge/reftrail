@@ -11,8 +11,8 @@ import (
 type ReferralEntry struct {
 	ID        int32         `json:"id"`
 	CreatorID domain.UserID `json:"-"`
-	CreatedTs int64         `json:"createdTs"`
-	UpdatedTs int64         `json:"updatedTs"`
+	CreatedTs string        `json:"createdTs"`
+	UpdatedTs string        `json:"updatedTs"`
 
 	// 2. Patient Info (Matches your requirement #1)
 	PatientName string               `json:"patientName"`
@@ -35,10 +35,9 @@ type ReferralEntry struct {
 	Source  string `json:"source"`
 
 	// Appointment Info (If status is "Booked")
-	ApptDate      string `json:"apptDate"`
-	ApptTime      string `json:"apptTime"`
-	Practitioner  string `json:"practitioner"`
-	JuvonnoApptID string `json:"juvonnoApptId"` // e.g., #18752
+	ApptDateAndTime string `json:"apptDateAndTime"`
+	Practitioner    string `json:"practitioner"`
+	JuvonnoApptID   string `json:"juvonnoApptId"` // e.g., #18752
 }
 
 type ReferralComplaint struct {
@@ -127,7 +126,7 @@ type DeleteReferralEntry struct {
 // 1. Create: The "Guard"
 func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error) {
 	var newID int32
-	ts := time.Now().Unix()
+	ts := time.Now().Format(time.RFC3339)
 
 	err := s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
 		// 1. Get User

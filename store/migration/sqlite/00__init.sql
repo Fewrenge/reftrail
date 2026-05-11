@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS user (
 -- 2. Referral Table (Requirement #1 through #10)
 CREATE TABLE IF NOT EXISTS referral_entry (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    created_ts BIGINT NOT NULL,
-    updated_ts BIGINT NOT NULL, 
+    created_ts TEXT NOT NULL,
+    updated_ts TEXT NOT NULL, 
     creator_id INTEGER NOT NULL,
     patient_name TEXT NOT NULL,
     patient_dob TEXT NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS referral_log (
     old_status TEXT,
     new_status TEXT,
     note TEXT,
-    created_ts BIGINT NOT NULL,
+    created_ts TEXT NOT NULL,
     FOREIGN KEY (entry_id) REFERENCES referral_entry(id),
     FOREIGN KEY (user_id) REFERENCES user(id)
 );
@@ -47,11 +47,10 @@ CREATE TABLE IF NOT EXISTS referral_appointment (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     referral_id INTEGER NOT NULL,
     complaint_target TEXT NOT NULL,
-    appt_date TEXT,
-    appt_time TEXT,
+    appt_date_and_time TEXT,
     practitioner TEXT,
     juvonno_appt_id TEXT,
-    created_ts BIGINT NOT NULL,
+    created_ts TEXT NOT NULL,
     creator_id INTEGER,
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id)
 );

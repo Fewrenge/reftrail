@@ -9,7 +9,7 @@ type ReferralLog struct {
 	OldStatus string `json:"oldStatus"`
 	NewStatus string `json:"newStatus"`
 	Note      string `json:"note"`
-	CreatedTs int64  `json:"createdTs"`
+	CreatedTs string `json:"createdTs"`
 }
 
 // Manager Logic: Notice we don't use a "Find" struct here.

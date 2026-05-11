@@ -16,7 +16,7 @@ func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID int32, 
 
 func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (int32, error) {
 	// Get the current time for our timestamps
-	ts := time.Now().Unix()
+	ts := time.Now().Format(time.RFC3339)
 
 	stmt := `INSERT INTO referral_entry (
 		creator_id, created_ts, updated_ts, 
@@ -140,7 +140,7 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 	}
 	// Update the timestamp automatically
 	set = append(set, "updated_ts = ?")
-	args = append(args, time.Now().Unix())
+	args = append(args, time.Now().Format(time.RFC3339))
 
 	// 2. Add the ID for the WHERE clause
 	args = append(args, update.ID)
@@ -160,7 +160,7 @@ func (d *Driver) GetReferralEntryStatusByID(ctx context.Context, id int32) (doma
 // Only updates referral entry status
 func (d *Driver) UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error {
 	query := `UPDATE referral_entry SET status = ?, updated_ts = ? WHERE id = ?`
-	_, err := d.conn(ctx).ExecContext(ctx, query, string(status), time.Now().Unix(), id)
+	_, err := d.conn(ctx).ExecContext(ctx, query, string(status), time.Now().Format(time.RFC3339), id)
 	return err
 }
 
