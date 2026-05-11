@@ -2,45 +2,62 @@ package sqlite
 
 import (
 	"context"
+	"log"
 	"reftrail/internal/domain"
 	"reftrail/store" // Import your main store for the object definitions
 	"strings"
 	"time"
+
+	uuid "github.com/google/uuid"
 )
 
-func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID int32, complaint *store.ReferralComplaint) error {
+func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID domain.ReferralID, complaint *store.ReferralComplaint) error {
 	stmt := `INSERT INTO referral_complaint (referral_id, body_part, side, details) VALUES (?, ?, ?, ?)`
 	_, err := d.conn(ctx).ExecContext(ctx, stmt, referralID, complaint.BodyPart, complaint.Side, complaint.Details)
 	return err
 }
 
-func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (int32, error) {
+func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (*store.ReferralEntry, error) {
 	// Get the current time for our timestamps
+	newID, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+	idStr := newID.String()
 	ts := time.Now().Format(time.RFC3339)
 
 	stmt := `INSERT INTO referral_entry (
-		creator_id, created_ts, updated_ts, 
+		id, created_ts, updated_ts, creator_id, 
 		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
 		referring_physician, triage_note, urgency, status, source
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// Execute the command
-	result, err := d.conn(ctx).ExecContext(ctx, stmt,
-		int32(create.CreatorID), ts, ts,
+	_, err = d.conn(ctx).ExecContext(ctx, stmt,
+		idStr, ts, ts, int32(create.CreatorID),
 		create.PatientName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
 		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source,
 	)
 	if err != nil {
-		return 0, err
+		// DEBUG
+		log.Printf("SQL Error: %v | Arguments: id=%v, creator=%v, ts=%v", err, idStr, create.CreatorID, ts)
+		return nil, err
 	}
-
-	// Get the ID that SQLite just generated automatically
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
-
-	return int32(id), err
+	return &store.ReferralEntry{
+		ID:                 domain.ReferralID(idStr), // Cast to custom type
+		CreatedTs:          ts,
+		UpdatedTs:          ts,
+		CreatorID:          create.CreatorID,
+		PatientName:        create.PatientName,
+		PatientDOB:         create.PatientDOB,
+		TxtCustomerID:      create.TxtCustomerID,
+		IntCustomerDocID:   create.IntCustomerDocID,
+		ReferringPhysician: create.ReferringPhysician,
+		TriageNote:         create.TriageNote,
+		Urgency:            create.Urgency,
+		Status:             create.Status,
+		Source:             create.Source,
+	}, nil
 }
 
 func (d *Driver) ListAllComplaints(ctx context.Context) ([]*store.ReferralComplaint, error) {
@@ -151,14 +168,14 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 	return err
 }
 
-func (d *Driver) GetReferralEntryStatusByID(ctx context.Context, id int32) (domain.ReferralStatus, error) {
+func (d *Driver) GetReferralEntryStatusByID(ctx context.Context, id domain.ReferralID) (domain.ReferralStatus, error) {
 	var status domain.ReferralStatus
 	err := d.conn(ctx).QueryRowContext(ctx, "SELECT status FROM referral_entry WHERE id = $1", id).Scan(&status)
 	return status, err
 }
 
 // Only updates referral entry status
-func (d *Driver) UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error {
+func (d *Driver) UpdateReferralEntryStatus(ctx context.Context, id domain.ReferralID, status domain.ReferralStatus) error {
 	query := `UPDATE referral_entry SET status = ?, updated_ts = ? WHERE id = ?`
 	_, err := d.conn(ctx).ExecContext(ctx, query, string(status), time.Now().Format(time.RFC3339), id)
 	return err

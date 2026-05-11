@@ -8,14 +8,14 @@ CREATE TABLE IF NOT EXISTS user (
 
 -- 2. Referral Table (Requirement #1 through #10)
 CREATE TABLE IF NOT EXISTS referral_entry (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     created_ts TEXT NOT NULL,
     updated_ts TEXT NOT NULL, 
     creator_id INTEGER NOT NULL,
     patient_name TEXT NOT NULL,
     patient_dob TEXT NOT NULL,
     txt_customer_id TEXT,
-    int_customer_doc_id TEXT,
+    int_customer_doc_id INTEGER,
     referring_physician TEXT,
     triage_note TEXT,
     urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')),
@@ -30,22 +30,22 @@ CREATE TABLE IF NOT EXISTS referral_entry (
 
 -- 3. Audit Log (Requirement #9 - Tracking who changed the status)
 CREATE TABLE IF NOT EXISTS referral_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entry_id INTEGER NOT NULL,
+    id TEXT PRIMARY KEY,
+    referral_id TEXT NOT NULL,
     user_id INTEGER NOT NULL,
     old_status TEXT,
     new_status TEXT,
     note TEXT,
     created_ts TEXT NOT NULL,
-    FOREIGN KEY (entry_id) REFERENCES referral_entry(id),
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id),
     FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(entry_id);
+CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(referral_id);
 
 CREATE TABLE IF NOT EXISTS referral_appointment (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    referral_id INTEGER NOT NULL,
+    id TEXT PRIMARY KEY,
+    referral_id TEXT NOT NULL,
     complaint_target TEXT NOT NULL,
     appt_date_and_time TEXT,
     practitioner TEXT,
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS referral_appointment (
 -- This table stores the actual body parts for each referral
 CREATE TABLE IF NOT EXISTS referral_complaint (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    referral_id INTEGER NOT NULL,
+    referral_id TEXT NOT NULL,
     body_part TEXT NOT NULL CHECK(body_part IN ('SHOULDER', 'KNEE', 'HIP', 'ELBOW', 'WRIST', 'ANKLE', 'FOOT', 'OTHER')),
     side TEXT NOT NULL CHECK(side IN ('LEFT', 'RIGHT', 'BILATERAL')),
     details TEXT, -- For when body_part is 'OTHER' (e.g., "Femur")

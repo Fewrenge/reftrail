@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"reftrail/internal/domain"
-	"time"
 )
 
 type ReferralEntry struct {
-	ID        int32         `json:"id"`
-	CreatorID domain.UserID `json:"-"`
-	CreatedTs string        `json:"createdTs"`
-	UpdatedTs string        `json:"updatedTs"`
+	ID        domain.ReferralID `json:"id"`
+	CreatorID domain.UserID     `json:"-"`
+	CreatedTs string            `json:"createdTs"`
+	UpdatedTs string            `json:"updatedTs"`
 
 	// 2. Patient Info (Matches your requirement #1)
 	PatientName string               `json:"patientName"`
@@ -41,11 +40,11 @@ type ReferralEntry struct {
 }
 
 type ReferralComplaint struct {
-	ID         int32  `json:"id"`
-	ReferralID int32  `json:"referralId"`
-	BodyPart   string `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
-	Side       string `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL"`
-	Details    string `json:"details"`
+	ID         int32             `json:"id"`
+	ReferralID domain.ReferralID `json:"referralId"`
+	BodyPart   string            `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
+	Side       string            `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL"`
+	Details    string            `json:"details"`
 }
 
 type CreateReferralEntry struct {
@@ -77,8 +76,8 @@ type BatchCreateReferralEntries struct {
 // FindReferralEntry is the "Search Filter" for your referrals.
 type FindReferralEntry struct {
 	// 1. Basic Filters
-	ID        *int32 `json:"id"`
-	CreatorID *int32 `json:"creatorId"`
+	ID        *domain.ReferralID `json:"id"`
+	CreatorID *int32             `json:"creatorId"`
 
 	// 2. Clinical Filters (Requirement #8 & #9)
 	// We use pointers (*) so we can tell the difference between
@@ -97,7 +96,7 @@ type FindReferralEntry struct {
 
 // UpdateReferralEntry defines which fields are allowed to be changed.
 type UpdateReferralEntry struct {
-	ID int32 `json:"id"`
+	ID domain.ReferralID `json:"id"`
 
 	// Fields that change during the workflow
 	Status     *string `json:"status"`
@@ -114,19 +113,18 @@ type UpdateReferralEntry struct {
 }
 
 type UpdateReferralEntryStatus struct {
-	ID        int32                 `json:"id"`
+	ID        domain.ReferralID     `json:"id"`
 	NewStatus domain.ReferralStatus `json:"newStatus"`
 	Note      string                `json:"note"`
 }
 
 type DeleteReferralEntry struct {
-	ID int32 `json:"id"`
+	ID domain.ReferralID `json:"id"`
 }
 
 // 1. Create: The "Guard"
 func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error) {
-	var newID int32
-	ts := time.Now().Format(time.RFC3339)
+	var finalEntry *ReferralEntry
 
 	err := s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
 		// 1. Get User
@@ -137,15 +135,16 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		create.CreatorID = domain.UserID(user.ID)
 
 		// 2. Insert Main Entry
-		id, err := s.driver.CreateReferralEntry(txCtx, create)
+		var err error
+		entry, err := s.driver.CreateReferralEntry(txCtx, create)
 		if err != nil {
 			return err
 		}
-		newID = id
+		finalEntry = entry
 
 		// 3. Insert Complaints
 		for _, c := range create.Complaints {
-			if err := s.driver.CreateReferralComplaint(txCtx, newID, &c); err != nil {
+			if err := s.driver.CreateReferralComplaint(txCtx, finalEntry.ID, &c); err != nil {
 				return err
 			}
 		}
@@ -157,22 +156,7 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 	}
 
 	// 4. Return the full object that the Handler expects
-	return &ReferralEntry{
-		ID:                 newID,
-		CreatorID:          create.CreatorID,
-		CreatedTs:          ts,
-		UpdatedTs:          ts,
-		PatientName:        create.PatientName,
-		PatientDOB:         create.PatientDOB,
-		TxtCustomerID:      create.TxtCustomerID,
-		IntCustomerDocID:   create.IntCustomerDocID,
-		ReferringPhysician: create.ReferringPhysician,
-		TriageNote:         create.TriageNote,
-		Urgency:            create.Urgency,
-		Status:             create.Status,
-		Source:             create.Source,
-		// Note: Usually we'd fetch complaints back here if the UI needs them immediately
-	}, nil
+	return finalEntry, nil
 }
 
 func (s *Store) BatchCreateReferralEntries(ctx context.Context, batch *BatchCreateReferralEntries) error {
@@ -214,7 +198,7 @@ func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry
 
 	// 3. Group complaints by ReferralID using a Map
 	// Key: ReferralID, Value: Slice of complaints
-	complaintMap := make(map[int32][]*ReferralComplaint)
+	complaintMap := make(map[domain.ReferralID][]*ReferralComplaint)
 	for _, c := range allComplaints {
 		complaintMap[c.ReferralID] = append(complaintMap[c.ReferralID], c)
 	}
@@ -279,7 +263,7 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 	})
 }
 
-func (s *Store) GetReferralEntryStatusByID(ctx context.Context, id int32) (domain.ReferralStatus, error) {
+func (s *Store) GetReferralEntryStatusByID(ctx context.Context, id domain.ReferralID) (domain.ReferralStatus, error) {
 	return s.driver.GetReferralEntryStatusByID(ctx, id)
 }
 
@@ -330,7 +314,7 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 func (s *Store) DeleteReferralEntry(ctx context.Context, delete *DeleteReferralEntry) error {
 
 	// Logic Check: Don't try to delete nothing
-	if delete.ID == 0 {
+	if delete.ID == "" {
 		return errors.New("valid ID is required for deletion")
 	}
 

@@ -1,5 +1,7 @@
 package domain
 
+type ReferralID string
+type ReferralLogID string
 type ReferralStatus string
 
 const (

@@ -14,18 +14,18 @@ type Driver interface {
 
 	// 2. Referral Entry Methods
 	// Notice we use the "Form" structs we just created!
-	CreateReferralComplaint(ctx context.Context, referralID int32, c *ReferralComplaint) error
+	CreateReferralComplaint(ctx context.Context, referralID domain.ReferralID, c *ReferralComplaint) error
 	ListAllComplaints(ctx context.Context) ([]*ReferralComplaint, error)
-	CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (int32, error)
+	CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error)
 	ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error)
 	UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error
 	DeleteReferralEntry(ctx context.Context, delete *DeleteReferralEntry) error
-	GetReferralEntryStatusByID(ctx context.Context, id int32) (domain.ReferralStatus, error)
-	UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error
+	GetReferralEntryStatusByID(ctx context.Context, id domain.ReferralID) (domain.ReferralStatus, error)
+	UpdateReferralEntryStatus(ctx context.Context, id domain.ReferralID, status domain.ReferralStatus) error
 
 	// 3. Accountability (Optional but recommended for your logs)
 	CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error)
-	ListReferralLogs(ctx context.Context, entryID int32) ([]*ReferralLog, error)
+	ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*ReferralLog, error)
 
 	// 4. User/Account Methods (For your Login/Privileges)
 	CreateUser(ctx context.Context, create *CreateUser) (*User, error)

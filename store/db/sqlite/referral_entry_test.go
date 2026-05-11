@@ -20,14 +20,14 @@ func setupTestStore(t *testing.T) *store.Store {
 
 	// 2. Run schema
 	schema := `
-	CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password_hash TEXT, role TEXT);
+	CREATE TABLE user (id TEXT PRIMARY KEY, username TEXT, password_hash TEXT, role TEXT);
 	CREATE TABLE referral_entry (
-		id INTEGER PRIMARY KEY AUTOINCREMENT, creator_id INTEGER, created_ts BIGINT, updated_ts BIGINT,
+		id TEXT PRIMARY KEY, creator_id INTEGER, created_ts TEXT, updated_ts TEXT,
 		patient_name TEXT, patient_dob TEXT, txt_customer_id TEXT, int_customer_doc_id TEXT,
 		referring_physician TEXT, triage_note TEXT, urgency TEXT, status TEXT, source TEXT
 	);
 	CREATE TABLE referral_complaint (
-		id INTEGER PRIMARY KEY AUTOINCREMENT, referral_id INTEGER, body_part TEXT, side TEXT, details TEXT
+		id INTEGER PRIMARY KEY AUTOINCREMENT, referral_id TEXT, body_part TEXT, side TEXT, details TEXT
 	);`
 
 	if _, err := db.Exec(schema); err != nil {
@@ -69,7 +69,7 @@ func TestCreateReferralEntry_Integration(t *testing.T) {
 			t.Fatalf("expected nil error, got %v", err)
 		}
 
-		if entry.ID == 0 {
+		if entry.ID == "" {
 			t.Error("expected a generated ID")
 		}
 	})
