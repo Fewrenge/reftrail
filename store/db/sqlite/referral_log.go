@@ -17,7 +17,7 @@ func (d *Driver) CreateReferralLog(ctx context.Context, create *store.ReferralLo
 	idStr := newID.String()
 
 	ts := time.Now().Format(time.RFC3339)
-	stmt := `INSERT INTO referral_log (id, entry_id, user_id, old_status, new_status, note, created_ts) 
+	stmt := `INSERT INTO referral_log (id, referral_id, user_id, old_status, new_status, note, created_ts) 
 			 VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 	_, err = d.conn(ctx).ExecContext(ctx, stmt,
