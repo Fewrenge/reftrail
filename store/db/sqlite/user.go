@@ -8,8 +8,8 @@ import (
 )
 
 func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*store.User, error) {
-	stmt := `INSERT INTO user (username, password_hash, role) VALUES (?, ?, ?)`
-	result, err := d.conn(ctx).ExecContext(ctx, stmt, create.Username, create.Password, create.Role)
+	query := `INSERT INTO user (username, password_hash, role) VALUES (?, ?, ?)`
+	result, err := d.conn(ctx).ExecContext(ctx, query, create.Username, create.Password, create.Role)
 	if err != nil {
 		return nil, err
 	}

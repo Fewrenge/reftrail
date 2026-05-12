@@ -12,8 +12,8 @@ import (
 )
 
 func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID domain.ReferralID, complaint *store.ReferralComplaint) error {
-	stmt := `INSERT INTO referral_complaint (referral_id, body_part, side, details) VALUES (?, ?, ?, ?)`
-	_, err := d.conn(ctx).ExecContext(ctx, stmt, referralID, complaint.BodyPart, complaint.Side, complaint.Details)
+	query := `INSERT INTO referral_complaint (referral_id, body_part, side, details) VALUES (?, ?, ?, ?)`
+	_, err := d.conn(ctx).ExecContext(ctx, query, referralID, complaint.BodyPart, complaint.Side, complaint.Details)
 	return err
 }
 
@@ -26,14 +26,14 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 	idStr := newID.String()
 	ts := time.Now().Format(time.RFC3339)
 
-	stmt := `INSERT INTO referral_entry (
+	query := `INSERT INTO referral_entry (
 		id, created_ts, updated_ts, creator_id, 
 		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
 		referring_physician, triage_note, urgency, status, source
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// Execute the command
-	_, err = d.conn(ctx).ExecContext(ctx, stmt,
+	_, err = d.conn(ctx).ExecContext(ctx, query,
 		idStr, ts, ts, int32(create.CreatorID),
 		create.PatientName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
 		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source,
@@ -183,8 +183,8 @@ func (d *Driver) UpdateReferralEntryStatus(ctx context.Context, id domain.Referr
 
 func (d *Driver) DeleteReferralEntry(ctx context.Context, delete *store.DeleteReferralEntry) error {
 	// We pull the ID out of the struct's ID field
-	stmt := `DELETE FROM referral_entry WHERE id = ?`
-	_, err := d.conn(ctx).ExecContext(ctx, stmt, delete.ID)
+	query := `DELETE FROM referral_entry WHERE id = ?`
+	_, err := d.conn(ctx).ExecContext(ctx, query, delete.ID)
 	return err
 }
 
