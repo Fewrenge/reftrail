@@ -2,7 +2,10 @@ package sqlite
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
+	"fmt"
 	"reftrail/internal/domain"
 	"reftrail/store"
 	"testing"
@@ -11,23 +14,37 @@ import (
 )
 
 func setupTestStore(t *testing.T) *store.Store {
-	// 1. Open a fresh in-memory database
-	// ":memory:" tells SQLite not to save a file to disk
-	db, err := sql.Open("sqlite3", ":memory:")
+	// 1. Open a fresh in-memory database with random name
+	b := make([]byte, 4)
+	rand.Read(b)
+	dbName := hex.EncodeToString(b)
+
+	// Use the unique name in the DSN
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared&_fk=1", dbName)
+	db, err := sql.Open("sqlite3", dsn)
+
+	t.Cleanup(func() {
+		db.Close()
+	})
+
 	if err != nil {
 		t.Fatalf("failed to open test db: %v", err)
 	}
 
+	db.SetMaxOpenConns(1)
+
 	// 2. Run schema
 	schema := `
-	CREATE TABLE user (id TEXT PRIMARY KEY, username TEXT, password_hash TEXT, role TEXT);
-	CREATE TABLE referral_entry (
-		id TEXT PRIMARY KEY, creator_id INTEGER, created_ts TEXT, updated_ts TEXT,
-		patient_name TEXT, patient_dob TEXT, txt_customer_id TEXT, int_customer_doc_id TEXT,
-		referring_physician TEXT, triage_note TEXT, urgency TEXT, status TEXT, source TEXT
+	CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password_hash TEXT, role TEXT);
+	CREATE TABLE IF NOT EXISTS referral_entry (
+		id TEXT PRIMARY KEY, creator_id INTEGER NOT NULL, created_ts TEXT, updated_ts TEXT,
+		patient_name TEXT, patient_dob TEXT, txt_customer_id TEXT, int_customer_doc_id INTEGER,
+		referring_physician TEXT, triage_note TEXT, urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')), status TEXT, source TEXT,
+		FOREIGN KEY (creator_id) REFERENCES user(id)
 	);
-	CREATE TABLE referral_complaint (
-		id INTEGER PRIMARY KEY AUTOINCREMENT, referral_id TEXT, body_part TEXT, side TEXT, details TEXT
+	CREATE TABLE IF NOT EXISTS referral_complaint (
+		id INTEGER PRIMARY KEY AUTOINCREMENT, referral_id TEXT, body_part TEXT, side TEXT, details TEXT,
+		FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
 	);`
 
 	if _, err := db.Exec(schema); err != nil {
@@ -71,6 +88,72 @@ func TestCreateReferralEntry_Integration(t *testing.T) {
 
 		if entry.ID == "" {
 			t.Error("expected a generated ID")
+		}
+	})
+
+}
+
+func TestBatchCreateReferralEntries_Integration(t *testing.T) {
+	s := setupTestStore(t)
+	ctx := WithUserContext(context.Background(), &domain.UserContext{ID: 1, Role: "REFTRAIL_ADMIN"})
+
+	t.Run("Should successfully import multiple entries", func(t *testing.T) {
+		batch := &store.BatchCreateReferralEntries{
+			ReferralEntries: []store.CreateReferralEntry{
+				{PatientName: "Alice", Status: "READY_TO_BOOK", Urgency: "Elective"},
+				{PatientName: "Bob", Status: "READY_TO_BOOK", Urgency: "Elective"},
+			},
+		}
+
+		// 1. Run the batch
+		err := s.BatchCreateReferralEntries(ctx, batch)
+		if err != nil {
+			t.Fatalf("batch failed: %v", err)
+		}
+
+		// 2. Use the existing public List method to verify
+		// This doesn't need access to s.driver!
+		entries, err := s.ListReferralEntries(ctx, &store.FindReferralEntry{})
+		if err != nil {
+			t.Fatalf("could not verify entries: %v", err)
+		}
+
+		if len(entries) != 2 {
+			t.Errorf("expected 2 entries, got %d", len(entries))
+		}
+	})
+
+	t.Run("Should rollback entire batch if urgency is invalid", func(t *testing.T) {
+		// 1. Prepare a batch where the first is valid but the second has a bad Urgency
+		batch := &store.BatchCreateReferralEntries{
+			ReferralEntries: []store.CreateReferralEntry{
+				{
+					PatientName: "I Should Be Rolled Back",
+					Urgency:     "Elective", // Valid
+				},
+				{
+					PatientName: "I Am Invalid",
+					Urgency:     "IMMEDIATELY", // INVALID! (Not Elective, Urgent, or ASAP)
+				},
+			},
+		}
+
+		// 2. Attempt the batch import
+		err := s.BatchCreateReferralEntries(ctx, batch)
+		if err == nil {
+			t.Error("expected error due to invalid urgency CHECK constraint, but got nil")
+		}
+
+		// 3. VERIFY ROLLBACK
+		// We search for the first patient. If the rollback worked, they shouldn't exist.
+		name := "I Should Be Rolled Back"
+		entries, err := s.ListReferralEntries(ctx, &store.FindReferralEntry{
+			// Adjust this search filter to match your actual List method logic
+			PatientName: &name,
+		})
+
+		if err == nil && len(entries) > 0 {
+			t.Errorf("Rollback failed! 'I Should Be Rolled Back' was found in the database despite the batch failing.")
 		}
 	})
 

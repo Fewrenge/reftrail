@@ -37,4 +37,7 @@ type Driver interface {
 
 	// 5. Transaction methods
 	RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error
+
+	// 6. Tag methods
+	CreateReferralTag(ctx context.Context, create *CreateReferralTag) (*ReferralTag, error)
 }

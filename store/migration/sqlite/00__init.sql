@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     txt_customer_id TEXT,
     int_customer_doc_id INTEGER,
     referring_physician TEXT,
+    consult_type TEXT CHECK(consult_type IN ('APP+LE','APP+UE','APP+SX','SX','OTHER')),
+    consult_type_details TEXT, -- e.g. when patient has a preference
     triage_note TEXT,
     urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')),
     status TEXT NOT NULL DEFAULT 'READY_TO_BOOK' CHECK (status IN ('READY_TO_BOOK', '1ST_CALL_COMPLETE', '2ND_CALL_COMPLETE',
@@ -64,3 +66,23 @@ CREATE TABLE IF NOT EXISTS referral_complaint (
     details TEXT, -- For when body_part is 'OTHER' (e.g., "Femur")
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id)
 );
+
+-- Definition of Tags
+-- Only Admin can edit Tags
+CREATE TABLE IF NOT EXISTS tag_definition (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    created_ts TEXT NOT NULL
+);
+
+-- Junction table (Many-to-Many)
+CREATE TABLE IF NOT EXISTS referral_tag (
+    referral_id TEXT NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (referral_id, tag_id),
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tag_definition(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_referral_tag_ref ON referral_tag(referral_id);

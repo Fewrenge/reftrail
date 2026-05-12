@@ -11,6 +11,8 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ['.loca.lt'],
+    host: true,
     proxy: {
       // Any request starting with /api will go to your Go backend
       '/api': {
