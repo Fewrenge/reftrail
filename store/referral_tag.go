@@ -25,3 +25,7 @@ func (s *Store) CreateReferralTag(ctx context.Context, create *CreateReferralTag
 	}
 	return s.driver.CreateReferralTag(ctx, create)
 }
+
+func (s *Store) ListReferralTags(ctx context.Context) ([]*ReferralTag, error) {
+	return s.driver.ListReferralTags(ctx)
+}

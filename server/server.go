@@ -66,6 +66,7 @@ func (s *Server) registerReferralRoutes() {
 
 	// Change password
 	protected.PATCH("/users/password", v1Service.ChangePasswordHandler)
+	protected.GET("/tags", v1Service.ListReferralTagsHandler)
 
 	admin := protected.Group("")
 	admin.Use(auth.AdminOnlyMiddleware)               // Add the extra gatekeeper
