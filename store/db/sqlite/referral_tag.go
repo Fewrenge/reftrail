@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"fmt"
 	"reftrail/store"
 )
 
@@ -39,4 +40,22 @@ func (d *Driver) ListReferralTags(ctx context.Context) ([]*store.ReferralTag, er
 		tags = append(tags, &tag)
 	}
 	return tags, nil
+}
+
+func (d *Driver) DeleteReferralTag(ctx context.Context, delete *store.DeleteReferralTag) error {
+	// Deleting from the definition table triggers the cascade in the junction table
+	query := `DELETE FROM tag_definition WHERE id = ?`
+
+	result, err := d.db.ExecContext(ctx, query, delete.ID)
+	if err != nil {
+		return err
+	}
+
+	// Optional: Check if we actually deleted something
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("tag with ID %d not found", delete.ID)
+	}
+
+	return nil
 }

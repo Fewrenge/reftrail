@@ -41,4 +41,5 @@ type Driver interface {
 	// 6. Tag methods
 	CreateReferralTag(ctx context.Context, create *CreateReferralTag) (*ReferralTag, error)
 	ListReferralTags(ctx context.Context) ([]*ReferralTag, error)
+	DeleteReferralTag(ctx context.Context, delete *DeleteReferralTag) error
 }
