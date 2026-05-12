@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS referral_complaint (
 
 -- Definition of Tags
 -- Only Admin can edit Tags
-CREATE TABLE IF NOT EXISTS tag_definition (
+CREATE TABLE IF NOT EXISTS referral_tag_definition (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     description TEXT,
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS referral_tag (
     tag_id INTEGER NOT NULL,
     PRIMARY KEY (referral_id, tag_id),
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES tag_definition(id) ON DELETE CASCADE
+    FOREIGN KEY (tag_id) REFERENCES referral_tag_definition(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_referral_tag_ref ON referral_tag(referral_id);

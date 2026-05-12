@@ -8,12 +8,12 @@ import (
 )
 
 func (d *Driver) CreateReferralTag(ctx context.Context, create *store.CreateReferralTag) (*store.ReferralTag, error) {
-	query := `INSERT INTO tag_definition (name, description, created_ts) 
-              VALUES (?, ?, datetime('now')) RETURNING id, name, description, created_ts`
+	query := `INSERT INTO referral_tag_definition (name, description) 
+              VALUES (?, ?) RETURNING id, name, description`
 
 	var tag store.ReferralTag
 	err := d.db.QueryRowContext(ctx, query, create.Name, create.Description).Scan(
-		&tag.ID, &tag.Name, &tag.Description, &tag.CreatedTS,
+		&tag.ID, &tag.Name, &tag.Description,
 	)
 	if err != nil {
 		return nil, err
@@ -22,8 +22,8 @@ func (d *Driver) CreateReferralTag(ctx context.Context, create *store.CreateRefe
 }
 
 func (d *Driver) ListReferralTags(ctx context.Context) ([]*store.ReferralTag, error) {
-	query := `SELECT id, name, description, created_ts 
-              FROM tag_definition 
+	query := `SELECT id, name, description
+              FROM referral_tag_definition 
               ORDER BY name ASC`
 
 	rows, err := d.db.QueryContext(ctx, query)
@@ -35,7 +35,7 @@ func (d *Driver) ListReferralTags(ctx context.Context) ([]*store.ReferralTag, er
 	tags := []*store.ReferralTag{}
 	for rows.Next() {
 		var tag store.ReferralTag
-		if err := rows.Scan(&tag.ID, &tag.Name, &tag.Description, &tag.CreatedTS); err != nil {
+		if err := rows.Scan(&tag.ID, &tag.Name, &tag.Description); err != nil {
 			return nil, err
 		}
 		tags = append(tags, &tag)
@@ -45,7 +45,7 @@ func (d *Driver) ListReferralTags(ctx context.Context) ([]*store.ReferralTag, er
 
 func (d *Driver) DeleteReferralTag(ctx context.Context, delete *store.DeleteReferralTag) error {
 	// Deleting from the definition table triggers the cascade in the junction table
-	query := `DELETE FROM tag_definition WHERE id = ?`
+	query := `DELETE FROM referral_tag_definition WHERE id = ?`
 
 	result, err := d.db.ExecContext(ctx, query, delete.ID)
 	if err != nil {
@@ -62,8 +62,8 @@ func (d *Driver) DeleteReferralTag(ctx context.Context, delete *store.DeleteRefe
 }
 
 func (d *Driver) AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
-	query := `INSERT OR IGNORE INTO referral_tag (referral_id, tag_id, assigned_at) 
-              VALUES (?, ?, datetime('now'))`
+	query := `INSERT OR IGNORE INTO referral_tag (referral_id, tag_id) 
+              VALUES (?, ?)`
 	_, err := d.db.ExecContext(ctx, query, referralID, tagID)
 	return err
 }

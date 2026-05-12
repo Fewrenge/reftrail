@@ -45,6 +45,18 @@ func setupTestStore(t *testing.T) *store.Store {
 	CREATE TABLE IF NOT EXISTS referral_complaint (
 		id INTEGER PRIMARY KEY AUTOINCREMENT, referral_id TEXT, body_part TEXT, side TEXT, details TEXT,
 		FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
+	);
+	CREATE TABLE IF NOT EXISTS referral_tag_definition (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+    name TEXT UNIQUE, 
+    description TEXT
+	);
+	CREATE TABLE IF NOT EXISTS referral_tag (
+    referral_id TEXT, 
+    tag_id INTEGER,
+    PRIMARY KEY (referral_id, tag_id),
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES referral_tag_definition(id) ON DELETE CASCADE
 	);`
 
 	if _, err := db.Exec(schema); err != nil {
@@ -70,6 +82,7 @@ func TestCreateReferralEntry_Integration(t *testing.T) {
 			Complaints: []store.ReferralComplaint{
 				{BodyPart: "KNEE", Side: "LEFT"},
 			},
+			Urgency: "Elective",
 		}
 
 		baseCtx := context.Background()
