@@ -44,7 +44,7 @@ func (s *Server) registerReferralRoutes() {
 
 	// --- THE CLEAN LIST ---
 	// Get the whole list
-	protected.GET("/referrals", v1Service.GetReferralEntriesHandler)
+	protected.GET("/referrals", v1Service.ListReferralEntriesHandler)
 
 	// Get ONE specific referrals entry (The :id sniper)
 	protected.GET("/referrals/:id", v1Service.GetReferralEntryHandler)

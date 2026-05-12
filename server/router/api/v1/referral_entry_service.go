@@ -10,7 +10,7 @@ import (
 )
 
 // Get all referrals
-func (s *APIV1Service) GetReferralEntriesHandler(c *echo.Context) error {
+func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
 	list, err := s.Store.ListReferralEntries(ctx, &store.FindReferralEntry{})
