@@ -77,5 +77,8 @@ func (s *Server) registerReferralRoutes() {
 	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler) // Delete a referral entry
 	// admin.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler) // Gotta change the URL?
 
-	admin.POST("/tags", v1Service.CreateReferralTagHandler)
+	admin.POST("/tags", v1Service.CreateReferralTagHandler)                // Add a tag to the database
+	admin.DELETE("/tags/:id", v1Service.DeleteReferralTagHandler)          // Delete a tag from the database
+	admin.POST("/referrals/:id/tags/:tagId", v1Service.AssignTagHandler)   // Assign a tag to a referral
+	admin.DELETE("/referrals/:id/tags/:tagId", v1Service.RemoveTagHandler) // Remove a tag from a referral
 }

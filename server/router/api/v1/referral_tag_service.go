@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"reftrail/internal/domain"
 	"reftrail/store"
 	"strconv"
 
@@ -49,5 +50,27 @@ func (s *APIV1Service) DeleteReferralTagHandler(c *echo.Context) error {
 	}
 
 	// 3. Return 204 No Content (Standard for successful deletion)
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (s *APIV1Service) AssignTagHandler(c *echo.Context) error {
+	refIDStr := c.Param("id")
+	refID := domain.ReferralID(refIDStr)
+	tagID, _ := strconv.ParseInt(c.Param("tagId"), 10, 64)
+
+	if err := s.Store.AssignTagToReferral(c.Request().Context(), refID, tagID); err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+	return c.NoContent(http.StatusCreated)
+}
+
+func (s *APIV1Service) RemoveTagHandler(c *echo.Context) error {
+	refIDStr := c.Param("id")
+	refID := domain.ReferralID(refIDStr)
+	tagID, _ := strconv.ParseInt(c.Param("tagId"), 10, 64)
+
+	if err := s.Store.RemoveTagFromReferral(c.Request().Context(), refID, tagID); err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
 	return c.NoContent(http.StatusNoContent)
 }

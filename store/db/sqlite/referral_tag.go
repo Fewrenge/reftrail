@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"fmt"
+	"reftrail/internal/domain"
 	"reftrail/store"
 )
 
@@ -58,4 +59,17 @@ func (d *Driver) DeleteReferralTag(ctx context.Context, delete *store.DeleteRefe
 	}
 
 	return nil
+}
+
+func (d *Driver) AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
+	query := `INSERT OR IGNORE INTO referral_tag (referral_id, tag_id, assigned_at) 
+              VALUES (?, ?, datetime('now'))`
+	_, err := d.db.ExecContext(ctx, query, referralID, tagID)
+	return err
+}
+
+func (d *Driver) RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
+	query := `DELETE FROM referral_tag WHERE referral_id = ? AND tag_id = ?`
+	_, err := d.db.ExecContext(ctx, query, referralID, tagID)
+	return err
 }

@@ -41,3 +41,12 @@ func (s *Store) DeleteReferralTag(ctx context.Context, delete *DeleteReferralTag
 	}
 	return s.driver.DeleteReferralTag(ctx, delete)
 }
+
+func (s *Store) AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
+	// TODO: check if the referral exists first
+	return s.driver.AssignTagToReferral(ctx, referralID, tagID)
+}
+
+func (s *Store) RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
+	return s.driver.RemoveTagFromReferral(ctx, referralID, tagID)
+}
