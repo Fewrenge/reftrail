@@ -38,7 +38,8 @@ func setupTestStore(t *testing.T) *store.Store {
 	CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password_hash TEXT, role TEXT);
 	CREATE TABLE IF NOT EXISTS referral_entry (
 		id TEXT PRIMARY KEY, creator_id INTEGER NOT NULL, created_ts TEXT, updated_ts TEXT,
-		patient_last_name TEXT, patient_first_name TEXT, patient_dob TEXT, txt_customer_id TEXT, int_customer_doc_id INTEGER,
+		patient_last_name TEXT, patient_first_name TEXT, patient_dob TEXT, patient_healthcard_number TEXT, patient_healthcard_version_code TEXT,
+		txt_customer_id TEXT, int_customer_doc_id INTEGER,
 		referring_physician TEXT, triage_note TEXT, urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')), status TEXT, source TEXT,
 		FOREIGN KEY (creator_id) REFERENCES user(id)
 	);

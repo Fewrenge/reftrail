@@ -28,7 +28,8 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 
 	query := `INSERT INTO referral_entry (
 		id, created_ts, updated_ts, creator_id, 
-		patient_last_name, patient_first_name, patient_dob, txt_customer_id, int_customer_doc_id,
+		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code,
+		 txt_customer_id, int_customer_doc_id,
 		referring_physician, triage_note, urgency, status, source
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
@@ -43,20 +44,22 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 			create.PatientLastName, create.PatientFirstName, create.CreatorID, err)
 	}
 	return &store.ReferralEntry{
-		ID:                 domain.ReferralID(idStr), // Cast to custom type
-		CreatedTs:          ts,
-		UpdatedTs:          ts,
-		CreatorID:          create.CreatorID,
-		PatientLastName:    create.PatientLastName,
-		PatientFirstName:   create.PatientFirstName,
-		PatientDOB:         create.PatientDOB,
-		TxtCustomerID:      create.TxtCustomerID,
-		IntCustomerDocID:   create.IntCustomerDocID,
-		ReferringPhysician: create.ReferringPhysician,
-		TriageNote:         create.TriageNote,
-		Urgency:            create.Urgency,
-		Status:             create.Status,
-		Source:             create.Source,
+		ID:                           domain.ReferralID(idStr), // Cast to custom type
+		CreatedTs:                    ts,
+		UpdatedTs:                    ts,
+		CreatorID:                    create.CreatorID,
+		PatientLastName:              create.PatientLastName,
+		PatientFirstName:             create.PatientFirstName,
+		PatientDOB:                   create.PatientDOB,
+		PatientHealthcardNumber:      create.PatientHealthcardNumber,
+		PatientHealthcardVersionCode: create.PatientHealthcardVersionCode,
+		TxtCustomerID:                create.TxtCustomerID,
+		IntCustomerDocID:             create.IntCustomerDocID,
+		ReferringPhysician:           create.ReferringPhysician,
+		TriageNote:                   create.TriageNote,
+		Urgency:                      create.Urgency,
+		Status:                       create.Status,
+		Source:                       create.Source,
 	}, nil
 }
 
@@ -83,7 +86,8 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	// 1. The Base Query
 	query := `SELECT 
 		id, creator_id, created_ts, updated_ts, 
-		patient_last_name, patient_first_name, patient_dob, txt_customer_id, int_customer_doc_id,
+		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code,
+		txt_customer_id, int_customer_doc_id,
 		referring_physician, triage_note, urgency, status, source
 	FROM referral_entry WHERE 1 = 1`
 
@@ -134,7 +138,9 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		// Scan matches the columns in our SELECT statusment to our Go struct
 		err := rows.Scan(
 			&entry.ID, &entry.CreatorID, &entry.CreatedTs, &entry.UpdatedTs,
-			&entry.PatientLastName, &entry.PatientFirstName, &entry.PatientDOB, &entry.TxtCustomerID, &entry.IntCustomerDocID,
+			&entry.PatientLastName, &entry.PatientFirstName, &entry.PatientDOB,
+			&entry.PatientHealthcardNumber, &entry, entry.PatientHealthcardVersionCode,
+			&entry.TxtCustomerID, &entry.IntCustomerDocID,
 			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source,
 		)
 		if err != nil {
