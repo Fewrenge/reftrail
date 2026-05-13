@@ -38,7 +38,7 @@ func setupTestStore(t *testing.T) *store.Store {
 	CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password_hash TEXT, role TEXT);
 	CREATE TABLE IF NOT EXISTS referral_entry (
 		id TEXT PRIMARY KEY, creator_id INTEGER NOT NULL, created_ts TEXT, updated_ts TEXT,
-		patient_name TEXT, patient_dob TEXT, txt_customer_id TEXT, int_customer_doc_id INTEGER,
+		patient_last_name TEXT, patient_first_name TEXT, patient_dob TEXT, txt_customer_id TEXT, int_customer_doc_id INTEGER,
 		referring_physician TEXT, triage_note TEXT, urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')), status TEXT, source TEXT,
 		FOREIGN KEY (creator_id) REFERENCES user(id)
 	);
@@ -77,8 +77,9 @@ func TestCreateReferralEntry_Integration(t *testing.T) {
 
 	t.Run("Should save entry and complaints in a transaction", func(t *testing.T) {
 		req := &store.CreateReferralEntry{
-			PatientName: "Test Gopher",
-			Source:      "REGULAR",
+			PatientLastName:  "Test",
+			PatientFirstName: "Gopher",
+			Source:           "REGULAR",
 			Complaints: []store.ReferralComplaint{
 				{BodyPart: "KNEE", Side: "LEFT"},
 			},
@@ -113,8 +114,8 @@ func TestBatchCreateReferralEntries_Integration(t *testing.T) {
 	t.Run("Should successfully import multiple entries", func(t *testing.T) {
 		batch := &store.BatchCreateReferralEntries{
 			ReferralEntries: []store.CreateReferralEntry{
-				{PatientName: "Alice", Status: "READY_TO_BOOK", Urgency: "Elective"},
-				{PatientName: "Bob", Status: "READY_TO_BOOK", Urgency: "Elective"},
+				{PatientLastName: "Alice", PatientFirstName: "One", Status: "READY_TO_BOOK", Urgency: "Elective"},
+				{PatientLastName: "Bob", PatientFirstName: "Two", Status: "READY_TO_BOOK", Urgency: "Elective"},
 			},
 		}
 
@@ -141,12 +142,14 @@ func TestBatchCreateReferralEntries_Integration(t *testing.T) {
 		batch := &store.BatchCreateReferralEntries{
 			ReferralEntries: []store.CreateReferralEntry{
 				{
-					PatientName: "I Should Be Rolled Back",
-					Urgency:     "Elective", // Valid
+					PatientLastName:  "I Should Be",
+					PatientFirstName: "Rolled Back",
+					Urgency:          "Elective", // Valid
 				},
 				{
-					PatientName: "I Am Invalid",
-					Urgency:     "IMMEDIATELY", // INVALID! (Not Elective, Urgent, or ASAP)
+					PatientLastName:  "I Am",
+					PatientFirstName: "Invalid",
+					Urgency:          "IMMEDIATELY", // INVALID! (Not Elective, Urgent, or ASAP)
 				},
 			},
 		}
@@ -159,10 +162,12 @@ func TestBatchCreateReferralEntries_Integration(t *testing.T) {
 
 		// 3. VERIFY ROLLBACK
 		// We search for the first patient. If the rollback worked, they shouldn't exist.
-		name := "I Should Be Rolled Back"
+		firstName := "I Should Be"
+		lastName := "Rolled Back"
 		entries, err := s.ListReferralEntries(ctx, &store.FindReferralEntry{
 			// Adjust this search filter to match your actual List method logic
-			PatientName: &name,
+			PatientFirstName: &firstName,
+			PatientLastName:  &lastName,
 		})
 
 		if err == nil && len(entries) > 0 {

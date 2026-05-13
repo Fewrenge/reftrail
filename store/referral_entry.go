@@ -13,9 +13,10 @@ type ReferralEntry struct {
 	UpdatedTs string            `json:"updatedTs"`
 
 	// 2. Patient Info (Matches your requirement #1)
-	PatientName string               `json:"patientName"`
-	PatientDOB  string               `json:"patientDob"`
-	Complaints  []*ReferralComplaint `json:"complaints"`
+	PatientLastName  string               `json:"patientLastName"`
+	PatientFirstName string               `json:"patientFirstName"`
+	PatientDOB       string               `json:"patientDob"`
+	Complaints       []*ReferralComplaint `json:"complaints"`
 
 	// 3. Juvonno Integration (Matches your requirements #2 & #3)
 	// We use string for TxtCustomerID because Juvonno IDs can sometimes be alphanumeric
@@ -48,7 +49,8 @@ type ReferralComplaint struct {
 
 type CreateReferralEntry struct {
 	// Patient & Juvonno Info
-	PatientName      string `json:"patientName" validate:"required,min=2"`
+	PatientLastName  string `json:"patientLastName" validate:"required"`
+	PatientFirstName string `json:"patientFirstName" validate:"required"`
 	PatientDOB       string `json:"patientDob"`
 	TxtCustomerID    string `json:"txtCustomerId"`
 	IntCustomerDocID int64  `json:"intCustomerDocId"`
@@ -76,7 +78,7 @@ type BatchCreateReferralEntries struct {
 type FindReferralEntry struct {
 	// 1. Basic Filters
 	ID        *domain.ReferralID `json:"id"`
-	CreatorID *int32             `json:"creatorId"`
+	CreatorID *domain.UserID     `json:"creatorId"`
 
 	// 2. Clinical Filters (Requirement #8 & #9)
 	// We use pointers (*) so we can tell the difference between
@@ -85,7 +87,8 @@ type FindReferralEntry struct {
 	Status  *string `json:"status"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
-	PatientName        *string `json:"patientName"`
+	PatientLastName    *string `json:"patientLastName"`
+	PatientFirstName   *string `json:"patientFirstName"`
 	ReferringPhysician *string `json:"referringPhysician"`
 
 	// 4. Pagination (For when your list gets huge)
@@ -173,7 +176,7 @@ func (s *Store) BatchCreateReferralEntries(ctx context.Context, batch *BatchCrea
 			_, err := s.driver.CreateReferralEntry(txCtx, &create)
 			if err != nil {
 				// If one fails, the whole transaction returns an error and rolls back
-				return fmt.Errorf("batch failed at entry for %s: %w", create.PatientName, err)
+				return fmt.Errorf("batch failed at entry for %s, %s: %w", create.PatientLastName, create.PatientFirstName, err)
 			}
 		}
 
@@ -187,6 +190,10 @@ func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry
 	entries, err := s.driver.ListReferralEntries(ctx, find)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(entries) == 0 {
+		return entries, nil
 	}
 
 	// 2. Get EVERY complaint
@@ -204,7 +211,11 @@ func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry
 
 	// 4. Attach complaints to each entry
 	for _, entry := range entries {
-		entry.Complaints = complaintMap[entry.ID]
+		if comps, found := complaintMap[entry.ID]; found {
+			entry.Complaints = comps
+		} else {
+			entry.Complaints = []*ReferralComplaint{} // Return empty array instead of null JSON
+		}
 	}
 
 	return entries, nil

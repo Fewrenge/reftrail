@@ -24,8 +24,9 @@ export default function Home() {
   }, []);
 
   // Filter patients based on search input
+  // TODO: filter through last name and first name
   const filteredPatients = patients.filter(p =>
-    p.patientName.toLowerCase().includes(searchQuery.toLowerCase())
+    p.patientLastName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (

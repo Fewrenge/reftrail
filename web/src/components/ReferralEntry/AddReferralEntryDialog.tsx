@@ -24,7 +24,8 @@ const BODY_PARTS = ['SHOULDER', 'KNEE', 'HIP', 'ELBOW', 'WRIST', 'ANKLE', 'FOOT'
 const SIDES = ['LEFT', 'RIGHT', 'BILATERAL'];
 
 export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: Props) {
-  const [name, setName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const[firstName, setFirstName]=useState('');
   const [source, setSource] = useState('REGULAR');
   const [urgency, setUrgency] = useState('Elective');
   // Now we manage an array of complaints
@@ -43,7 +44,8 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          patientName: name,
+          patientLastName: lastName,
+          patientFirstName: firstName,
           patientDob: "1990-01-01", // You might want to add a DOB field to your form!
           source: source,
           urgency: urgency,
@@ -53,7 +55,8 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
       });
 
       if (res.ok) {
-        setName(''); 
+        setLastName('');
+        setFirstName(''); 
         setComplaints([{ bodyPart: 'KNEE', side: 'LEFT', details: '' }]);
         onSuccess();
         onClose();
@@ -86,7 +89,8 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
           {/* Patient Name */}
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase">Patient Name</label>
-            <input required type="text" className="form-input-style" value={name} onChange={e => setName(e.target.value)} />
+            <input required type="text" className="form-input-style" value={lastName} onChange={e => setLastName(e.target.value)} />
+            <input required type="text" className="form-input-style" value={firstName} onChange={e => setFirstName(e.target.value)} />
           </div>
 
           {/* Dynamic Complaint List */}

@@ -29,7 +29,8 @@ export interface Complaint {
 // This is the "Blueprint" for what data one entry needs
 export interface ReferralEntry {
   id: number;
-  patientName: string;
+  patientLastName: string;
+  patientFirstName: string;
   patientDob: string;
   urgency: 'ASAP' | 'Urgent' | 'Elective';
   status: string;
@@ -94,7 +95,7 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
 
   const handleDelete = async () => {
 
-    if (!window.confirm(`Permanently delete ${entry.patientName}?`)) return;
+    if (!window.confirm(`Permanently delete ${entry.patientLastName}, ${entry.patientFirstName}?`)) return;
 
     try {
       const res = await fetch(`/api/v1/referrals/${entry.id}`, {
@@ -118,7 +119,7 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
       {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="font-bold text-xl text-slate-900">{entry.patientName}</h3>
+          <h3 className="font-bold text-xl text-slate-900">{entry.patientLastName}{entry.patientFirstName}</h3>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
             DOB: {entry.patientDob || 'N/A'}
           </p>

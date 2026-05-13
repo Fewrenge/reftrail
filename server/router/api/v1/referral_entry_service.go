@@ -66,7 +66,8 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 
 	if err := domain.ValidateStruct(create); err != nil {
 		slog.Warn("Referral payload structural validation failed",
-			"patient_name", create.PatientName,
+			"patient_last_name", create.PatientLastName,
+			"patient_first_name", create.PatientFirstName,
 			"error", err.Error(),
 		)
 

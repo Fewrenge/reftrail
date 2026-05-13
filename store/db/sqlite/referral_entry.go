@@ -28,26 +28,27 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 
 	query := `INSERT INTO referral_entry (
 		id, created_ts, updated_ts, creator_id, 
-		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
+		patient_last_name, patient_first_name, patient_dob, txt_customer_id, int_customer_doc_id,
 		referring_physician, triage_note, urgency, status, source
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// Execute the command
 	_, err = d.conn(ctx).ExecContext(ctx, query,
 		idStr, ts, ts, int64(create.CreatorID),
-		create.PatientName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
+		create.PatientLastName, create.PatientFirstName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
 		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to insert referral entry for patient %s (creator_id: %d): %w",
-			create.PatientName, create.CreatorID, err)
+		return nil, fmt.Errorf("failed to insert referral entry for patient %s, %s (creator_id: %d): %w",
+			create.PatientLastName, ",", create.PatientFirstName, create.CreatorID, err)
 	}
 	return &store.ReferralEntry{
 		ID:                 domain.ReferralID(idStr), // Cast to custom type
 		CreatedTs:          ts,
 		UpdatedTs:          ts,
 		CreatorID:          create.CreatorID,
-		PatientName:        create.PatientName,
+		PatientLastName:    create.PatientLastName,
+		PatientFirstName:   create.PatientFirstName,
 		PatientDOB:         create.PatientDOB,
 		TxtCustomerID:      create.TxtCustomerID,
 		IntCustomerDocID:   create.IntCustomerDocID,
@@ -82,7 +83,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	// 1. The Base Query
 	query := `SELECT 
 		id, creator_id, created_ts, updated_ts, 
-		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
+		patient_last_name, patient_first_name, patient_dob, txt_customer_id, int_customer_doc_id,
 		referring_physician, triage_note, urgency, status, source
 	FROM referral_entry WHERE 1 = 1`
 
@@ -105,9 +106,13 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	}
 
 	// Fuzzy Matching for Patient Name (Requirement #1)
-	if find.PatientName != nil {
-		query += " AND patient_name LIKE ?"
-		args = append(args, "%"+*find.PatientName+"%")
+	if find.PatientLastName != nil && *find.PatientLastName != "" {
+		query += " AND patient_last_name LIKE ?"
+		args = append(args, "%"+*find.PatientLastName+"%")
+	}
+	if find.PatientFirstName != nil && *find.PatientFirstName != "" {
+		query += " AND patient_first_name LIKE ?"
+		args = append(args, "%"+*find.PatientFirstName+"%")
 	}
 
 	// 4. Sorting (Always show newest or most urgent first)
@@ -129,7 +134,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		// Scan matches the columns in our SELECT statusment to our Go struct
 		err := rows.Scan(
 			&entry.ID, &entry.CreatorID, &entry.CreatedTs, &entry.UpdatedTs,
-			&entry.PatientName, &entry.PatientDOB, &entry.TxtCustomerID, &entry.IntCustomerDocID,
+			&entry.PatientLastName, &entry.PatientFirstName, &entry.PatientDOB, &entry.TxtCustomerID, &entry.IntCustomerDocID,
 			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source,
 		)
 		if err != nil {

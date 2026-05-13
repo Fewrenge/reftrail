@@ -16,8 +16,9 @@ func TestReferralTag_Integration(t *testing.T) {
 
 	// 2. Setup: Pre-create a referral to tag
 	ref, err := s.CreateReferralEntry(ctx, &store.CreateReferralEntry{
-		PatientName: "Tag Testing Patient",
-		Urgency:     "Elective",
+		PatientLastName:  "Tag Testing",
+		PatientFirstName: "Patient",
+		Urgency:          "Elective",
 	})
 	if err != nil {
 		t.Fatalf("Failed to create referral for testing: %v", err)
