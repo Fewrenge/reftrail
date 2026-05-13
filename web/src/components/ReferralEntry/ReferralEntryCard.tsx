@@ -18,6 +18,14 @@ interface Props {
   onRefresh: () => void;
 }
 
+export interface Complaint {
+  id: number;
+  referralId: string;
+  bodyPart: string;
+  side: string;
+  details: string;
+}
+
 // This is the "Blueprint" for what data one entry needs
 export interface ReferralEntry {
   id: number;
@@ -26,7 +34,7 @@ export interface ReferralEntry {
   urgency: 'ASAP' | 'Urgent' | 'Elective';
   status: string;
   referringPhysician: string;
-  complaint: string;
+  complaints: Complaint[];
   triageNote: string;
 }
 
@@ -189,8 +197,19 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
           <p className="text-sm font-medium text-slate-700">{entry.referringPhysician || 'Unassigned'}</p>
         </div>
         <div>
-          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Complaint</p>
-          <p className="text-sm font-medium text-slate-700">{entry.complaint}</p>
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Complaints</p>
+          <div className="space-y-1">
+            {entry.complaints && entry.complaints.length > 0 ? (
+              entry.complaints.map((c) => (
+                <p key={c.id} className="text-sm font-medium text-slate-700 capitalize">
+                  {`${c.side?.toLowerCase() || ''} ${c.bodyPart?.toLowerCase() || ''}`}
+                  {c.details && <span className="text-xs text-slate-400 block font-normal">{c.details}</span>}
+                </p>
+              ))
+            ) : (
+              <p className="text-sm font-medium text-slate-400 italic">None reported</p>
+            )}
+          </div>
         </div>
       </div>
 
