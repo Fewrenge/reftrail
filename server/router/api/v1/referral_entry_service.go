@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"reftrail/internal/domain"
 	"reftrail/store"
@@ -15,8 +15,14 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 
 	list, err := s.Store.ListReferralEntries(ctx, &store.FindReferralEntry{})
 	if err != nil {
-		log.Printf("Database error: %v", err)
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		slog.Error("failed to get referral entries list", "error", err.Error())
+
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to retrieve referral records",
+		})
+	}
+	if list == nil {
+		list = []*store.ReferralEntry{}
 	}
 
 	return c.JSON(http.StatusOK, list)
@@ -30,8 +36,6 @@ func (s *APIV1Service) GetReferralEntryHandler(c *echo.Context) error {
 	// 1. Extract the "id" from the URL path parameter
 	idStr := c.Param("id")
 	refID := domain.ReferralID(idStr)
-
-	//log.Printf("Sniper Handler triggered with ID: [%s]", idStr)
 
 	// 2. Ask the Manager (Store) to find this specific entry
 	// We use our 'Find' blueprint here
@@ -56,19 +60,25 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 	create := &store.CreateReferralEntry{}
 
 	if err := c.Bind(create); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		slog.Warn("Failed to bind malformed JSON request body", "error", err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request payload syntax"})
 	}
 
 	if err := domain.ValidateStruct(create); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"message": "Validation failed",
-			"details": err.Error(), // You can make this prettier later
+		slog.Warn("Referral payload structural validation failed",
+			"patient_name", create.PatientName,
+			"error", err.Error(),
+		)
+
+		return c.JSON(http.StatusUnprocessableEntity, map[string]string{
+			"error":   "Validation failed",
+			"details": err.Error(),
 		})
 	}
 
 	entry, err := s.Store.CreateReferralEntry(ctx, create)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create referral"})
 	}
 	return c.JSON(http.StatusOK, entry)
 }

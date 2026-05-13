@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reftrail/internal/domain"
 )
@@ -21,7 +20,7 @@ type ReferralEntry struct {
 	// 3. Juvonno Integration (Matches your requirements #2 & #3)
 	// We use string for TxtCustomerID because Juvonno IDs can sometimes be alphanumeric
 	TxtCustomerID    string `json:"txtCustomerId"`
-	IntCustomerDocID int32  `json:"intCustomerDocId"`
+	IntCustomerDocID int64  `json:"intCustomerDocId"`
 
 	// 4. Clinical Details (Matches #4, #6, #7, #10)
 	ReferringPhysician string `json:"referringPhysician"`
@@ -52,7 +51,7 @@ type CreateReferralEntry struct {
 	PatientName      string `json:"patientName" validate:"required,min=2"`
 	PatientDOB       string `json:"patientDob"`
 	TxtCustomerID    string `json:"txtCustomerId"`
-	IntCustomerDocID int32  `json:"intCustomerDocId"`
+	IntCustomerDocID int64  `json:"intCustomerDocId"`
 
 	// Clinical Info
 	ReferringPhysician string              `json:"referringPhysician"`
@@ -130,7 +129,7 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		// 1. Get User
 		user, ok := domain.GetUserContext(txCtx)
 		if !ok {
-			return errors.New("unauthorized")
+			return domain.ErrUnauthorized
 		}
 		create.CreatorID = domain.UserID(user.ID)
 
@@ -164,7 +163,7 @@ func (s *Store) BatchCreateReferralEntries(ctx context.Context, batch *BatchCrea
 	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
 		user, ok := domain.GetUserContext(txCtx)
 		if !ok {
-			return errors.New("unauthorized: user context missing")
+			return domain.ErrUnauthorized
 		}
 
 		// 2. Loop through the entries
@@ -231,10 +230,10 @@ func (s *Store) GetReferralEntry(ctx context.Context, find *FindReferralEntry) (
 func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error {
 	// Wrap the whole operation in a transaction
 	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
-		// 1. Get the CURRENT status before it changes
-		current, err := s.GetReferralEntry(ctx, &FindReferralEntry{ID: &update.ID})
+		// 1. Get current record using the transaction context txCtx
+		current, err := s.GetReferralEntry(txCtx, &FindReferralEntry{ID: &update.ID})
 		if err != nil || current == nil {
-			return errors.New("entry not found")
+			return domain.ErrReferralEntryNotFound
 		}
 
 		// 2. ONLY create a log if the status is actually changing
@@ -242,24 +241,30 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 			// Grab UserID from the context "mailbox" (set by the Bouncer)
 			userCtx, ok := domain.GetUserContext(ctx)
 			if !ok {
-				return errors.New("unauthorized")
+				return domain.ErrUnauthorized
 			}
 
 			// 3. Tell the Worker to write the history
-			_, err := s.driver.CreateReferralLog(ctx, &ReferralLog{
+			logPayload := &ReferralLog{
 				EntryID:   update.ID,
-				UserID:    int32(userCtx.ID),
+				UserID:    domain.UserID(userCtx.ID),
 				OldStatus: current.Status,
 				NewStatus: *update.Status,
 				Note:      "Status updated via dashboard",
-			})
-			if err != nil {
-				return err // Stop if we can't record history!
+			}
+
+			if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
+				return fmt.Errorf("failed to create referral history log during record update: %w", err)
 			}
 		}
 
-		// 4. Finally, update the actual patient record
-		return s.driver.UpdateReferralEntry(ctx, update)
+		// 4. Commit the changes to the primary referral entity record
+		if err := s.driver.UpdateReferralEntry(txCtx, update); err != nil {
+			return fmt.Errorf("failed to execute referral entry update: %w", err)
+		}
+
+		// Happy path termination anchor
+		return nil
 	})
 }
 
@@ -273,7 +278,7 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 		// 1. Get the "Who" (User Context)
 		user, ok := domain.GetUserContext(txCtx)
 		if !ok {
-			return errors.New("unauthorized: user context missing")
+			return domain.ErrUnauthorized
 		}
 
 		// 2. Get the "Where we are" (Old Status)
@@ -288,25 +293,29 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 		newStatus := domain.ReferralStatus(update.NewStatus)
 
 		if !domain.CanTransition(oldStatus, newStatus, user.Role) {
-			return fmt.Errorf("illegal status transition from %s to %s for role %s",
-				oldStatus, newStatus, user.Role)
+			return fmt.Errorf("illegal status transition from %s to %s for role %s: %w",
+				oldStatus, newStatus, user.Role, domain.ErrIllegalTransition)
 		}
 
 		// 4. Update the Status
 		if err := s.driver.UpdateReferralEntryStatus(txCtx, update.ID, newStatus); err != nil {
-			return err
+			return fmt.Errorf("failed to update status in database: %w", err)
 		}
 
 		// 5. Create the Log
-		_, err = s.driver.CreateReferralLog(txCtx, &ReferralLog{
+		logPayload := &ReferralLog{
 			EntryID:   update.ID,
-			UserID:    int32(user.ID),
+			UserID:    domain.UserID(user.ID),
 			OldStatus: string(oldStatus),
 			NewStatus: string(newStatus),
 			Note:      update.Note,
-		})
+		}
 
-		return err // If this is nil, transaction commits!
+		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
+			return fmt.Errorf("failed to write audit log entry: %w", err)
+		}
+
+		return nil // If this is nil, transaction commits!
 	})
 }
 
@@ -315,25 +324,21 @@ func (s *Store) DeleteReferralEntry(ctx context.Context, delete *DeleteReferralE
 
 	// Logic Check: Don't try to delete nothing
 	if delete.ID == "" {
-		return errors.New("valid ID is required for deletion")
+		return domain.ErrDataValidationFailed
 	}
 
 	// Optional: Check if user has permission (Admin role)
 	userCtx, ok := domain.GetUserContext(ctx)
-	// -----DEBUG-----
-	fmt.Printf("Value: %+v, Type: %T\n", ctx.Value("user-role"), ctx.Value("user-role"))
-	fmt.Printf("Looking for key: %T(%v)\n", domain.UserKey, domain.UserKey)
-	fmt.Printf("Actually in context: %+v\n", ctx)
-
 	if !ok || userCtx.Role != domain.RoleReftrailAdmin {
-		if !ok {
-			return errors.New("unauthorized: only admins can delete entries, not ok!")
-		}
-		return errors.New("unauthorized: only admins can delete entries, but ok!")
+		return domain.ErrUnauthorized
 	}
 
 	// Pass the whole struct to the worker (driver)
 	// Before deleting the entry, clean up related logs/comments
 	// So call driver.DeleteReferralLogs here later
-	return s.driver.DeleteReferralEntry(ctx, delete)
+	if err := s.driver.DeleteReferralEntry(ctx, delete); err != nil {
+		return fmt.Errorf("failed to delete referral entry with ID %s: %w", delete.ID, err)
+	}
+
+	return nil
 }

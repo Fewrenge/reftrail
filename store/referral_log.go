@@ -8,7 +8,7 @@ import (
 type ReferralLog struct {
 	ID        domain.ReferralLogID `json:"id"`
 	EntryID   domain.ReferralID    `json:"entryId"`
-	UserID    int32                `json:"userId"`
+	UserID    domain.UserID        `json:"userId"`
 	OldStatus string               `json:"oldStatus"`
 	NewStatus string               `json:"newStatus"`
 	Note      string               `json:"note"`

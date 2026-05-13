@@ -1,10 +1,11 @@
 package v1
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
 	"reftrail/internal/domain"
 	"reftrail/store"
+	"strconv"
 
 	echo "github.com/labstack/echo/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -101,16 +102,28 @@ func (s *APIV1Service) ListUsersHandler(c *echo.Context) error {
 // DELETE /api/v1/users/:id
 func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
+	idParam := c.Param("id")
 
 	// Get ID from URL /api/v1/users/5
-	idParam := c.Param("id")
-	// Convert string "5" to int32
-	var id int32
-	fmt.Sscanf(idParam, "%d", &id)
-
-	err := s.Store.DeleteUser(ctx, &store.DeleteUser{ID: domain.UserID(id)})
+	id, err := strconv.ParseInt(idParam, 10, 32)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		slog.Warn("Invalid user ID parameter format",
+			"provided_id", idParam,
+			"error", err.Error(),
+		)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID format"})
+	}
+
+	err = s.Store.DeleteUser(ctx, &store.DeleteUser{ID: domain.UserID(id)})
+	if err != nil {
+		// 3. Smell Fixed: Log the exact system error internally for debugging
+		slog.Error("Failed to delete user from database",
+			"user_id", id,
+			"error", err.Error(),
+		)
+
+		// 4. Smell Fixed: Avoid leaking raw DB errors (SQL syntax, foreign keys) to the client
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete user"})
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "User deleted"})

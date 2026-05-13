@@ -2,7 +2,7 @@ package sqlite
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"reftrail/internal/domain"
 	"reftrail/store"
 	"strings"
@@ -34,14 +34,13 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 
 	// Execute the command
 	_, err = d.conn(ctx).ExecContext(ctx, query,
-		idStr, ts, ts, int32(create.CreatorID),
+		idStr, ts, ts, int64(create.CreatorID),
 		create.PatientName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
 		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source,
 	)
 	if err != nil {
-		// DEBUG
-		log.Printf("SQL Error: %v | Arguments: id=%v, creator=%v, ts=%v", err, idStr, create.CreatorID, ts)
-		return nil, err
+		return nil, fmt.Errorf("failed to insert referral entry for patient %s (creator_id: %d): %w",
+			create.PatientName, create.CreatorID, err)
 	}
 	return &store.ReferralEntry{
 		ID:                 domain.ReferralID(idStr), // Cast to custom type
@@ -202,8 +201,7 @@ func (d *Driver) DeleteReferralEntries(ctx context.Context, ids []int32) error {
 		args[i] = id
 	}
 
-	query := fmt.Sprintf("DELETE FROM referral_entry WHERE id IN (%s)", strings.Join(placeholders, ","))
-	_, err := d.conn(ctx).ExecContext(ctx, query, args...)
+	query := "DELETE FROM referral_entry WHERE id IN (%s)"
 	return err
 }
 */

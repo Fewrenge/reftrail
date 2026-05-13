@@ -2,7 +2,7 @@ package store
 
 import (
 	"context"
-	"log"
+	"log/slog"
 )
 
 // Store is the "Manager" that handles the database and cache.
@@ -18,7 +18,7 @@ func NewStore(driver Driver) *Store {
 	s := &Store{driver: driver}
 	// Fire the seeding logic right when the manager starts
 	if err := s.SeedAdminUser(context.Background()); err != nil {
-		log.Printf("Warning: Failed to seed admin user: %v", err)
+		slog.Warn("Warning: Failed to seed admin user: ", "error", err.Error())
 	}
 	return s
 }

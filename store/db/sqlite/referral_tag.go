@@ -2,7 +2,6 @@ package sqlite
 
 import (
 	"context"
-	"fmt"
 	"reftrail/internal/domain"
 	"reftrail/store"
 )
@@ -55,7 +54,7 @@ func (d *Driver) DeleteReferralTag(ctx context.Context, delete *store.DeleteRefe
 	// Optional: Check if we actually deleted something
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		return fmt.Errorf("tag with ID %d not found", delete.ID)
+		return domain.ErrTagNotFound
 	}
 
 	return nil
