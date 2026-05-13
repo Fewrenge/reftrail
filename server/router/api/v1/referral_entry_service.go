@@ -1,10 +1,13 @@
 package v1
 
 import (
+	"encoding/csv"
+	"io"
 	"log/slog"
 	"net/http"
 	"reftrail/internal/domain"
 	"reftrail/store"
+	"strings"
 
 	echo "github.com/labstack/echo/v5"
 )
@@ -85,25 +88,105 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 }
 
 func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error {
-	var req store.BatchCreateReferralEntries
-
-	// 1. Bind the JSON body to our struct
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, "Invalid batch data format")
-	}
-
-	// 2. Optional: Basic validation (e.g., check if empty)
-	if len(req.ReferralEntries) == 0 {
-		return c.JSON(http.StatusBadRequest, "No entries provided")
-	}
-
-	// 3. Call the Store
-	err := s.Store.BatchCreateReferralEntries(c.Request().Context(), &req)
+	// 1. Extract the raw file from the multi-part form data
+	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "No file found in upload form data"})
 	}
 
-	return c.JSON(http.StatusCreated, map[string]string{"message": "Batch import successful"})
+	src, err := fileHeader.Open()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to open uploaded file stream"})
+	}
+	defer src.Close()
+
+	// 2. Initialize Go's streaming reader and configure it for tab-separated tokens (TSV)
+	reader := csv.NewReader(src)
+	reader.Comma = '\t'
+	reader.LazyQuotes = true
+
+	// 3. Parse the Header Row to dynamically map columns to position indices
+	headers, err := reader.Read()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Failed to read file spreadsheet headers"})
+	}
+
+	headerMap := make(map[string]int)
+	for idx, name := range headers {
+		headerMap[strings.TrimSpace(strings.ToLower(name))] = idx
+	}
+
+	// Fail-fast verification check for required schema columns
+	requiredFields := []string{"first name", "last name", "complaint", "complaint side", "urgency"}
+	for _, field := range requiredFields {
+		if _, exists := headerMap[field]; !exists {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing column header '" + field + "'"})
+		}
+	}
+
+	var batch store.BatchCreateReferralEntries
+
+	// 4. Stream rows sequentially (One row = One referral entry)
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break // Gracefully reached end of file stream
+		}
+		if err != nil {
+			return c.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "Data row line parsing corruption detected"})
+		}
+
+		// Parse semicolon-separated text values inside matching cells
+		rawComplaints := strings.Split(row[headerMap["complaint"]], ";")
+		rawSides := strings.Split(row[headerMap["complaint side"]], ";")
+
+		var complaints []store.ReferralComplaint
+		for i, part := range rawComplaints {
+			cleanPart := strings.TrimSpace(strings.ToUpper(part))
+			if cleanPart == "" {
+				continue
+			}
+
+			// Core zip pattern: resolve matching sides index, fallback to BILATERAL if data length mismatches
+			sideVal := "BILATERAL"
+			if i < len(rawSides) && strings.TrimSpace(rawSides[i]) != "" {
+				sideVal = strings.TrimSpace(strings.ToUpper(rawSides[i]))
+			}
+
+			complaints = append(complaints, store.ReferralComplaint{
+				BodyPart: cleanPart,
+				Side:     sideVal,
+				Details:  "",
+			})
+		}
+
+		// Map spreadsheet elements into your exact structural schema
+		entry := store.CreateReferralEntry{
+			PatientLastName:    strings.TrimSpace(row[headerMap["LAST NAME"]]),
+			PatientFirstName:   strings.TrimSpace(row[headerMap["FIRST NAME"]]),
+			PatientDOB:         "1990-01-01", // Default placeholder since template column is missing
+			ReferringPhysician: strings.TrimSpace(row[headerMap["REFERRING PHYSICIAN"]]),
+			Urgency:            strings.TrimSpace(row[headerMap["URGENCY"]]),
+			Status:             "READY_TO_BOOK", // Workflow entry state default
+			Source:             "REGULAR",
+			Complaints:         complaints,
+		}
+
+		batch.ReferralEntries = append(batch.ReferralEntries, entry)
+	}
+
+	// 5. Run standard empty set check
+	if len(batch.ReferralEntries) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "The uploaded file contains no valid data rows"})
+	}
+
+	// 6. Direct transaction call execution into your existing Storage layer engine
+	err = s.Store.BatchCreateReferralEntries(c.Request().Context(), &batch)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, "Transactional database batch error: "+err.Error())
+	}
+
+	return c.JSON(http.StatusCreated, map[string]string{"message": "Batch file import successful"})
 }
 
 func (s *APIV1Service) UpdateReferralEntryHandler(c *echo.Context) error {

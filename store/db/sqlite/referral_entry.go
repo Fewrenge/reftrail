@@ -40,7 +40,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert referral entry for patient %s, %s (creator_id: %d): %w",
-			create.PatientLastName, ",", create.PatientFirstName, create.CreatorID, err)
+			create.PatientLastName, create.PatientFirstName, create.CreatorID, err)
 	}
 	return &store.ReferralEntry{
 		ID:                 domain.ReferralID(idStr), // Cast to custom type
