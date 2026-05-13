@@ -163,11 +163,11 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 
 		// Map spreadsheet elements into your exact structural schema
 		entry := store.CreateReferralEntry{
-			PatientLastName:    strings.TrimSpace(row[headerMap["LAST NAME"]]),
-			PatientFirstName:   strings.TrimSpace(row[headerMap["FIRST NAME"]]),
+			PatientLastName:    strings.TrimSpace(row[headerMap["last name"]]),
+			PatientFirstName:   strings.TrimSpace(row[headerMap["first name"]]),
 			PatientDOB:         "1990-01-01", // Default placeholder since template column is missing
-			ReferringPhysician: strings.TrimSpace(row[headerMap["REFERRING PHYSICIAN"]]),
-			Urgency:            strings.TrimSpace(row[headerMap["URGENCY"]]),
+			ReferringPhysician: strings.TrimSpace(row[headerMap["referring physician"]]),
+			Urgency:            strings.TrimSpace(row[headerMap["urgency"]]),
 			Status:             "READY_TO_BOOK", // Workflow entry state default
 			Source:             "REGULAR",
 			Complaints:         complaints,
