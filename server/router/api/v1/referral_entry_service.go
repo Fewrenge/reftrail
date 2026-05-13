@@ -116,8 +116,9 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		headerMap[strings.TrimSpace(strings.ToLower(name))] = idx
 	}
 
+	// TODO: change mapping rule
 	// Fail-fast verification check for required schema columns
-	requiredFields := []string{"first name", "last name", "complaint", "complaint side", "urgency"}
+	requiredFields := []string{"LAST NAME", "FIRST NAME", "COMPLAINTS", "COMPLAINTS SIDE", "URGENCY"}
 	for _, field := range requiredFields {
 		if _, exists := headerMap[field]; !exists {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing column header '" + field + "'"})
@@ -137,8 +138,8 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		}
 
 		// Parse semicolon-separated text values inside matching cells
-		rawComplaints := strings.Split(row[headerMap["complaint"]], ";")
-		rawSides := strings.Split(row[headerMap["complaint side"]], ";")
+		rawComplaints := strings.Split(row[headerMap["COMPLAINTS"]], ";")
+		rawSides := strings.Split(row[headerMap["COMPLAINTS SIDE"]], ";")
 
 		var complaints []store.ReferralComplaint
 		for i, part := range rawComplaints {

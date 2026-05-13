@@ -31,12 +31,14 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code,
 		 txt_customer_id, int_customer_doc_id,
 		referring_physician, triage_note, urgency, status, source
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// Execute the command
 	_, err = d.conn(ctx).ExecContext(ctx, query,
 		idStr, ts, ts, int64(create.CreatorID),
-		create.PatientLastName, create.PatientFirstName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
+		create.PatientLastName, create.PatientFirstName, create.PatientDOB,
+		create.PatientHealthcardNumber, create.PatientHealthcardVersionCode,
+		create.TxtCustomerID, create.IntCustomerDocID,
 		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source,
 	)
 	if err != nil {
@@ -139,7 +141,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		err := rows.Scan(
 			&entry.ID, &entry.CreatorID, &entry.CreatedTs, &entry.UpdatedTs,
 			&entry.PatientLastName, &entry.PatientFirstName, &entry.PatientDOB,
-			&entry.PatientHealthcardNumber, &entry, entry.PatientHealthcardVersionCode,
+			&entry.PatientHealthcardNumber, &entry.PatientHealthcardVersionCode,
 			&entry.TxtCustomerID, &entry.IntCustomerDocID,
 			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source,
 		)
