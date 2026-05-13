@@ -13,10 +13,12 @@ type ReferralEntry struct {
 	UpdatedTs string            `json:"updatedTs"`
 
 	// 2. Patient Info (Matches your requirement #1)
-	PatientLastName  string               `json:"patientLastName"`
-	PatientFirstName string               `json:"patientFirstName"`
-	PatientDOB       string               `json:"patientDob"`
-	Complaints       []*ReferralComplaint `json:"complaints"`
+	PatientLastName              string               `json:"patientLastName"`
+	PatientFirstName             string               `json:"patientFirstName"`
+	PatientDOB                   string               `json:"patientDob"`
+	PatientHealthcardNumber      string               `json:"patientHealthcardNumber"`
+	PatientHealthcardVersionCode string               `json:"patientHealthcardVersionCode"`
+	Complaints                   []*ReferralComplaint `json:"complaints"`
 
 	// 3. Juvonno Integration (Matches your requirements #2 & #3)
 	// We use string for TxtCustomerID because Juvonno IDs can sometimes be alphanumeric
@@ -49,11 +51,13 @@ type ReferralComplaint struct {
 
 type CreateReferralEntry struct {
 	// Patient & Juvonno Info
-	PatientLastName  string `json:"patientLastName" validate:"required"`
-	PatientFirstName string `json:"patientFirstName" validate:"required"`
-	PatientDOB       string `json:"patientDob"`
-	TxtCustomerID    string `json:"txtCustomerId"`
-	IntCustomerDocID int64  `json:"intCustomerDocId"`
+	PatientLastName              string `json:"patientLastName" validate:"required"`
+	PatientFirstName             string `json:"patientFirstName" validate:"required"`
+	PatientDOB                   string `json:"patientDob"`
+	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
+	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
+	TxtCustomerID                string `json:"txtCustomerId"`
+	IntCustomerDocID             int64  `json:"intCustomerDocId"`
 
 	// Clinical Info
 	ReferringPhysician string              `json:"referringPhysician"`
@@ -87,9 +91,10 @@ type FindReferralEntry struct {
 	Status  *string `json:"status"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
-	PatientLastName    *string `json:"patientLastName"`
-	PatientFirstName   *string `json:"patientFirstName"`
-	ReferringPhysician *string `json:"referringPhysician"`
+	PatientLastName         *string `json:"patientLastName"`
+	PatientFirstName        *string `json:"patientFirstName"`
+	ReferringPhysician      *string `json:"referringPhysician"`
+	PatientHealthcardNumber *string `json:"patientHealthcardNumber"`
 
 	// 4. Pagination (For when your list gets huge)
 	Limit  *int `json:"limit"`

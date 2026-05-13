@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     patient_last_name TEXT NOT NULL,
     patient_first_name TEXT NOT NULL,
     patient_dob TEXT NOT NULL,
+    patient_healthcard_number TEXT NOT NULL,
+    patient_healthcard_version_code TEXT NOT NULL,
     txt_customer_id TEXT,
     int_customer_doc_id INTEGER,
     referring_physician TEXT,
@@ -45,6 +47,7 @@ CREATE TABLE IF NOT EXISTS referral_log (
 );
 
 CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(referral_id);
+CREATE INDEX IF NOT EXISTS idx_referral_healthcard ON referral_entry(patient_healthcard_number);
 
 CREATE TABLE IF NOT EXISTS referral_appointment (
     id TEXT PRIMARY KEY,
