@@ -102,8 +102,14 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 
 	// 2. Initialize Go's streaming reader and configure it for tab-separated tokens (TSV)
 	reader := csv.NewReader(src)
-	reader.Comma = '\t'
 	reader.LazyQuotes = true
+
+	// Check file extension to switch between comma and tab separation (Is this robust enough?)
+	if strings.HasSuffix(strings.ToLower(fileHeader.Filename), ".csv") {
+		reader.Comma = ','
+	} else {
+		reader.Comma = '\t' // Default fallback for .tsv or .txt file paths
+	}
 
 	// 3. Parse the Header Row to dynamically map columns to position indices
 	headers, err := reader.Read()
@@ -113,12 +119,16 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 
 	headerMap := make(map[string]int)
 	for idx, name := range headers {
-		headerMap[strings.TrimSpace(strings.ToLower(name))] = idx
+		cleanHeader := strings.TrimSpace(strings.ToLower(name))
+
+		// Fix hidden character issue: Remove UTF-8 Byte Order Marks (BOM) if exported from Excel
+		cleanHeader = strings.TrimPrefix(cleanHeader, "\xef\xbb\xbf")
+
+		headerMap[cleanHeader] = idx
 	}
 
-	// TODO: change mapping rule
 	// Fail-fast verification check for required schema columns
-	requiredFields := []string{"LAST NAME", "FIRST NAME", "COMPLAINTS", "COMPLAINTS SIDE", "URGENCY"}
+	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency"}
 	for _, field := range requiredFields {
 		if _, exists := headerMap[field]; !exists {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing column header '" + field + "'"})
@@ -138,8 +148,8 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		}
 
 		// Parse semicolon-separated text values inside matching cells
-		rawComplaints := strings.Split(row[headerMap["COMPLAINTS"]], ";")
-		rawSides := strings.Split(row[headerMap["COMPLAINTS SIDE"]], ";")
+		rawComplaints := strings.Split(row[headerMap["complaint"]], ";")
+		rawSides := strings.Split(row[headerMap["complaint side"]], ";")
 
 		var complaints []store.ReferralComplaint
 		for i, part := range rawComplaints {

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { SearchIcon, Plus } from "lucide-react";
+import { useState, useEffect, useRef } from 'react';
+import { SearchIcon, PlusIcon, UploadIcon } from "lucide-react";
 import ReferralEntryCard from '../components/ReferralEntry/ReferralEntryCard';
 import AddReferralEntryDialog from '../components/ReferralEntry/AddReferralEntryDialog';
 import type { ReferralEntry } from '../components/ReferralEntry/ReferralEntryCard';
@@ -8,8 +8,11 @@ import { Button } from "@/components/ui";
 export default function Home() {
   const [patients, setPatients] = useState<ReferralEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading]=useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refreshData = () => {
     setLoading(true);
@@ -23,20 +26,72 @@ export default function Home() {
     refreshData();
   }, []);
 
+    // Handler to pipe the binary file stream to your new backend handler
+  const handleBatchImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file); // 'file' matches c.FormFile("file") exactly
+
+    try {
+      const response = await fetch('/api/v1/referrals/batch', {
+        method: 'POST',
+        body: formData, // Browser automatically sets 'multipart/form-data' boundary header
+        credentials: 'same-origin'
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to import batch file.');
+      }
+
+      alert('Batch file import successful!');
+      refreshData(); // Re-fetch list to show the freshly uploaded entries
+    } catch (err: any) {
+      alert(`Import Error: ${err.message}`);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = ""; // Reset input
+    }
+  };
+
+
   // Filter patients based on search input
-  // TODO: filter through last name and first name
-  const filteredPatients = patients.filter(p =>
-    p.patientLastName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const filteredPatients = patients.filter(p => {
+    const fullName = `${p.patientFirstName || ''} ${p.patientLastName || ''}`.toLowerCase();
+    return fullName.includes(searchQuery.toLowerCase());
+  });
 
   return (
     <>
-      <header className="flex justify-between items-center mb-8">
+       <header className="flex justify-between items-center mb-8">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">Active Referrals</h2>
-        <Button onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} className="mr-2" />
-          Add Referral
-        </Button>
+        <div className="flex gap-3">
+          {/* Hidden binary file input wrapper */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleBatchImport} 
+            accept=".tsv,.csv" 
+            className="hidden" 
+          />
+          <Button 
+            variant="outline" 
+            onClick={() => fileInputRef.current?.click()} 
+            disabled={uploading}
+          >
+            <UploadIcon size={18} className="mr-2" />
+            {uploading ? "Importing..." : "Batch Import"}
+          </Button>
+
+          <Button onClick={() => setIsModalOpen(true)}>
+            <PlusIcon size={18} className="mr-2" />
+            Add Referral
+          </Button>
+        </div>
       </header>
 
       {/* SEARCH BAR */}
