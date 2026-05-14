@@ -178,11 +178,19 @@ func (s *Store) BatchCreateReferralEntries(ctx context.Context, batch *BatchCrea
 		for _, create := range batch.ReferralEntries {
 			create.CreatorID = domain.UserID(user.ID)
 			// 3. Reuse your existing driver method!
-			_, err := s.driver.CreateReferralEntry(txCtx, &create)
+
+			createdEntry, err := s.driver.CreateReferralEntry(txCtx, &create)
 			if err != nil {
-				// If one fails, the whole transaction returns an error and rolls back
 				return fmt.Errorf("batch failed at entry for %s, %s: %w", create.PatientLastName, create.PatientFirstName, err)
 			}
+
+			for _, complaint := range create.Complaints {
+				err := s.driver.CreateReferralComplaint(txCtx, createdEntry.ID, &complaint)
+				if err != nil {
+					return fmt.Errorf("batch failed saving complaints line for %s, %s: %w", create.PatientLastName, create.PatientFirstName, err)
+				}
+			}
+
 		}
 
 		return nil

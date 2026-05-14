@@ -2,11 +2,13 @@ package v1
 
 import (
 	"encoding/csv"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"reftrail/internal/domain"
 	"reftrail/store"
+	"regexp"
 	"strings"
 
 	echo "github.com/labstack/echo/v5"
@@ -136,6 +138,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 	}
 
 	var batch store.BatchCreateReferralEntries
+	var healthCardRegex = regexp.MustCompile(`^(\d{10})([A-Za-z]{2})?$`)
 
 	// 4. Stream rows sequentially (One row = One referral entry)
 	for {
@@ -145,6 +148,25 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		}
 		if err != nil {
 			return c.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "Data row line parsing corruption detected"})
+		}
+
+		rawHealthcare := strings.TrimSpace(row[headerMap["healthcare"]])
+		// Strip common user input styling artifacts like spaces or dashes
+		cleanedHealthcare := strings.ReplaceAll(strings.ReplaceAll(rawHealthcare, " ", ""), "-", "")
+
+		var healthCardNum string
+		var versionCode string
+
+		if cleanedHealthcare != "" {
+			matches := healthCardRegex.FindStringSubmatch(cleanedHealthcare)
+			if len(matches) == 0 {
+				return c.JSON(http.StatusBadRequest, map[string]string{
+					"error": fmt.Sprintf("Invalid healthcard format '%s' for patient %s. Must be 10 digits, optionally followed by 2 letters.",
+						rawHealthcare, row[headerMap["last name"]]),
+				})
+			}
+			healthCardNum = matches[1]
+			versionCode = strings.ToUpper(matches[2]) // Force version letters uppercase
 		}
 
 		// Parse semicolon-separated text values inside matching cells
@@ -173,14 +195,16 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 
 		// Map spreadsheet elements into your exact structural schema
 		entry := store.CreateReferralEntry{
-			PatientLastName:    strings.TrimSpace(row[headerMap["last name"]]),
-			PatientFirstName:   strings.TrimSpace(row[headerMap["first name"]]),
-			PatientDOB:         "1990-01-01", // Default placeholder since template column is missing
-			ReferringPhysician: strings.TrimSpace(row[headerMap["referring physician"]]),
-			Urgency:            strings.TrimSpace(row[headerMap["urgency"]]),
-			Status:             "READY_TO_BOOK", // Workflow entry state default
-			Source:             "REGULAR",
-			Complaints:         complaints,
+			PatientLastName:              strings.TrimSpace(row[headerMap["last name"]]),
+			PatientFirstName:             strings.TrimSpace(row[headerMap["first name"]]),
+			PatientDOB:                   "1990-01-01", // Default placeholder since template column is missing
+			PatientHealthcardNumber:      healthCardNum,
+			PatientHealthcardVersionCode: versionCode,
+			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
+			Urgency:                      strings.TrimSpace(row[headerMap["urgency"]]),
+			Status:                       "READY_TO_BOOK", // Workflow entry state default
+			Source:                       "REGULAR",
+			Complaints:                   complaints,
 		}
 
 		batch.ReferralEntries = append(batch.ReferralEntries, entry)
