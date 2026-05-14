@@ -19,6 +19,14 @@ func TestReferralTag_Integration(t *testing.T) {
 		PatientLastName:  "Tag Testing",
 		PatientFirstName: "Patient",
 		Urgency:          "Elective",
+		Status:           "READY_TO_BOOK",
+		Source:           "REGULAR",
+		Complaints: []store.ReferralComplaint{
+			{
+				BodyPart: "KNEE",
+				Side:     "LEFT",
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create referral for testing: %v", err)

@@ -2,7 +2,6 @@ package v1
 
 import (
 	"encoding/csv"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -150,23 +149,23 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			return c.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "Data row line parsing corruption detected"})
 		}
 
-		rawHealthcare := strings.TrimSpace(row[headerMap["healthcare"]])
+		rawHealthCard := strings.TrimSpace(row[headerMap["health card"]])
 		// Strip common user input styling artifacts like spaces or dashes
-		cleanedHealthcare := strings.ReplaceAll(strings.ReplaceAll(rawHealthcare, " ", ""), "-", "")
+		cleanedHealthCard := strings.ReplaceAll(strings.ReplaceAll(rawHealthCard, " ", ""), "-", "")
 
 		var healthCardNum string
 		var versionCode string
 
-		if cleanedHealthcare != "" {
-			matches := healthCardRegex.FindStringSubmatch(cleanedHealthcare)
-			if len(matches) == 0 {
-				return c.JSON(http.StatusBadRequest, map[string]string{
-					"error": fmt.Sprintf("Invalid healthcard format '%s' for patient %s. Must be 10 digits, optionally followed by 2 letters.",
-						rawHealthcare, row[headerMap["last name"]]),
-				})
+		if healthCardRegex.MatchString(cleanedHealthCard) {
+			matches := healthCardRegex.FindStringSubmatch(cleanedHealthCard)
+			if len(matches) > 1 {
+				healthCardNum = matches[1] // The 10 digits
+
+				// If the optional 2 letters exist, capture and capitalize them
+				if len(matches) > 2 && matches[2] != "" {
+					versionCode = strings.ToUpper(matches[2])
+				}
 			}
-			healthCardNum = matches[1]
-			versionCode = strings.ToUpper(matches[2]) // Force version letters uppercase
 		}
 
 		// Parse semicolon-separated text values inside matching cells
@@ -271,6 +270,7 @@ func (s *APIV1Service) UpdateReferralEntryStatusHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, true)
 }
 
+// TODO: delete all complaints when deleting referrals
 func (s *APIV1Service) DeleteReferralEntryHandler(c *echo.Context) error {
 	// 1. Get the ID from the URL
 	idStr := c.Param("id")
