@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"errors"
 	"reftrail/internal/domain"
 )
 
@@ -24,7 +23,7 @@ type DeleteReferralTag struct {
 func (s *Store) CreateReferralTag(ctx context.Context, create *CreateReferralTag) (*ReferralTag, error) {
 	user, ok := domain.GetUserContext(ctx)
 	if !ok || user.Role != "REFTRAIL_ADMIN" {
-		return nil, errors.New("forbidden: only admins can create system tags")
+		return nil, domain.ErrForbidden
 	}
 	return s.driver.CreateReferralTag(ctx, create)
 }
@@ -36,7 +35,7 @@ func (s *Store) ListReferralTags(ctx context.Context) ([]*ReferralTag, error) {
 func (s *Store) DeleteReferralTag(ctx context.Context, delete *DeleteReferralTag) error {
 	user, ok := domain.GetUserContext(ctx)
 	if !ok || user.Role != "REFTRAIL_ADMIN" {
-		return errors.New("forbidden: only admins can delete system tags")
+		return domain.ErrForbidden
 	}
 	return s.driver.DeleteReferralTag(ctx, delete)
 }
