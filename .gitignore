@@ -1,4 +1,5 @@
 # db
-reftrail.db*
+*.db*
 .env
 api_test.http
+*scratch_test.go

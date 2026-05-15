@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"errors" // Needed for errors.New
-	"log"
+	"log/slog"
 	"reftrail/internal/domain"
 
 	"golang.org/x/crypto/bcrypt"
@@ -84,7 +84,7 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 		// but SeedAdminUser only wants to return (error).
 		_, err := s.driver.CreateUser(ctx, admin)
 		if err == nil {
-			log.Println("SEED SUCCESS: Created admin/admin123") // Add this!
+			slog.Info("SEED SUCCESS: Created admin/admin123")
 		}
 		return err
 	}

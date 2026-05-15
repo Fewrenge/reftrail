@@ -2,70 +2,95 @@ package sqlite
 
 import (
 	"context"
+	"fmt"
 	"reftrail/internal/domain"
-	"reftrail/store" // Import your main store for the object definitions
+	"reftrail/store"
 	"strings"
 	"time"
+
+	uuid "github.com/google/uuid"
 )
 
+func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID domain.ReferralID, complaint *store.ReferralComplaint) error {
+	query := `INSERT INTO referral_complaint (referral_id, body_part, side, details) VALUES (?, ?, ?, ?)`
+	_, err := d.conn(ctx).ExecContext(ctx, query, referralID, complaint.BodyPart, complaint.Side, complaint.Details)
+	return err
+}
+
 func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (*store.ReferralEntry, error) {
-	// 1. Get the current time for our timestamps
-	ts := time.Now().Unix()
+	// Get the current time for our timestamps
+	newID, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+	idStr := newID.String()
+	ts := time.Now().Format(time.RFC3339)
 
-	// 2. Write the SQL command
-	// We use "?" as placeholders to prevent "SQL Injection" (Hacking)
-	stmt := `INSERT INTO referral_entry (
-		creator_id, created_ts, updated_ts, 
-		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
-		referring_physician, complaint, triage_note, urgency, status
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO referral_entry (
+		id, created_ts, updated_ts, creator_id, 
+		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code,
+		 txt_customer_id, int_customer_doc_id,
+		referring_physician, triage_note, urgency, status, source
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	// 3. Execute the command
-	result, err := d.conn(ctx).ExecContext(ctx, stmt,
-		create.CreatorID, ts, ts,
-		create.PatientName, create.PatientDOB, create.TxtCustomerID, create.IntCustomerDocID,
-		create.ReferringPhysician, create.Complaint, create.TriageNote, create.Urgency, create.Status,
+	// Execute the command
+	_, err = d.conn(ctx).ExecContext(ctx, query,
+		idStr, ts, ts, int64(create.CreatorID),
+		create.PatientLastName, create.PatientFirstName, create.PatientDOB,
+		create.PatientHealthcardNumber, create.PatientHealthcardVersionCode,
+		create.TxtCustomerID, create.IntCustomerDocID,
+		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to insert referral entry for patient %s, %s (creator_id: %d): %w",
+			create.PatientLastName, create.PatientFirstName, create.CreatorID, err)
 	}
+	return &store.ReferralEntry{
+		ID:                           domain.ReferralID(idStr), // Cast to custom type
+		CreatedTs:                    ts,
+		UpdatedTs:                    ts,
+		CreatorID:                    create.CreatorID,
+		PatientLastName:              create.PatientLastName,
+		PatientFirstName:             create.PatientFirstName,
+		PatientDOB:                   create.PatientDOB,
+		PatientHealthcardNumber:      create.PatientHealthcardNumber,
+		PatientHealthcardVersionCode: create.PatientHealthcardVersionCode,
+		TxtCustomerID:                create.TxtCustomerID,
+		IntCustomerDocID:             create.IntCustomerDocID,
+		ReferringPhysician:           create.ReferringPhysician,
+		TriageNote:                   create.TriageNote,
+		Urgency:                      create.Urgency,
+		Status:                       create.Status,
+		Source:                       create.Source,
+	}, nil
+}
 
-	// 4. Get the ID that SQLite just generated automatically
-	id, err := result.LastInsertId()
+func (d *Driver) ListAllComplaints(ctx context.Context) ([]*store.ReferralComplaint, error) {
+	query := `SELECT id, referral_id, body_part, side, details FROM referral_complaint`
+	rows, err := d.conn(ctx).QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	// 5. Return the "Finished" object back to the Manager
-	return &store.ReferralEntry{
-		ID:                 int32(id),
-		CreatorID:          create.CreatorID,
-		CreatedTs:          ts,
-		UpdatedTs:          ts,
-		PatientName:        create.PatientName,
-		PatientDOB:         create.PatientDOB,
-		TxtCustomerID:      create.TxtCustomerID,
-		IntCustomerDocID:   create.IntCustomerDocID,
-		ReferringPhysician: create.ReferringPhysician,
-		Complaint:          create.Complaint,
-		TriageNote:         create.TriageNote,
-		Urgency:            create.Urgency,
-		Status:             create.Status,
-	}, nil
+	var list []*store.ReferralComplaint
+	for rows.Next() {
+		var c store.ReferralComplaint
+		if err := rows.Scan(&c.ID, &c.ReferralID, &c.BodyPart, &c.Side, &c.Details); err != nil {
+			return nil, err
+		}
+		list = append(list, &c)
+	}
+	return list, nil
 }
 
 func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferralEntry) ([]*store.ReferralEntry, error) {
 	// 1. The Base Query
-	// "WHERE 1 = 1" is a classic trick. It does nothing, but lets us
-	// safely add "AND ..." to the end of the string later.
 	query := `SELECT 
 		id, creator_id, created_ts, updated_ts, 
-		patient_name, patient_dob, txt_customer_id, int_customer_doc_id,
-		referring_physician, complaint, triage_note, urgency, status,
-		IFNULL(appt_date, ''),
-		IFNULL(appt_time,''),
-		IFNULL(practitioner, ''), 
-		IFNULL(juvonno_appt_id,'')
+		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code,
+		txt_customer_id, int_customer_doc_id,
+		referring_physician, triage_note, urgency, status, source
 	FROM referral_entry WHERE 1 = 1`
 
 	// 2. The "Arguments" list
@@ -87,9 +112,13 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	}
 
 	// Fuzzy Matching for Patient Name (Requirement #1)
-	if find.PatientName != nil {
-		query += " AND patient_name LIKE ?"
-		args = append(args, "%"+*find.PatientName+"%")
+	if find.PatientLastName != nil && *find.PatientLastName != "" {
+		query += " AND patient_last_name LIKE ?"
+		args = append(args, "%"+*find.PatientLastName+"%")
+	}
+	if find.PatientFirstName != nil && *find.PatientFirstName != "" {
+		query += " AND patient_first_name LIKE ?"
+		args = append(args, "%"+*find.PatientFirstName+"%")
 	}
 
 	// 4. Sorting (Always show newest or most urgent first)
@@ -111,9 +140,10 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		// Scan matches the columns in our SELECT statusment to our Go struct
 		err := rows.Scan(
 			&entry.ID, &entry.CreatorID, &entry.CreatedTs, &entry.UpdatedTs,
-			&entry.PatientName, &entry.PatientDOB, &entry.TxtCustomerID, &entry.IntCustomerDocID,
-			&entry.ReferringPhysician, &entry.Complaint, &entry.TriageNote, &entry.Urgency, &entry.Status,
-			&entry.ApptDate, &entry.ApptTime, &entry.Practitioner, &entry.JuvonnoApptID,
+			&entry.PatientLastName, &entry.PatientFirstName, &entry.PatientDOB,
+			&entry.PatientHealthcardNumber, &entry.PatientHealthcardVersionCode,
+			&entry.TxtCustomerID, &entry.IntCustomerDocID,
+			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source,
 		)
 		if err != nil {
 			return nil, err
@@ -139,7 +169,7 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 	}
 	// Update the timestamp automatically
 	set = append(set, "updated_ts = ?")
-	args = append(args, time.Now().Unix())
+	args = append(args, time.Now().Format(time.RFC3339))
 
 	// 2. Add the ID for the WHERE clause
 	args = append(args, update.ID)
@@ -150,23 +180,23 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 	return err
 }
 
-func (d *Driver) GetReferralEntryStatusByID(ctx context.Context, id int32) (domain.ReferralStatus, error) {
+func (d *Driver) GetReferralEntryStatusByID(ctx context.Context, id domain.ReferralID) (domain.ReferralStatus, error) {
 	var status domain.ReferralStatus
 	err := d.conn(ctx).QueryRowContext(ctx, "SELECT status FROM referral_entry WHERE id = $1", id).Scan(&status)
 	return status, err
 }
 
 // Only updates referral entry status
-func (d *Driver) UpdateReferralEntryStatus(ctx context.Context, id int32, status domain.ReferralStatus) error {
+func (d *Driver) UpdateReferralEntryStatus(ctx context.Context, id domain.ReferralID, status domain.ReferralStatus) error {
 	query := `UPDATE referral_entry SET status = ?, updated_ts = ? WHERE id = ?`
-	_, err := d.conn(ctx).ExecContext(ctx, query, string(status), time.Now().Unix(), id)
+	_, err := d.conn(ctx).ExecContext(ctx, query, string(status), time.Now().Format(time.RFC3339), id)
 	return err
 }
 
 func (d *Driver) DeleteReferralEntry(ctx context.Context, delete *store.DeleteReferralEntry) error {
 	// We pull the ID out of the struct's ID field
-	stmt := `DELETE FROM referral_entry WHERE id = ?`
-	_, err := d.conn(ctx).ExecContext(ctx, stmt, delete.ID)
+	query := `DELETE FROM referral_entry WHERE id = ?`
+	_, err := d.conn(ctx).ExecContext(ctx, query, delete.ID)
 	return err
 }
 
@@ -184,8 +214,7 @@ func (d *Driver) DeleteReferralEntries(ctx context.Context, ids []int32) error {
 		args[i] = id
 	}
 
-	query := fmt.Sprintf("DELETE FROM referral_entry WHERE id IN (%s)", strings.Join(placeholders, ","))
-	_, err := d.conn(ctx).ExecContext(ctx, query, args...)
+	query := "DELETE FROM referral_entry WHERE id IN (%s)"
 	return err
 }
 */

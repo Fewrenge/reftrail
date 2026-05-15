@@ -1,0 +1,50 @@
+package store
+
+import (
+	"context"
+	"reftrail/internal/domain"
+)
+
+type ReferralTag struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type CreateReferralTag struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type DeleteReferralTag struct {
+	ID int64 `json:"id"`
+}
+
+func (s *Store) CreateReferralTag(ctx context.Context, create *CreateReferralTag) (*ReferralTag, error) {
+	user, ok := domain.GetUserContext(ctx)
+	if !ok || user.Role != "REFTRAIL_ADMIN" {
+		return nil, domain.ErrForbidden
+	}
+	return s.driver.CreateReferralTag(ctx, create)
+}
+
+func (s *Store) ListReferralTags(ctx context.Context) ([]*ReferralTag, error) {
+	return s.driver.ListReferralTags(ctx)
+}
+
+func (s *Store) DeleteReferralTag(ctx context.Context, delete *DeleteReferralTag) error {
+	user, ok := domain.GetUserContext(ctx)
+	if !ok || user.Role != "REFTRAIL_ADMIN" {
+		return domain.ErrForbidden
+	}
+	return s.driver.DeleteReferralTag(ctx, delete)
+}
+
+func (s *Store) AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
+	// TODO: check if the referral exists first
+	return s.driver.AssignTagToReferral(ctx, referralID, tagID)
+}
+
+func (s *Store) RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
+	return s.driver.RemoveTagFromReferral(ctx, referralID, tagID)
+}

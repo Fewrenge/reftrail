@@ -44,7 +44,7 @@ func (s *Server) registerReferralRoutes() {
 
 	// --- THE CLEAN LIST ---
 	// Get the whole list
-	protected.GET("/referrals", v1Service.GetReferralsHandler)
+	protected.GET("/referrals", v1Service.ListReferralEntriesHandler)
 
 	// Get ONE specific referrals entry (The :id sniper)
 	protected.GET("/referrals/:id", v1Service.GetReferralEntryHandler)
@@ -66,12 +66,19 @@ func (s *Server) registerReferralRoutes() {
 
 	// Change password
 	protected.PATCH("/users/password", v1Service.ChangePasswordHandler)
+	protected.GET("/tags", v1Service.ListReferralTagsHandler)
 
 	admin := protected.Group("")
-	admin.Use(auth.AdminOnlyMiddleware)                                  // Add the extra gatekeeper
-	admin.POST("/users", v1Service.CreateUserHandler)                    // Create a user
+	admin.Use(auth.AdminOnlyMiddleware)               // Add the extra gatekeeper
+	admin.POST("/users", v1Service.CreateUserHandler) // Create a user
+	admin.POST("/referrals/batch", v1Service.BatchCreateReferralEntriesHandler)
 	admin.GET("/users", v1Service.ListUsersHandler)                      // List Users
 	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)              // Delete a user
 	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler) // Delete a referral entry
 	// admin.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler) // Gotta change the URL?
+
+	admin.POST("/tags", v1Service.CreateReferralTagHandler)                // Add a tag to the database
+	admin.DELETE("/tags/:id", v1Service.DeleteReferralTagHandler)          // Delete a tag from the database
+	admin.POST("/referrals/:id/tags/:tagId", v1Service.AssignTagHandler)   // Assign a tag to a referral
+	admin.DELETE("/referrals/:id/tags/:tagId", v1Service.RemoveTagHandler) // Remove a tag from a referral
 }

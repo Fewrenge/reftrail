@@ -2,29 +2,38 @@ package sqlite
 
 import (
 	"context"
+	"reftrail/internal/domain"
 	"reftrail/store"
 	"time"
+
+	uuid "github.com/google/uuid"
 )
 
 func (d *Driver) CreateReferralLog(ctx context.Context, create *store.ReferralLog) (*store.ReferralLog, error) {
-	ts := time.Now().Unix()
-	stmt := `INSERT INTO referral_log (entry_id, user_id, old_status, new_status, note, created_ts) 
-			 VALUES (?, ?, ?, ?, ?, ?)`
+	newID, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+	idStr := newID.String()
 
-	result, err := d.conn(ctx).ExecContext(ctx, stmt,
-		create.EntryID, create.UserID, create.OldStatus, create.NewStatus, create.Note, ts,
+	ts := time.Now().Format(time.RFC3339)
+	query := `INSERT INTO referral_log (id, referral_id, user_id, old_status, new_status, note, created_ts) 
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`
+
+	_, err = d.conn(ctx).ExecContext(ctx, query,
+		idStr, create.EntryID, create.UserID, create.OldStatus, create.NewStatus, create.Note, ts,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	id, _ := result.LastInsertId()
-	create.ID = int32(id)
+	create.ID = domain.ReferralLogID(idStr)
 	create.CreatedTs = ts
+
 	return create, nil
 }
 
-func (d *Driver) ListReferralLogs(ctx context.Context, entryID int32) ([]*store.ReferralLog, error) {
+func (d *Driver) ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*store.ReferralLog, error) {
 	query := `SELECT id, entry_id, user_id, old_status, new_status, note, created_ts 
 			  FROM referral_log WHERE entry_id = ? ORDER BY created_ts DESC`
 

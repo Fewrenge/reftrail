@@ -8,41 +8,85 @@ CREATE TABLE IF NOT EXISTS user (
 
 -- 2. Referral Table (Requirement #1 through #10)
 CREATE TABLE IF NOT EXISTS referral_entry (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    created_ts BIGINT NOT NULL,
-    updated_ts BIGINT NOT NULL, 
+    id TEXT PRIMARY KEY,
+    created_ts TEXT NOT NULL,
+    updated_ts TEXT NOT NULL, 
     creator_id INTEGER NOT NULL,
-    patient_name TEXT NOT NULL,
+    patient_last_name TEXT NOT NULL,
+    patient_first_name TEXT NOT NULL,
     patient_dob TEXT NOT NULL,
+    patient_healthcard_number TEXT NOT NULL,
+    patient_healthcard_version_code TEXT NOT NULL,
     txt_customer_id TEXT,
-    int_customer_doc_id TEXT,
+    int_customer_doc_id INTEGER,
     referring_physician TEXT,
-    complaint TEXT,
+    consult_type TEXT CHECK(consult_type IN ('APP+LE','APP+UE','APP+SX','SX','OTHER')),
+    consult_type_details TEXT, -- e.g. when patient has a preference
     triage_note TEXT,
     urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')),
-    status TEXT NOT NULL DEFAULT 'READY_TO_BOOK' check (status IN ('READY_TO_BOOK', '1ST_CALL_COMPLETE', '2ND_CALL_COMPLETE',
+    status TEXT NOT NULL DEFAULT 'READY_TO_BOOK' CHECK (status IN ('READY_TO_BOOK', '1ST_CALL_COMPLETE', '2ND_CALL_COMPLETE',
     '3RD_CALL_COMPLETE', 'BOOKED', 'UNABLE_TO_CONTACT', 'PATIENT_TO_CALL_BACK', 'DECLINED', 'SUSPENDED','CLOSED')),
     
-    -- Appointment Info (Requirement #11)
-    appt_date TEXT,
-    appt_time TEXT,
-    practitioner TEXT,
-    juvonno_appt_id TEXT,
+    -- Source Info
+    source TEXT CHECK(source IN ('REGULAR', 'FRACTURE_CLINIC', 'OTHER')),
     
     FOREIGN KEY (creator_id) REFERENCES user(id)
 );
 
 -- 3. Audit Log (Requirement #9 - Tracking who changed the status)
 CREATE TABLE IF NOT EXISTS referral_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entry_id INTEGER NOT NULL,
+    id TEXT PRIMARY KEY,
+    referral_id TEXT NOT NULL,
     user_id INTEGER NOT NULL,
     old_status TEXT,
     new_status TEXT,
     note TEXT,
-    created_ts BIGINT NOT NULL,
-    FOREIGN KEY (entry_id) REFERENCES referral_entry(id),
+    created_ts TEXT NOT NULL,
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id),
     FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(entry_id);
+CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(referral_id);
+CREATE INDEX IF NOT EXISTS idx_referral_healthcard ON referral_entry(patient_healthcard_number);
+
+CREATE TABLE IF NOT EXISTS referral_appointment (
+    id TEXT PRIMARY KEY,
+    referral_id TEXT NOT NULL,
+    complaint_target TEXT NOT NULL,
+    appt_date_and_time TEXT,
+    practitioner TEXT,
+    juvonno_appt_id TEXT,
+    created_ts TEXT NOT NULL,
+    creator_id INTEGER,
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id)
+);
+
+-- This table stores the actual body parts for each referral
+CREATE TABLE IF NOT EXISTS referral_complaint (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    referral_id TEXT NOT NULL,
+    body_part TEXT NOT NULL CHECK(body_part IN ('SHOULDER', 'KNEE', 'HIP', 'ELBOW', 'WRIST', 'ANKLE', 'FOOT', 'OTHER')),
+    side TEXT NOT NULL CHECK(side IN ('LEFT', 'RIGHT', 'BILATERAL')),
+    details TEXT, -- For when body_part is 'OTHER' (e.g., "Femur")
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id)
+);
+
+-- Definition of Tags
+-- Only Admin can edit Tags
+CREATE TABLE IF NOT EXISTS referral_tag_definition (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    created_ts TEXT NOT NULL
+);
+
+-- Junction table (Many-to-Many)
+CREATE TABLE IF NOT EXISTS referral_tag (
+    referral_id TEXT NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (referral_id, tag_id),
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES referral_tag_definition(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_referral_tag_ref ON referral_tag(referral_id);

@@ -1,20 +1,23 @@
 package store
 
-import "context"
+import (
+	"context"
+	"reftrail/internal/domain"
+)
 
 type ReferralLog struct {
-	ID        int32  `json:"id"`
-	EntryID   int32  `json:"entryId"`
-	UserID    int32  `json:"userId"`
-	OldStatus string `json:"oldStatus"`
-	NewStatus string `json:"newStatus"`
-	Note      string `json:"note"`
-	CreatedTs int64  `json:"createdTs"`
+	ID        domain.ReferralLogID `json:"id"`
+	EntryID   domain.ReferralID    `json:"entryId"`
+	UserID    domain.UserID        `json:"userId"`
+	OldStatus string               `json:"oldStatus"`
+	NewStatus string               `json:"newStatus"`
+	Note      string               `json:"note"`
+	CreatedTs string               `json:"createdTs"`
 }
 
 // Manager Logic: Notice we don't use a "Find" struct here.
 // We just ask for the ID of the patient we care about.
-func (s *Store) ListReferralLogs(ctx context.Context, entryID int32) ([]*ReferralLog, error) {
+func (s *Store) ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*ReferralLog, error) {
 	return s.driver.ListReferralLogs(ctx, entryID)
 }
 

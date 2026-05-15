@@ -18,15 +18,24 @@ interface Props {
   onRefresh: () => void;
 }
 
+export interface Complaint {
+  id: number;
+  referralId: string;
+  bodyPart: string;
+  side: string;
+  details: string;
+}
+
 // This is the "Blueprint" for what data one entry needs
 export interface ReferralEntry {
   id: number;
-  patientName: string;
+  patientLastName: string;
+  patientFirstName: string;
   patientDob: string;
   urgency: 'ASAP' | 'Urgent' | 'Elective';
   status: string;
   referringPhysician: string;
-  complaint: string;
+  complaints: Complaint[];
   triageNote: string;
 }
 
@@ -86,7 +95,7 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
 
   const handleDelete = async () => {
 
-    if (!window.confirm(`Permanently delete ${entry.patientName}?`)) return;
+    if (!window.confirm(`Permanently delete ${entry.patientLastName}, ${entry.patientFirstName}?`)) return;
 
     try {
       const res = await fetch(`/api/v1/referrals/${entry.id}`, {
@@ -110,7 +119,7 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
       {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="font-bold text-xl text-slate-900">{entry.patientName}</h3>
+          <h3 className="font-bold text-xl text-slate-900">{entry.patientLastName}{entry.patientFirstName}</h3>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
             DOB: {entry.patientDob || 'N/A'}
           </p>
@@ -189,8 +198,19 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
           <p className="text-sm font-medium text-slate-700">{entry.referringPhysician || 'Unassigned'}</p>
         </div>
         <div>
-          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Complaint</p>
-          <p className="text-sm font-medium text-slate-700">{entry.complaint}</p>
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Complaints</p>
+          <div className="space-y-1">
+            {entry.complaints && entry.complaints.length > 0 ? (
+              entry.complaints.map((c) => (
+                <p key={c.id} className="text-sm font-medium text-slate-700 capitalize">
+                  {`${c.side?.toLowerCase() || ''} ${c.bodyPart?.toLowerCase() || ''}`}
+                  {c.details && <span className="text-xs text-slate-400 block font-normal">{c.details}</span>}
+                </p>
+              ))
+            ) : (
+              <p className="text-sm font-medium text-slate-400 italic">None reported</p>
+            )}
+          </div>
         </div>
       </div>
 

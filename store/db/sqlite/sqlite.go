@@ -78,7 +78,8 @@ func (d *Driver) Migrate(ctx context.Context) error {
 	return err
 }
 
-// New opens the connection to the .db file.
+// TODO: activate foreign key constraints so affliates (tags, logs, complaints) get deleted with referral entries
+// New opens the connection to the .db file
 func New(dbPath string) (*Driver, error) {
 	// 1. Tell Go to open (or create) the file
 	db, err := sql.Open("sqlite3", dbPath)
@@ -86,13 +87,14 @@ func New(dbPath string) (*Driver, error) {
 		return nil, err
 	}
 
-	// _, _ = db.Exec("PRAGMA journal_mode=WAL;")
+	return NewWithDB(db), nil
+}
 
-	db.SetMaxOpenConns(1) // SQLite works best if only one person writes at a time
-
+func NewWithDB(db *sql.DB) *Driver {
+	db.SetMaxOpenConns(1)
 	return &Driver{
 		db: db,
-	}, nil
+	}
 }
 
 // GetDB lets the Manager see the raw connection if needed.

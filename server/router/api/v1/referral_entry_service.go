@@ -1,22 +1,32 @@
 package v1
 
 import (
-	"log"
+	"encoding/csv"
+	"io"
+	"log/slog"
 	"net/http"
+	"reftrail/internal/domain"
 	"reftrail/store"
-	"strconv"
+	"regexp"
+	"strings"
 
 	echo "github.com/labstack/echo/v5"
 )
 
 // Get all referrals
-func (s *APIV1Service) GetReferralsHandler(c *echo.Context) error {
+func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
 	list, err := s.Store.ListReferralEntries(ctx, &store.FindReferralEntry{})
 	if err != nil {
-		log.Printf("Database error: %v", err)
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		slog.Error("failed to get referral entries list", "error", err.Error())
+
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to retrieve referral records",
+		})
+	}
+	if list == nil {
+		list = []*store.ReferralEntry{}
 	}
 
 	return c.JSON(http.StatusOK, list)
@@ -29,18 +39,12 @@ func (s *APIV1Service) GetReferralEntryHandler(c *echo.Context) error {
 
 	// 1. Extract the "id" from the URL path parameter
 	idStr := c.Param("id")
-
-	log.Printf("Sniper Handler triggered with ID: [%s]", idStr)
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]any{"error": "Invalid ID format"})
-	}
+	refID := domain.ReferralID(idStr)
 
 	// 2. Ask the Manager (Store) to find this specific entry
 	// We use our 'Find' blueprint here
 	entry, err := s.Store.GetReferralEntry(ctx, &store.FindReferralEntry{
-		ID: ptrInt32(int32(id)),
+		ID: &refID,
 	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
@@ -60,21 +64,171 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 	create := &store.CreateReferralEntry{}
 
 	if err := c.Bind(create); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		slog.Warn("Failed to bind malformed JSON request body", "error", err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request payload syntax"})
+	}
+
+	if err := domain.ValidateStruct(create); err != nil {
+		slog.Warn("Referral payload structural validation failed",
+			"patient_last_name", create.PatientLastName,
+			"patient_first_name", create.PatientFirstName,
+			"error", err.Error(),
+		)
+
+		return c.JSON(http.StatusUnprocessableEntity, map[string]string{
+			"error":   "Validation failed",
+			"details": err.Error(),
+		})
 	}
 
 	entry, err := s.Store.CreateReferralEntry(ctx, create)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create referral"})
 	}
 	return c.JSON(http.StatusOK, entry)
 }
 
-func (s *APIV1Service) UpdateReferralEntryHandler(c *echo.Context) error {
-	// 1. Get the ID from the URL (e.g., /api/v1/referrals/1)
-	id, _ := strconv.Atoi(c.Param("id"))
+func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error {
+	// 1. Extract the raw file from the multi-part form data
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "No file found in upload form data"})
+	}
 
-	update := &store.UpdateReferralEntry{ID: int32(id)}
+	src, err := fileHeader.Open()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to open uploaded file stream"})
+	}
+	defer src.Close()
+
+	// 2. Initialize Go's streaming reader and configure it for tab-separated tokens (TSV)
+	reader := csv.NewReader(src)
+	reader.LazyQuotes = true
+
+	// Check file extension to switch between comma and tab separation (Is this robust enough?)
+	if strings.HasSuffix(strings.ToLower(fileHeader.Filename), ".csv") {
+		reader.Comma = ','
+	} else {
+		reader.Comma = '\t' // Default fallback for .tsv or .txt file paths
+	}
+
+	// 3. Parse the Header Row to dynamically map columns to position indices
+	headers, err := reader.Read()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Failed to read file spreadsheet headers"})
+	}
+
+	headerMap := make(map[string]int)
+	for idx, name := range headers {
+		cleanHeader := strings.TrimSpace(strings.ToLower(name))
+
+		// Fix hidden character issue: Remove UTF-8 Byte Order Marks (BOM) if exported from Excel
+		cleanHeader = strings.TrimPrefix(cleanHeader, "\xef\xbb\xbf")
+
+		headerMap[cleanHeader] = idx
+	}
+
+	// Fail-fast verification check for required schema columns
+	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency"}
+	for _, field := range requiredFields {
+		if _, exists := headerMap[field]; !exists {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing column header '" + field + "'"})
+		}
+	}
+
+	var batch store.BatchCreateReferralEntries
+	var healthCardRegex = regexp.MustCompile(`^(\d{10})([A-Za-z]{2})?$`)
+
+	// 4. Stream rows sequentially (One row = One referral entry)
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break // Gracefully reached end of file stream
+		}
+		if err != nil {
+			return c.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "Data row line parsing corruption detected"})
+		}
+
+		rawHealthCard := strings.TrimSpace(row[headerMap["health card"]])
+		// Strip common user input styling artifacts like spaces or dashes
+		cleanedHealthCard := strings.ReplaceAll(strings.ReplaceAll(rawHealthCard, " ", ""), "-", "")
+
+		var healthCardNum string
+		var versionCode string
+
+		if healthCardRegex.MatchString(cleanedHealthCard) {
+			matches := healthCardRegex.FindStringSubmatch(cleanedHealthCard)
+			if len(matches) > 1 {
+				healthCardNum = matches[1] // The 10 digits
+
+				// If the optional 2 letters exist, capture and capitalize them
+				if len(matches) > 2 && matches[2] != "" {
+					versionCode = strings.ToUpper(matches[2])
+				}
+			}
+		}
+
+		// Parse semicolon-separated text values inside matching cells
+		rawComplaints := strings.Split(row[headerMap["complaint"]], ";")
+		rawSides := strings.Split(row[headerMap["complaint side"]], ";")
+
+		var complaints []store.ReferralComplaint
+		for i, part := range rawComplaints {
+			cleanPart := strings.TrimSpace(strings.ToUpper(part))
+			if cleanPart == "" {
+				continue
+			}
+
+			// Core zip pattern: resolve matching sides index, fallback to BILATERAL if data length mismatches
+			sideVal := "BILATERAL"
+			if i < len(rawSides) && strings.TrimSpace(rawSides[i]) != "" {
+				sideVal = strings.TrimSpace(strings.ToUpper(rawSides[i]))
+			}
+
+			complaints = append(complaints, store.ReferralComplaint{
+				BodyPart: cleanPart,
+				Side:     sideVal,
+				Details:  "",
+			})
+		}
+
+		// Map spreadsheet elements into your exact structural schema
+		entry := store.CreateReferralEntry{
+			PatientLastName:              strings.TrimSpace(row[headerMap["last name"]]),
+			PatientFirstName:             strings.TrimSpace(row[headerMap["first name"]]),
+			PatientDOB:                   "1990-01-01", // Default placeholder since template column is missing
+			PatientHealthcardNumber:      healthCardNum,
+			PatientHealthcardVersionCode: versionCode,
+			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
+			Urgency:                      strings.TrimSpace(row[headerMap["urgency"]]),
+			Status:                       "READY_TO_BOOK", // Workflow entry state default
+			Source:                       "REGULAR",
+			Complaints:                   complaints,
+		}
+
+		batch.ReferralEntries = append(batch.ReferralEntries, entry)
+	}
+
+	// 5. Run standard empty set check
+	if len(batch.ReferralEntries) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "The uploaded file contains no valid data rows"})
+	}
+
+	// 6. Direct transaction call execution into your existing Storage layer engine
+	err = s.Store.BatchCreateReferralEntries(c.Request().Context(), &batch)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, "Transactional database batch error: "+err.Error())
+	}
+
+	return c.JSON(http.StatusCreated, map[string]string{"message": "Batch file import successful"})
+}
+
+func (s *APIV1Service) UpdateReferralEntryHandler(c *echo.Context) error {
+	// 1. Get the ID from the URL
+	idStr := c.Param("id")
+	refID := domain.ReferralID(idStr)
+
+	update := &store.UpdateReferralEntry{ID: refID}
 	if err := c.Bind(update); err != nil {
 		return c.JSON(http.StatusBadRequest, err)
 	}
@@ -88,21 +242,19 @@ func (s *APIV1Service) UpdateReferralEntryHandler(c *echo.Context) error {
 
 func (s *APIV1Service) UpdateReferralEntryStatusHandler(c *echo.Context) error {
 	// 1. Get ID from URL
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, "Invalid referral ID")
-	}
+	idStr := c.Param("id")
+	refID := domain.ReferralID(idStr)
 
 	// 2. Bind Request (Only the status)
 	var req store.UpdateReferralEntryStatus
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, "Invalid request body")
 	}
-	req.ID = int32(id)
+	req.ID = refID
 
 	// 3. Update the DB
 	// The Store now handles: Transaction, Old Status Check, Role Logic, and Logging
-	err = s.Store.UpdateReferralEntryStatus(c.Request().Context(), &req)
+	err := s.Store.UpdateReferralEntryStatus(c.Request().Context(), &req)
 	if err != nil {
 		// You can check the error type here to return 403 vs 500
 		if err.Error() == "illegal status transition" {
@@ -118,18 +270,16 @@ func (s *APIV1Service) UpdateReferralEntryStatusHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, true)
 }
 
+// TODO: delete all complaints when deleting referrals
 func (s *APIV1Service) DeleteReferralEntryHandler(c *echo.Context) error {
-	// 1. Get the ID from the URL (/api/v1/referrals/15 -> 15)
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, "Invalid ID format")
-	}
+	// 1. Get the ID from the URL
+	idStr := c.Param("id")
+	refID := domain.ReferralID(idStr)
 
 	// 2. Call the "Janitor" (Store.DeleteReferralEntry)
 	// We wrap the ID into the struct your store expects
-	err = s.Store.DeleteReferralEntry(c.Request().Context(), &store.DeleteReferralEntry{
-		ID: int32(id),
+	err := s.Store.DeleteReferralEntry(c.Request().Context(), &store.DeleteReferralEntry{
+		ID: refID,
 	})
 
 	if err != nil {

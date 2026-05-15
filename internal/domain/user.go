@@ -2,7 +2,7 @@ package domain
 
 import "context"
 
-type UserID int32
+type UserID int64
 type UserRole string
 
 const (
