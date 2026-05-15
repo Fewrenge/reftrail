@@ -102,7 +102,8 @@ type FindReferralEntry struct {
 	Offset *int `json:"offset"`
 }
 
-// UpdateReferralEntry defines which fields are allowed to be changed.
+// Admin use only, for arbiturary updates (e.g., correcting a typo, changing urgency, etc.)
+// TODO: Determine what can be updated
 type UpdateReferralEntry struct {
 	ID domain.ReferralID `json:"id"`
 
@@ -123,11 +124,12 @@ type UpdateReferralEntryStatus struct {
 	Note      string                `json:"note"`
 }
 
+// Only records initial appointment, not for rescheduling (which is the EMR's job)
 type UpdateReferralEntryAppointment struct {
 	// Appt details (Requirement #11)
 	ApptDateAndTime *string `json:"apptDateAndTime"`
 	Practitioner    *string `json:"practitioner"`
-	JuvonnoApptID   *string `json:"juvonnoApptId"`
+	EMRApptID       *string `json:"emrApptId"`
 }
 
 type DeleteReferralEntry struct {
