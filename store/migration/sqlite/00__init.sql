@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS referral_complaint (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     referral_id TEXT NOT NULL,
     body_part TEXT NOT NULL CHECK(body_part IN ('SHOULDER', 'KNEE', 'HIP', 'ELBOW', 'WRIST', 'ANKLE', 'FOOT', 'OTHER')),
-    side TEXT NOT NULL CHECK(side IN ('LEFT', 'RIGHT', 'BILATERAL')),
+    side TEXT NOT NULL CHECK(side IN ('LEFT', 'RIGHT', 'BILATERAL', 'OTHER')),
     details TEXT, -- For when body_part is 'OTHER' (e.g., "Femur")
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
 );

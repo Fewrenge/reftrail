@@ -12,25 +12,26 @@ type ReferralEntry struct {
 	CreatedTs string            `json:"createdTs"`
 	UpdatedTs string            `json:"updatedTs"`
 
-	// 2. Patient Info (Matches your requirement #1)
-	PatientLastName              string               `json:"patientLastName"`
-	PatientFirstName             string               `json:"patientFirstName"`
-	PatientDOB                   string               `json:"patientDob"`
-	PatientHealthcardNumber      string               `json:"patientHealthcardNumber"`
-	PatientHealthcardVersionCode string               `json:"patientHealthcardVersionCode"`
-	Complaints                   []*ReferralComplaint `json:"complaints"`
+	// 2. Patient Info
+	PatientLastName              string `json:"patientLastName"`
+	PatientFirstName             string `json:"patientFirstName"`
+	PatientDOB                   string `json:"patientDob"`
+	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
+	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
 
-	// 3. Juvonno Integration (Matches your requirements #2 & #3)
-	// We use string for TxtCustomerID because Juvonno IDs can sometimes be alphanumeric
+	Complaints []*ReferralComplaint `json:"complaints"`
+
+	// 3. EMR Integration
+	// Use string in case EMR updates their ID format in the future
 	TxtCustomerID    string `json:"txtCustomerId"`
 	IntCustomerDocID int64  `json:"intCustomerDocId"`
 
-	// 4. Clinical Details (Matches #4, #6, #7, #10)
+	// 4. Clinical Details
 	ReferringPhysician string `json:"referringPhysician"`
 	TriageNote         string `json:"triageNote"`
 	XRayClinic         string `json:"xrayClinic"`
 
-	// 5. Workflow & Urgency (Matches #8, #9, #11)
+	// 5. Workflow & Urgency
 	Urgency string `json:"urgency"` // Elective, Urgent, ASAP
 	Status  string `json:"status"`  // Ready to book, 1st call, etc.
 	Source  string `json:"source"`
@@ -45,7 +46,7 @@ type ReferralComplaint struct {
 	ID         int64             `json:"id"`
 	ReferralID domain.ReferralID `json:"referralId"`
 	BodyPart   string            `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
-	Side       string            `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL"`
+	Side       string            `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL OTHER"`
 	Details    string            `json:"details"`
 }
 
@@ -110,10 +111,7 @@ type UpdateReferralEntry struct {
 	TriageNote *string `json:"triageNote"`
 	Urgency    *string `json:"urgency"`
 
-	// Appt details (Requirement #11)
-	ApptDate     *string `json:"apptDate"`
-	ApptTime     *string `json:"apptTime"`
-	Practitioner *string `json:"practitioner"`
+	Note *string `json:"note"`
 
 	// Force flag
 	Force bool `json:"force"`
@@ -123,6 +121,13 @@ type UpdateReferralEntryStatus struct {
 	ID        domain.ReferralID     `json:"id"`
 	NewStatus domain.ReferralStatus `json:"newStatus"`
 	Note      string                `json:"note"`
+}
+
+type UpdateReferralEntryAppointment struct {
+	// Appt details (Requirement #11)
+	ApptDateAndTime *string `json:"apptDateAndTime"`
+	Practitioner    *string `json:"practitioner"`
+	JuvonnoApptID   *string `json:"juvonnoApptId"`
 }
 
 type DeleteReferralEntry struct {
@@ -266,29 +271,26 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 			return domain.ErrReferralEntryNotFound
 		}
 
-		// 2. ONLY create a log if the status is actually changing
-		if update.Status != nil && *update.Status != current.Status {
-			// Grab UserID from the context "mailbox" (set by the Bouncer)
-			userCtx, ok := domain.GetUserContext(ctx)
-			if !ok {
-				return domain.ErrUnauthorized
-			}
-
-			// 3. Tell the Worker to write the history
-			logPayload := &ReferralLog{
-				EntryID:   update.ID,
-				UserID:    domain.UserID(userCtx.ID),
-				OldStatus: current.Status,
-				NewStatus: *update.Status,
-				Note:      "Status updated via dashboard",
-			}
-
-			if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
-				return fmt.Errorf("failed to create referral history log during record update: %w", err)
-			}
+		// Grab UserID from the context "mailbox" (set by the Bouncer)
+		userCtx, ok := domain.GetUserContext(ctx)
+		if !ok {
+			return domain.ErrUnauthorized
 		}
 
-		// 4. Commit the changes to the primary referral entity record
+		// 2. Tell the Worker to write the history
+		logPayload := &ReferralLog{
+			EntryID:   update.ID,
+			UserID:    domain.UserID(userCtx.ID),
+			OldStatus: current.Status,
+			NewStatus: *update.Status,
+			Note:      *update.Note,
+		}
+
+		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
+			return fmt.Errorf("failed to create referral history log during record update: %w", err)
+		}
+
+		// 3. Commit the changes to the primary referral entity record
 		if err := s.driver.UpdateReferralEntry(txCtx, update); err != nil {
 			return fmt.Errorf("failed to execute referral entry update: %w", err)
 		}
@@ -364,8 +366,7 @@ func (s *Store) DeleteReferralEntry(ctx context.Context, delete *DeleteReferralE
 	}
 
 	// Pass the whole struct to the worker (driver)
-	// Before deleting the entry, clean up related logs/comments
-	// So call driver.DeleteReferralLogs here later
+	// ON DELETE CASCADE activated
 	if err := s.driver.DeleteReferralEntry(ctx, delete); err != nil {
 		return fmt.Errorf("failed to delete referral entry with ID %s: %w", delete.ID, err)
 	}
