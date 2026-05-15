@@ -82,7 +82,8 @@ func (d *Driver) Migrate(ctx context.Context) error {
 // New opens the connection to the .db file
 func New(dbPath string) (*Driver, error) {
 	// 1. Tell Go to open (or create) the file
-	db, err := sql.Open("sqlite3", dbPath)
+	dsn := dbPath + "?_foreign_keys=on"
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, err
 	}

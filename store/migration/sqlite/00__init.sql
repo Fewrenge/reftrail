@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS referral_log (
     new_status TEXT,
     note TEXT,
     created_ts TEXT NOT NULL,
-    FOREIGN KEY (referral_id) REFERENCES referral_entry(id),
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS referral_appointment (
     juvonno_appt_id TEXT,
     created_ts TEXT NOT NULL,
     creator_id INTEGER,
-    FOREIGN KEY (referral_id) REFERENCES referral_entry(id)
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
 );
 
 -- This table stores the actual body parts for each referral
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS referral_complaint (
     body_part TEXT NOT NULL CHECK(body_part IN ('SHOULDER', 'KNEE', 'HIP', 'ELBOW', 'WRIST', 'ANKLE', 'FOOT', 'OTHER')),
     side TEXT NOT NULL CHECK(side IN ('LEFT', 'RIGHT', 'BILATERAL')),
     details TEXT, -- For when body_part is 'OTHER' (e.g., "Femur")
-    FOREIGN KEY (referral_id) REFERENCES referral_entry(id)
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
 );
 
 -- Definition of Tags
