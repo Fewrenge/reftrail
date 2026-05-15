@@ -17,6 +17,7 @@ func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID domain.
 	return err
 }
 
+// TODO: Create referral log of creation automatically when create referral entry
 func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (*store.ReferralEntry, error) {
 	// Get the current time for our timestamps
 	newID, err := uuid.NewV7()

@@ -130,8 +130,9 @@ type DeleteReferralEntry struct {
 }
 
 // 1. Create: The "Guard"
+// Implement log creation logic at the store level so that it can be reused across different handlers
 func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error) {
-	var finalEntry *ReferralEntry
+	var referralEntry *ReferralEntry
 
 	err := s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
 		// 1. Get User
@@ -147,14 +148,29 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		if err != nil {
 			return err
 		}
-		finalEntry = entry
+		referralEntry = entry
 
 		// 3. Insert Complaints
 		for _, c := range create.Complaints {
-			if err := s.driver.CreateReferralComplaint(txCtx, finalEntry.ID, &c); err != nil {
+			if err := s.driver.CreateReferralComplaint(txCtx, referralEntry.ID, &c); err != nil {
 				return err
 			}
 		}
+
+		// 4. Create log for creation
+		var creationLog *ReferralLog
+		creationLog = &ReferralLog{
+			EntryID:   referralEntry.ID,
+			UserID:    domain.UserID(user.ID),
+			OldStatus: "",
+			NewStatus: referralEntry.Status,
+			Note:      "Referral entry created",
+		}
+
+		if _, err := s.driver.CreateReferralLog(txCtx, creationLog); err != nil {
+			return fmt.Errorf("failed to create initial audit log: %w", err)
+		}
+
 		return nil
 	})
 
@@ -163,34 +179,24 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 	}
 
 	// 4. Return the full object that the Handler expects
-	return finalEntry, nil
+	return referralEntry, nil
 }
 
 func (s *Store) BatchCreateReferralEntries(ctx context.Context, batch *BatchCreateReferralEntries) error {
 	// 1. Run everything in one transaction
 	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
-		user, ok := domain.GetUserContext(txCtx)
+		_, ok := domain.GetUserContext(txCtx)
 		if !ok {
 			return domain.ErrUnauthorized
 		}
 
 		// 2. Loop through the entries
 		for _, create := range batch.ReferralEntries {
-			create.CreatorID = domain.UserID(user.ID)
-			// 3. Reuse your existing driver method!
-
-			createdEntry, err := s.driver.CreateReferralEntry(txCtx, &create)
+			_, err := s.CreateReferralEntry(txCtx, &create)
 			if err != nil {
-				return fmt.Errorf("batch failed at entry for %s, %s: %w", create.PatientLastName, create.PatientFirstName, err)
+				return fmt.Errorf("failed to create referral entry for patient %s, %s: %w",
+					create.PatientLastName, create.PatientFirstName, err)
 			}
-
-			for _, complaint := range create.Complaints {
-				err := s.driver.CreateReferralComplaint(txCtx, createdEntry.ID, &complaint)
-				if err != nil {
-					return fmt.Errorf("batch failed saving complaints line for %s, %s: %w", create.PatientLastName, create.PatientFirstName, err)
-				}
-			}
-
 		}
 
 		return nil

@@ -41,7 +41,6 @@ func (s *Store) DeleteReferralTag(ctx context.Context, delete *DeleteReferralTag
 }
 
 func (s *Store) AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
-	// TODO: check if the referral exists first
 	return s.driver.AssignTagToReferral(ctx, referralID, tagID)
 }
 

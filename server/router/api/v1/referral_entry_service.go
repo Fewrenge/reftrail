@@ -270,7 +270,6 @@ func (s *APIV1Service) UpdateReferralEntryStatusHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, true)
 }
 
-// TODO: delete all complaints when deleting referrals
 func (s *APIV1Service) DeleteReferralEntryHandler(c *echo.Context) error {
 	// 1. Get the ID from the URL
 	idStr := c.Param("id")
