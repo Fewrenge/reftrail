@@ -10,10 +10,12 @@ import (
 )
 
 type User struct {
-	ID           domain.UserID   `json:"id"`
-	Username     string          `json:"username"`
-	PasswordHash string          `json:"-"`
-	Role         domain.UserRole `json:"role"`
+	ID            domain.UserID   `json:"id"`
+	Username      string          `json:"username"`
+	PasswordHash  string          `json:"-"`
+	Role          domain.UserRole `json:"role"`
+	UserFirstName string          `json:"userFirstName"`
+	UserLastName  string          `json:"userLastName"`
 }
 
 // The "Form" for logging in
@@ -23,9 +25,11 @@ type LoginRequest struct {
 }
 
 type CreateUser struct {
-	Username string          `json:"username"`
-	Password string          `json:"password"`
-	Role     domain.UserRole `json:"role"`
+	Username      string          `json:"username"`
+	Password      string          `json:"password"`
+	Role          domain.UserRole `json:"role"`
+	UserFirstName string          `json:"userFirstName"`
+	UserLastName  string          `json:"userLastName"`
 }
 
 type FindUser struct {
@@ -75,9 +79,11 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 		// Fix: We need to use CreateUser struct because s.driver.CreateUser
 		// likely expects the "Create" form, not the final "User" form.
 		admin := &CreateUser{
-			Username: "admin",
-			Password: string(hashed), // This will be saved to password_hash in SQLite
-			Role:     domain.RoleReftrailAdmin,
+			Username:      "admin",
+			Password:      string(hashed), // This will be saved to password_hash in SQLite
+			Role:          domain.RoleReftrailAdmin,
+			UserFirstName: "Admin",
+			UserLastName:  "User",
 		}
 
 		// Fix: s.driver.CreateUser returns (*User, error),

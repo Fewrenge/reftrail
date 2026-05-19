@@ -4,6 +4,7 @@ import "context"
 
 type UserID int64
 type UserRole string
+type Username string
 
 const (
 	RoleReftrailAdmin = "REFTRAIL_ADMIN"
@@ -11,8 +12,9 @@ const (
 )
 
 type UserContext struct {
-	ID   UserID
-	Role UserRole
+	ID       UserID
+	Role     UserRole
+	Username Username
 }
 
 type contextKey string

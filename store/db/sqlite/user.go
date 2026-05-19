@@ -8,16 +8,18 @@ import (
 )
 
 func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*store.User, error) {
-	query := `INSERT INTO user (username, password_hash, role) VALUES (?, ?, ?)`
-	result, err := d.conn(ctx).ExecContext(ctx, query, create.Username, create.Password, create.Role)
+	query := `INSERT INTO user (username, password_hash, role, user_first_name, user_last_name) VALUES (?, ?, ?, ?, ?)`
+	result, err := d.conn(ctx).ExecContext(ctx, query, create.Username, create.Password, create.Role, create.UserFirstName, create.UserLastName)
 	if err != nil {
 		return nil, err
 	}
 	id, _ := result.LastInsertId()
 	return &store.User{
-		ID:       domain.UserID(id), // Changes
-		Username: create.Username,
-		Role:     create.Role,
+		ID:            domain.UserID(id), // Changes
+		Username:      create.Username,
+		Role:          create.Role,
+		UserFirstName: create.UserFirstName,
+		UserLastName:  create.UserLastName,
 	}, nil
 }
 
