@@ -263,7 +263,6 @@ func (s *Store) GetReferralEntry(ctx context.Context, find *FindReferralEntry) (
 	return list[0], nil
 }
 
-// 4. Update: The "Editor"
 func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error {
 	// Wrap the whole operation in a transaction
 	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
@@ -297,7 +296,6 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 			return fmt.Errorf("failed to execute referral entry update: %w", err)
 		}
 
-		// Happy path termination anchor
 		return nil
 	})
 }
@@ -307,7 +305,7 @@ func (s *Store) GetReferralEntryStatusByID(ctx context.Context, id domain.Referr
 }
 
 func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateReferralEntryStatus) error {
-	// You are looking at an anonymous function
+	// Anonymous function here
 	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
 		// 1. Get the "Who" (User Context)
 		user, ok := domain.GetUserContext(txCtx)

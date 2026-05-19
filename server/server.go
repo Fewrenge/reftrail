@@ -49,11 +49,14 @@ func (s *Server) registerReferralRoutes() {
 	// Get ONE specific referrals entry (The :id sniper)
 	protected.GET("/referrals/:id", v1Service.GetReferralEntryHandler)
 
-	// Create a new referrals entry
+	// Create a new referral entry
 	protected.POST("/referrals", v1Service.CreateReferralEntryHandler)
 
 	// Update a referral entry's status
 	protected.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryStatusHandler)
+
+	// Add a log to a referral entry (for recording notes that don't correspond to a status change)
+	protected.POST("/referrals/:id/logs", v1Service.CreateReferralLogHandler)
 
 	// Get the history logs
 	protected.GET("/referrals/:id/logs", v1Service.ListReferralLogsHandler)

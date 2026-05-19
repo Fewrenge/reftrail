@@ -154,7 +154,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	return list, nil
 }
 
-// For miscellaneous updates
+// For miscellaneous updates (e.g., correcting a typo, changing urgency, etc.)
 func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateReferralEntry) error {
 	// 1. Build the "SET" part of our SQL dynamically
 	set, args := []string{}, []any{}
@@ -182,7 +182,7 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 
 func (d *Driver) GetReferralEntryStatusByID(ctx context.Context, id domain.ReferralID) (domain.ReferralStatus, error) {
 	var status domain.ReferralStatus
-	err := d.conn(ctx).QueryRowContext(ctx, "SELECT status FROM referral_entry WHERE id = $1", id).Scan(&status)
+	err := d.conn(ctx).QueryRowContext(ctx, "SELECT status FROM referral_entry WHERE id = ?", id).Scan(&status)
 	return status, err
 }
 

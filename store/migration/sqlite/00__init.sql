@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS referral_complaint (
 
 -- Definition of Tags
 -- Only Admin can edit Tags
+-- Tags are for internal use to help categorize referrals (e.g. "X-Ray completed at hospital", "Online Booking Eligible", etc.)
 CREATE TABLE IF NOT EXISTS referral_tag_definition (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,

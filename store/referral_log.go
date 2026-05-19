@@ -15,11 +15,12 @@ type ReferralLog struct {
 	CreatedTs string               `json:"createdTs"`
 }
 
+func (s *Store) CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error) {
+	return s.driver.CreateReferralLog(ctx, create)
+}
+
 // Manager Logic: Notice we don't use a "Find" struct here.
-// We just ask for the ID of the patient we care about.
+// We just ask for the ID of the referral we care about.
 func (s *Store) ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*ReferralLog, error) {
 	return s.driver.ListReferralLogs(ctx, entryID)
 }
-
-// We don't even need a CreateReferralLog function here!
-// The Manager calls s.driver.CreateReferralLog directly inside the UpdateReferralEntry function.
