@@ -76,8 +76,6 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 	if count == 0 {
 		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 
-		// Fix: We need to use CreateUser struct because s.driver.CreateUser
-		// likely expects the "Create" form, not the final "User" form.
 		admin := &CreateUser{
 			Username:      "admin",
 			Password:      string(hashed), // This will be saved to password_hash in SQLite

@@ -119,7 +119,7 @@ export default function ReferralEntryCard({ entry, onRefresh }: Props) {
       {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="font-bold text-xl text-slate-900">{entry.patientLastName}{entry.patientFirstName}</h3>
+          <h3 className="font-bold text-xl text-slate-900">{entry.patientLastName}{", "}{entry.patientFirstName}</h3>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
             DOB: {entry.patientDob || 'N/A'}
           </p>
