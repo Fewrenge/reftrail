@@ -43,7 +43,7 @@ type ReferralEntry struct {
 }
 
 type ReferralComplaint struct {
-	ID         int64             `json:"id"`
+	ID         int64             `json:"-"`
 	ReferralID domain.ReferralID `json:"referralId"`
 	BodyPart   string            `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
 	Side       string            `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL OTHER"`

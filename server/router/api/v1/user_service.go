@@ -36,6 +36,7 @@ func (s *APIV1Service) CreateUserHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
+// TODO: omit int user ID from /api/v1/users/me, return user first and last name and username
 // GET /api/v1/users/me
 func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 	ctx, ok := domain.GetUserContext(c.Request().Context())
