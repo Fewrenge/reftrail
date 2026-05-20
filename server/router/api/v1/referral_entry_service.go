@@ -196,7 +196,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		entry := store.CreateReferralEntry{
 			PatientLastName:              strings.TrimSpace(row[headerMap["last name"]]),
 			PatientFirstName:             strings.TrimSpace(row[headerMap["first name"]]),
-			PatientDOB:                   "1990-01-01", // Default placeholder since template column is missing
+			PatientDOB:                   "1990-01-01", // Default placeholder since template column is missing // TODO: Add DOB column
 			PatientHealthcardNumber:      healthCardNum,
 			PatientHealthcardVersionCode: versionCode,
 			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
@@ -204,6 +204,20 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			Status:                       domain.ReferralStatus("READY_TO_BOOK"), // Workflow entry state default
 			Source:                       domain.ReferralSource("REGULAR"),
 			Complaints:                   complaints,
+		}
+
+		// Run validator on this entry
+		if err := domain.ValidateStruct(entry); err != nil {
+			slog.Warn("Batch row validation failed",
+				"patient", entry.PatientFirstName+" "+entry.PatientLastName,
+				"error", err.Error(),
+			)
+
+			// Stop execution and tell the user exactly which row broke the batch import
+			return c.JSON(http.StatusUnprocessableEntity, map[string]string{
+				"error": "Batch import rejected: Duplicate body parts or invalid fields detected for patient " +
+					entry.PatientFirstName + " " + entry.PatientLastName + ".",
+			})
 		}
 
 		batch.ReferralEntries = append(batch.ReferralEntries, entry)

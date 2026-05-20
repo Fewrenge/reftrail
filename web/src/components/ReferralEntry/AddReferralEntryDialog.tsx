@@ -36,7 +36,7 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
   ]);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 

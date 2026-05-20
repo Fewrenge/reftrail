@@ -19,7 +19,7 @@ type ReferralEntry struct {
 	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
 	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
 
-	Complaints []*ReferralComplaint `json:"complaints"`
+	Complaints []*ReferralComplaint `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
 
 	// 3. EMR Integration
 	// Use string in case EMR updates their ID format in the future
@@ -62,7 +62,7 @@ type CreateReferralEntry struct {
 
 	// Clinical Info
 	ReferringPhysician string              `json:"referringPhysician"`
-	Complaints         []ReferralComplaint `json:"complaints" validate:"required,min=1,dive"`
+	Complaints         []ReferralComplaint `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
 	TriageNote         string              `json:"triageNote"`
 	// XRayClinic         string `json:"xrayClinic"`
 
