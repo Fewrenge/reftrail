@@ -33,7 +33,7 @@ func (d *Driver) CreateReferralLog(ctx context.Context, create *store.ReferralLo
 	return create, nil
 }
 
-func (d *Driver) ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*store.ReferralLog, error) {
+func (d *Driver) ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*store.ReferralLogWithUser, error) {
 	query := `
 		SELECT l.id, l.referral_id, l.user_id, u.username, u.user_first_name, u.user_last_name, l.old_status, l.new_status, l.note, l.created_ts 
 		FROM referral_log l
@@ -47,9 +47,9 @@ func (d *Driver) ListReferralLogs(ctx context.Context, entryID domain.ReferralID
 	}
 	defer rows.Close()
 
-	var logs []*store.ReferralLog
+	var logs []*store.ReferralLogWithUser
 	for rows.Next() {
-		var l store.ReferralLog
+		var l store.ReferralLogWithUser
 		if err := rows.Scan(&l.ID, &l.EntryID, &l.UserID, &l.Username, &l.UserFirstName, &l.UserLastName, &l.OldStatus, &l.NewStatus, &l.Note, &l.CreatedTs); err != nil {
 			return nil, err
 		}

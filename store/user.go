@@ -18,6 +18,12 @@ type User struct {
 	UserLastName  string          `json:"userLastName"`
 }
 
+type UserPublicInfo struct {
+	Username      string `json:"username"`
+	UserFirstName string `json:"userFirstName"`
+	UserLastName  string `json:"userLastName"`
+}
+
 // The "Form" for logging in
 type LoginRequest struct {
 	Username string `json:"username"`
@@ -38,10 +44,12 @@ type FindUser struct {
 }
 
 type UpdateUser struct {
-	ID       domain.UserID    `json:"id"`
-	Username *string          `json:"username"`
-	Password *string          `json:"password"`
-	Role     *domain.UserRole `json:"role"`
+	ID            domain.UserID    `json:"id"`
+	Username      *string          `json:"username"`
+	UserFirstName *string          `json:"userFirstName"`
+	UserLastName  *string          `json:"userLastName"`
+	Password      *string          `json:"password"`
+	Role          *domain.UserRole `json:"role"`
 }
 
 type DeleteUser struct {
@@ -125,7 +133,7 @@ func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
 	return s.driver.DeleteUser(ctx, delete)
 }
 
-func (s *Store) ChangeUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
+func (s *Store) UpdateUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
 	// Relay the command to the driver (the stove)
-	return s.driver.ChangeUserPassword(ctx, userID, newHash)
+	return s.driver.UpdateUserPassword(ctx, userID, newHash)
 }

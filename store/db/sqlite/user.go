@@ -70,7 +70,7 @@ func (d *Driver) DeleteUser(ctx context.Context, delete *store.DeleteUser) error
 	return nil
 }
 
-func (d *Driver) ChangeUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
+func (d *Driver) UpdateUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
 	_, err := d.conn(ctx).ExecContext(ctx, `
 		UPDATE user 
 		SET password_hash = ? 

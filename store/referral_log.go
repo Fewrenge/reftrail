@@ -6,16 +6,18 @@ import (
 )
 
 type ReferralLog struct {
-	ID            domain.ReferralLogID `json:"id"`
-	EntryID       domain.ReferralID    `json:"entryId"`
-	UserID        domain.UserID        `json:"userId"`
-	Username      string               `json:"-"`
-	UserFirstName string               `json:"-"`
-	UserLastName  string               `json:"-"`
-	OldStatus     string               `json:"oldStatus"`
-	NewStatus     string               `json:"newStatus"`
-	Note          string               `json:"note"`
-	CreatedTs     string               `json:"createdTs"`
+	ID        domain.ReferralLogID  `json:"id"`
+	EntryID   domain.ReferralID     `json:"entryId"`
+	UserID    domain.UserID         `json:"userId"`
+	OldStatus domain.ReferralStatus `json:"oldStatus"`
+	NewStatus domain.ReferralStatus `json:"newStatus"`
+	Note      string                `json:"note"`
+	CreatedTs string                `json:"createdTs"`
+}
+
+type ReferralLogWithUser struct {
+	ReferralLog
+	UserPublicInfo
 }
 
 func (s *Store) CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error) {
@@ -24,6 +26,6 @@ func (s *Store) CreateReferralLog(ctx context.Context, create *ReferralLog) (*Re
 
 // Manager Logic: Notice we don't use a "Find" struct here.
 // We just ask for the ID of the referral we care about.
-func (s *Store) ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*ReferralLog, error) {
+func (s *Store) ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*ReferralLogWithUser, error) {
 	return s.driver.ListReferralLogs(ctx, entryID)
 }

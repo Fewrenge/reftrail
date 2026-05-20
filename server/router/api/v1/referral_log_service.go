@@ -32,8 +32,8 @@ func (s *APIV1Service) CreateReferralLogHandler(c *echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to verify referral status"})
 	}
 
-	log.OldStatus = string(currentStatus)
-	log.NewStatus = string(currentStatus)
+	log.OldStatus = currentStatus
+	log.NewStatus = currentStatus
 
 	// 3. Ask the Manager (Store) to create the log
 	createdLog, err := s.Store.CreateReferralLog(ctx, log)
@@ -61,32 +61,11 @@ func (s *APIV1Service) ListReferralLogsHandler(c *echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to list referral logs"})
 	}
 
-	// Define a presentation model local to this endpoint's response
-	type LogResponse struct {
-		ID            domain.ReferralLogID `json:"id"`
-		EntryID       domain.ReferralID    `json:"entryId"`
-		Username      string               `json:"username"`
-		UserFirstName string               `json:"userFirstName"`
-		UserLastName  string               `json:"userLastName"`
-		OldStatus     string               `json:"oldStatus"`
-		NewStatus     string               `json:"newStatus"`
-		Note          string               `json:"note"`
-		CreatedTs     string               `json:"createdTs"`
-	}
-
-	logPayload := make([]LogResponse, len(logs))
+	logPayload := make([]store.ReferralLogWithUser, len(logs))
 	for i, l := range logs {
-		logPayload[i] = LogResponse{
-			ID:            l.ID,
-			EntryID:       l.EntryID,
-			Username:      l.Username,
-			UserFirstName: l.UserFirstName,
-			UserLastName:  l.UserLastName,
-			OldStatus:     l.OldStatus,
-			NewStatus:     l.NewStatus,
-			Note:          l.Note,
-			CreatedTs:     l.CreatedTs,
-			//l.UserID is deliberately excluded
+		logPayload[i] = store.ReferralLogWithUser{
+			ReferralLog:    l.ReferralLog,
+			UserPublicInfo: l.UserPublicInfo,
 		}
 	}
 

@@ -40,7 +40,7 @@ func (s *APIV1Service) CreateUserHandler(c *echo.Context) error {
 func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 	ctx, ok := domain.GetUserContext(c.Request().Context())
 	if !ok {
-		return c.JSON(http.StatusUnauthorized, "Not logged in - user_service.go")
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
 
 	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &ctx.ID})
@@ -88,7 +88,7 @@ func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 	}
 
 	// Save
-	if err := s.Store.ChangeUserPassword(ctx, userID, string(newHash)); err != nil {
+	if err := s.Store.UpdateUserPassword(ctx, userID, string(newHash)); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
 	}
 
@@ -167,7 +167,7 @@ func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 	}
 
 	// Update the user's password
-	if err := s.Store.ChangeUserPassword(ctx, domain.UserID(id), string(newHash)); err != nil {
+	if err := s.Store.UpdateUserPassword(ctx, domain.UserID(id), string(newHash)); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
 	}
 
