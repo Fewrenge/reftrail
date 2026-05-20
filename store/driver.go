@@ -25,7 +25,7 @@ type Driver interface {
 
 	// 3. Accountability (Optional but recommended for your logs)
 	CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error)
-	ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*ReferralLogWithUser, error)
+	ListReferralLogs(ctx context.Context, referralID domain.ReferralID) ([]*ReferralLogWithUser, error)
 
 	// 4. User/Account Methods (For your Login/Privileges)
 	CreateUser(ctx context.Context, create *CreateUser) (*User, error)

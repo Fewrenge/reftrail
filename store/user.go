@@ -10,7 +10,7 @@ import (
 )
 
 type User struct {
-	ID            domain.UserID   `json:"id"`
+	ID            domain.UserID   `json:"-"`
 	Username      string          `json:"username"`
 	PasswordHash  string          `json:"-"`
 	Role          domain.UserRole `json:"role"`

@@ -7,7 +7,7 @@ import type { ReferralEntry } from "../components/ReferralEntry/ReferralEntryCar
 
 interface ReferralLog {
   id: string;
-  entryId: string;
+  referralId: string;
   username: string;
   userFirstName: string;
   userLastName: string;

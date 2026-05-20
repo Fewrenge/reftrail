@@ -29,7 +29,7 @@ export interface Complaint {
 
 // This is the "Blueprint" for what data one entry needs
 export interface ReferralEntry {
-  id: number;
+  id: string; // UUID
   patientLastName: string;
   patientFirstName: string;
   patientDob: string;

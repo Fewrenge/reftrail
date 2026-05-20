@@ -43,8 +43,8 @@ type ReferralEntry struct {
 }
 
 type ReferralComplaint struct {
-	ID         int64             `json:"-"`
-	ReferralID domain.ReferralID `json:"referralId"`
+	ID         int64             `json:"id"`
+	ReferralID domain.ReferralID `json:"-"`
 	BodyPart   string            `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
 	Side       string            `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL OTHER"`
 	Details    string            `json:"details"`
@@ -167,11 +167,11 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		// 4. Create log for creation
 		var creationLog *ReferralLog
 		creationLog = &ReferralLog{
-			EntryID:   referralEntry.ID,
-			UserID:    domain.UserID(user.ID),
-			OldStatus: "",
-			NewStatus: referralEntry.Status,
-			Note:      "Referral entry created",
+			ReferralID: referralEntry.ID,
+			UserID:     domain.UserID(user.ID),
+			OldStatus:  "",
+			NewStatus:  referralEntry.Status,
+			Note:       "Referral entry created",
 		}
 
 		if _, err := s.driver.CreateReferralLog(txCtx, creationLog); err != nil {
@@ -280,11 +280,11 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 
 		// 2. Tell the Worker to write the history
 		logPayload := &ReferralLog{
-			EntryID:   update.ID,
-			UserID:    domain.UserID(userCtx.ID),
-			OldStatus: current.Status,
-			NewStatus: *update.Status,
-			Note:      *update.Note,
+			ReferralID: update.ID,
+			UserID:     domain.UserID(userCtx.ID),
+			OldStatus:  current.Status,
+			NewStatus:  *update.Status,
+			Note:       *update.Note,
 		}
 
 		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
@@ -336,11 +336,11 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 
 		// 5. Create the Log
 		logPayload := &ReferralLog{
-			EntryID:   update.ID,
-			UserID:    domain.UserID(user.ID),
-			OldStatus: oldStatus,
-			NewStatus: newStatus,
-			Note:      update.Note,
+			ReferralID: update.ID,
+			UserID:     domain.UserID(user.ID),
+			OldStatus:  oldStatus,
+			NewStatus:  newStatus,
+			Note:       update.Note,
 		}
 
 		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {

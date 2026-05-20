@@ -36,7 +36,6 @@ func (s *APIV1Service) CreateUserHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
-// TODO: omit int user ID from /api/v1/users/me, return user first and last name and username
 // GET /api/v1/users/me
 func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 	ctx, ok := domain.GetUserContext(c.Request().Context())
@@ -47,6 +46,10 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &ctx.ID})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get current user"})
+	}
+
+	if user == nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "User profile not found"})
 	}
 
 	return c.JSON(http.StatusOK, user)

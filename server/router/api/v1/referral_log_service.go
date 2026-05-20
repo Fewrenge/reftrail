@@ -24,7 +24,7 @@ func (s *APIV1Service) CreateReferralLogHandler(c *echo.Context) error {
 	if err := c.Bind(log); err != nil {
 		return c.JSON(http.StatusBadRequest, err)
 	}
-	log.EntryID = refID
+	log.ReferralID = refID
 
 	currentStatus, err := s.Store.GetReferralEntryStatusByID(ctx, refID)
 	if err != nil {
