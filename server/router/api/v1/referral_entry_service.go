@@ -200,9 +200,9 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			PatientHealthcardNumber:      healthCardNum,
 			PatientHealthcardVersionCode: versionCode,
 			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
-			Urgency:                      strings.TrimSpace(row[headerMap["urgency"]]),
-			Status:                       "READY_TO_BOOK", // Workflow entry state default
-			Source:                       "REGULAR",
+			Urgency:                      domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),
+			Status:                       domain.ReferralStatus("READY_TO_BOOK"), // Workflow entry state default
+			Source:                       domain.ReferralSource("REGULAR"),
 			Complaints:                   complaints,
 		}
 

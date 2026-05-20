@@ -2,6 +2,8 @@ package domain
 
 type ReferralID string
 type ReferralStatus string
+type ReferralUrgency string
+type ReferralSource string
 
 const (
 	StatusReadyToBook     ReferralStatus = "READY_TO_BOOK"

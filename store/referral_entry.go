@@ -32,9 +32,9 @@ type ReferralEntry struct {
 	XRayClinic         string `json:"xrayClinic"`
 
 	// 5. Workflow & Urgency
-	Urgency string                `json:"urgency"` // Elective, Urgent, ASAP
-	Status  domain.ReferralStatus `json:"status"`  // Ready to book, 1st call, etc.
-	Source  string                `json:"source"`
+	Urgency domain.ReferralUrgency `json:"urgency"` // Elective, Urgent, ASAP
+	Status  domain.ReferralStatus  `json:"status"`  // Ready to book, 1st call, etc.
+	Source  domain.ReferralSource  `json:"source"`
 
 	// Appointment Info (If status is "Booked")
 	ApptDateAndTime string `json:"apptDateAndTime"`
@@ -67,9 +67,9 @@ type CreateReferralEntry struct {
 	// XRayClinic         string `json:"xrayClinic"`
 
 	// Status
-	Urgency string                `json:"urgency"`
-	Status  domain.ReferralStatus `json:"status"` // Usually defaults to "READY_TO_BOOK"
-	Source  string                `json:"source"`
+	Urgency domain.ReferralUrgency `json:"urgency"`
+	Status  domain.ReferralStatus  `json:"status"` // Usually defaults to "READY_TO_BOOK"
+	Source  domain.ReferralSource  `json:"source"`
 
 	// Accountability
 	CreatorID domain.UserID `json:"creatorId"`
@@ -88,8 +88,8 @@ type FindReferralEntry struct {
 	// 2. Clinical Filters (Requirement #8 & #9)
 	// We use pointers (*) so we can tell the difference between
 	// "Filter by this" and "Don't filter at all" (nil).
-	Urgency *string                `json:"urgency"`
-	Status  *domain.ReferralStatus `json:"status"`
+	Urgency *domain.ReferralUrgency `json:"urgency"`
+	Status  *domain.ReferralStatus  `json:"status"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
 	PatientLastName         *string `json:"patientLastName"`
@@ -108,9 +108,9 @@ type UpdateReferralEntry struct {
 	ID domain.ReferralID `json:"id"`
 
 	// Fields that change during the workflow
-	Status     *domain.ReferralStatus `json:"status"`
-	TriageNote *string                `json:"triageNote"`
-	Urgency    *string                `json:"urgency"`
+	Status     *domain.ReferralStatus  `json:"status"`
+	TriageNote *string                 `json:"triageNote"`
+	Urgency    *domain.ReferralUrgency `json:"urgency"`
 
 	Note *string `json:"note"`
 
