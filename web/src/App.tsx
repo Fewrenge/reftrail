@@ -1,10 +1,11 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Login from './pages/Login';
 import Settings from './pages/Settings';
-import Home from './pages/Home'; // New import
 import Sidebar from './components/Sidebar/Sidebar';
 import { useAuth } from './contexts/AuthContext';
-import { AlertCircleIcon } from "lucide-react";
+import { AlertCircleIcon, LayoutDashboardIcon } from "lucide-react";
+import Referrals from './pages/Referrals';
+import ReferralDetails from './pages/ReferralDetails';
 
 
 export default function App() {
@@ -17,7 +18,7 @@ export default function App() {
 
   // Loading Screen: While checking auth
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400">Loading Medical Portal...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400">Loading RefTrail...</div>;
   }
 
   return (
@@ -28,7 +29,24 @@ export default function App() {
 
         <main className="flex-1 p-8 max-w-4xl mx-auto">
           <Routes>
-            <Route path="/" element={<Home />} />
+            {/*HOME PATH PLACEHOLDER*/}
+            <Route path="/" element={
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 text-center border border-dashed border-slate-200 bg-white/50 rounded-2xl p-8">
+                <LayoutDashboardIcon size={48} className="mb-4 text-slate-300" />
+                <h2 className="text-2xl font-bold text-slate-800">Welcome to RefTrail</h2>
+                <p className="mt-1 text-sm text-slate-500 max-w-sm">
+                  Select a section from the sidebar or jump straight into tracking your patient list below.
+                </p>
+                <Link to="/referrals" className="mt-6 inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                  Go to Referrals
+                </Link>
+              </div>
+            } />
+
+
+
+            <Route path="/referrals" element={<Referrals />} />
+            <Route path="/referrals/:referralId" element={<ReferralDetails />} />
             <Route path="/settings/*" element={<Settings />} />
             
             {/* 404 CATCH-ALL */}
