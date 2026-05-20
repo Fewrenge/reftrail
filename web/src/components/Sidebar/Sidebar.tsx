@@ -22,7 +22,7 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-white border-r border-slate-200 sticky top-0 h-screen p-6 hidden md:flex flex-col">
       {/* LOGO SECTION */}
-      <Link to="/" className="flex items-center gap-3 mb-10 hover:opacity-80 transition-opacity cursor-pointer block">
+      <Link to="/" className="flex items-center gap-3 mb-10 hover:opacity-80 transition-opacity cursor-pointer">
         <HospitalIcon size={30} strokeWidth={2.5} className="text-blue-600" />
         <h1 className="font-bold text-lg tracking-tight text-slate-800">RefTrail</h1>
       </Link>

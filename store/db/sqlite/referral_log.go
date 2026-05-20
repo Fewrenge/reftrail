@@ -34,8 +34,8 @@ func (d *Driver) CreateReferralLog(ctx context.Context, create *store.ReferralLo
 }
 
 func (d *Driver) ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*store.ReferralLog, error) {
-	query := `SELECT id, entry_id, user_id, old_status, new_status, note, created_ts 
-			  FROM referral_log WHERE entry_id = ? ORDER BY created_ts DESC`
+	query := `SELECT id, referral_id, user_id, old_status, new_status, note, created_ts 
+			  FROM referral_log WHERE referral_id = ? ORDER BY created_ts DESC`
 
 	rows, err := d.conn(ctx).QueryContext(ctx, query, entryID)
 	if err != nil {
