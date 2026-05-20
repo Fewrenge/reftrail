@@ -114,7 +114,7 @@ export default function Home() {
           <p className="text-center text-slate-400 animate-pulse py-10">Syncing database...</p>
         ) : filteredPatients.length > 0 ? (
           filteredPatients.map((p) => (
-            <ReferralEntryCard key={p.id} entry={p} onRefresh={refreshData} />
+            <ReferralEntryCard key={p.id} entry={p} onRefresh={refreshData} isClickable={true} />
           ))
         ) : (
           <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 italic">

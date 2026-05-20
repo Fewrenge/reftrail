@@ -10,10 +10,18 @@ import (
 )
 
 type User struct {
-	ID           domain.UserID   `json:"id"`
-	Username     string          `json:"username"`
-	PasswordHash string          `json:"-"`
-	Role         domain.UserRole `json:"role"`
+	ID            domain.UserID   `json:"id"`
+	Username      string          `json:"username"`
+	PasswordHash  string          `json:"-"`
+	Role          domain.UserRole `json:"role"`
+	UserFirstName string          `json:"userFirstName"`
+	UserLastName  string          `json:"userLastName"`
+}
+
+type UserPublicInfo struct {
+	Username      string `json:"username"`
+	UserFirstName string `json:"userFirstName"`
+	UserLastName  string `json:"userLastName"`
 }
 
 // The "Form" for logging in
@@ -23,9 +31,11 @@ type LoginRequest struct {
 }
 
 type CreateUser struct {
-	Username string          `json:"username"`
-	Password string          `json:"password"`
-	Role     domain.UserRole `json:"role"`
+	Username      string          `json:"username"`
+	Password      string          `json:"password"`
+	Role          domain.UserRole `json:"role"`
+	UserFirstName string          `json:"userFirstName"`
+	UserLastName  string          `json:"userLastName"`
 }
 
 type FindUser struct {
@@ -34,10 +44,12 @@ type FindUser struct {
 }
 
 type UpdateUser struct {
-	ID       domain.UserID    `json:"id"`
-	Username *string          `json:"username"`
-	Password *string          `json:"password"`
-	Role     *domain.UserRole `json:"role"`
+	ID            domain.UserID    `json:"id"`
+	Username      *string          `json:"username"`
+	UserFirstName *string          `json:"userFirstName"`
+	UserLastName  *string          `json:"userLastName"`
+	Password      *string          `json:"password"`
+	Role          *domain.UserRole `json:"role"`
 }
 
 type DeleteUser struct {
@@ -72,12 +84,12 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 	if count == 0 {
 		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 
-		// Fix: We need to use CreateUser struct because s.driver.CreateUser
-		// likely expects the "Create" form, not the final "User" form.
 		admin := &CreateUser{
-			Username: "admin",
-			Password: string(hashed), // This will be saved to password_hash in SQLite
-			Role:     domain.RoleReftrailAdmin,
+			Username:      "admin",
+			Password:      string(hashed), // This will be saved to password_hash in SQLite
+			Role:          domain.RoleReftrailAdmin,
+			UserFirstName: "Admin",
+			UserLastName:  "User",
 		}
 
 		// Fix: s.driver.CreateUser returns (*User, error),
@@ -121,7 +133,7 @@ func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
 	return s.driver.DeleteUser(ctx, delete)
 }
 
-func (s *Store) ChangeUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
+func (s *Store) UpdateUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
 	// Relay the command to the driver (the stove)
-	return s.driver.ChangeUserPassword(ctx, userID, newHash)
+	return s.driver.UpdateUserPassword(ctx, userID, newHash)
 }

@@ -40,20 +40,23 @@ func (s *Server) registerReferralRoutes() {
 
 	// PROTECTED (Requires JWT)
 	protected := s.Engine.Group("/api/v1")
+
 	protected.Use(auth.JWTMiddleware)
 
-	// --- THE CLEAN LIST ---
-	// Get the whole list
+	// Get all referral entries (with pagination, filtering, etc.)
 	protected.GET("/referrals", v1Service.ListReferralEntriesHandler)
 
 	// Get ONE specific referrals entry (The :id sniper)
 	protected.GET("/referrals/:id", v1Service.GetReferralEntryHandler)
 
-	// Create a new referrals entry
+	// Create a new referral entry
 	protected.POST("/referrals", v1Service.CreateReferralEntryHandler)
 
 	// Update a referral entry's status
 	protected.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryStatusHandler)
+
+	// Add a log to a referral entry (for recording notes that don't correspond to a status change)
+	protected.POST("/referrals/:id/logs", v1Service.CreateReferralLogHandler)
 
 	// Get the history logs
 	protected.GET("/referrals/:id/logs", v1Service.ListReferralLogsHandler)
@@ -64,21 +67,41 @@ func (s *Server) registerReferralRoutes() {
 	// Log out
 	protected.POST("/logout", v1Service.LogoutHandler)
 
-	// Change password
-	protected.PATCH("/users/password", v1Service.ChangePasswordHandler)
+	// Change own password
+	protected.PATCH("/users/password", v1Service.ChangeOwnPasswordHandler)
+
+	// List tags
 	protected.GET("/tags", v1Service.ListReferralTagsHandler)
 
 	admin := protected.Group("")
-	admin.Use(auth.AdminOnlyMiddleware)               // Add the extra gatekeeper
-	admin.POST("/users", v1Service.CreateUserHandler) // Create a user
+
+	admin.Use(auth.AdminOnlyMiddleware) // Add the extra gatekeeper
+
+	// Create a user
+	admin.POST("/users", v1Service.CreateUserHandler)
+
+	// Get all users
+	admin.GET("/users", v1Service.ListUsersHandler)
+
+	// Delete a user
+	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)
+
+	// Reset a user's password
+	admin.PATCH("/users/:id/password", v1Service.ResetUserPasswordHandler)
+
+	// Batch create referral entries
 	admin.POST("/referrals/batch", v1Service.BatchCreateReferralEntriesHandler)
-	admin.GET("/users", v1Service.ListUsersHandler)                      // List Users
-	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)              // Delete a user
-	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler) // Delete a referral entry
+
+	// Delete a referral entry
+	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler)
+
 	// admin.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler) // Gotta change the URL?
 
-	admin.POST("/tags", v1Service.CreateReferralTagHandler)                // Add a tag to the database
-	admin.DELETE("/tags/:id", v1Service.DeleteReferralTagHandler)          // Delete a tag from the database
-	admin.POST("/referrals/:id/tags/:tagId", v1Service.AssignTagHandler)   // Assign a tag to a referral
+	admin.POST("/tags", v1Service.CreateReferralTagHandler) // Add a tag to the database
+
+	admin.DELETE("/tags/:id", v1Service.DeleteReferralTagHandler) // Delete a tag from the database
+
+	admin.POST("/referrals/:id/tags/:tagId", v1Service.AssignTagHandler) // Assign a tag to a referral
+
 	admin.DELETE("/referrals/:id/tags/:tagId", v1Service.RemoveTagHandler) // Remove a tag from a referral
 }

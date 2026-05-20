@@ -3,7 +3,9 @@ CREATE TABLE IF NOT EXISTS user (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'BOOKING_TEAM' check (role IN ('BOOKING_TEAM', 'REFTRAIL_ADMIN'))
+    role TEXT NOT NULL DEFAULT 'BOOKING_TEAM' check (role IN ('BOOKING_TEAM', 'REFTRAIL_ADMIN')),
+    user_first_name TEXT,
+    user_last_name TEXT
 );
 
 -- 2. Referral Table (Requirement #1 through #10)
@@ -42,7 +44,7 @@ CREATE TABLE IF NOT EXISTS referral_log (
     new_status TEXT,
     note TEXT,
     created_ts TEXT NOT NULL,
-    FOREIGN KEY (referral_id) REFERENCES referral_entry(id),
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
@@ -58,7 +60,7 @@ CREATE TABLE IF NOT EXISTS referral_appointment (
     juvonno_appt_id TEXT,
     created_ts TEXT NOT NULL,
     creator_id INTEGER,
-    FOREIGN KEY (referral_id) REFERENCES referral_entry(id)
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
 );
 
 -- This table stores the actual body parts for each referral
@@ -66,13 +68,14 @@ CREATE TABLE IF NOT EXISTS referral_complaint (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     referral_id TEXT NOT NULL,
     body_part TEXT NOT NULL CHECK(body_part IN ('SHOULDER', 'KNEE', 'HIP', 'ELBOW', 'WRIST', 'ANKLE', 'FOOT', 'OTHER')),
-    side TEXT NOT NULL CHECK(side IN ('LEFT', 'RIGHT', 'BILATERAL')),
+    side TEXT NOT NULL CHECK(side IN ('LEFT', 'RIGHT', 'BILATERAL', 'OTHER')), -- OTHER is for cases where side is not applicable (e.g., "LOW BACK")
     details TEXT, -- For when body_part is 'OTHER' (e.g., "Femur")
-    FOREIGN KEY (referral_id) REFERENCES referral_entry(id)
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
 );
 
 -- Definition of Tags
 -- Only Admin can edit Tags
+-- Tags are for internal use to help categorize referrals (e.g. "X-Ray completed at hospital", "Online Booking Eligible", etc.)
 CREATE TABLE IF NOT EXISTS referral_tag_definition (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,

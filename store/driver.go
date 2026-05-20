@@ -25,7 +25,7 @@ type Driver interface {
 
 	// 3. Accountability (Optional but recommended for your logs)
 	CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error)
-	ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*ReferralLog, error)
+	ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*ReferralLogWithUser, error)
 
 	// 4. User/Account Methods (For your Login/Privileges)
 	CreateUser(ctx context.Context, create *CreateUser) (*User, error)
@@ -33,7 +33,7 @@ type Driver interface {
 	ListUsers(ctx context.Context, find *FindUser) ([]*User, error)
 	UpdateUser(ctx context.Context, update *UpdateUser) (*User, error)
 	DeleteUser(ctx context.Context, delete *DeleteUser) error
-	ChangeUserPassword(ctx context.Context, userID domain.UserID, newHash string) error
+	UpdateUserPassword(ctx context.Context, userID domain.UserID, newHash string) error
 
 	// 5. Transaction methods
 	RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error

@@ -29,9 +29,15 @@ const MemberSection = () => {
   const [formData, setFormData] = useState<{
     username: string;
     role: string;
+    password: string;
+    firstName: string;
+    lastName: string;
   }>({
     username: "",
-    role: ROLES.SYSTEM_ADMIN,
+    role: ROLES.BOOKING_TEAM,
+    password: '',
+    firstName: '',
+    lastName: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -51,7 +57,7 @@ const MemberSection = () => {
         setMembers((prev) => [...prev, newUser]);
         // Close the dialog and reset form
         setIsCreateDialogOpen(false);
-        setFormData({ username: "", role: ROLES.SYSTEM_ADMIN });
+        setFormData({ username: "", role: ROLES.BOOKING_TEAM, firstName: '', lastName: '', password: '' });
       } else {
         console.error("Failed to create user");
       }
@@ -116,8 +122,31 @@ const MemberSection = () => {
               </DialogDescription>
             </DialogHeader>
 
+{/*TODO: Implement form validation and error handling */}
             {/* Form */}
             <div className="py-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">First Name</label>
+                  <input
+                    className="border rounded-md p-2 bg-white text-slate-900"
+                    value={formData.firstName || ''} // Fallback to empty string to keep input controlled
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    placeholder="e.g. John"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">Last Name</label>
+                  <input
+                    className="border rounded-md p-2 bg-white text-slate-900"
+                    value={formData.lastName || ''}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    placeholder="e.g. Doe"
+                  />
+                </div>
+              </div>
+
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Username</label>
                 <input
@@ -127,6 +156,19 @@ const MemberSection = () => {
                   placeholder="Enter username"
                 />
               </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Temporary Password</label>
+                <input
+                  type="password"
+                  className="border rounded-md p-2 bg-white text-slate-900"
+                  value={formData.password || ''}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Enter temp password"
+                />
+              </div>
+
+
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Role</label>
                 <select

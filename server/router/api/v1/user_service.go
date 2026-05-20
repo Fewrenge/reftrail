@@ -11,6 +11,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// A mix of admin's user management and regular user self-service endpoints. Could be split into separate files if it gets too big
+
 // CreateUserHandler handles POST /api/v1/users
 func (s *APIV1Service) CreateUserHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
@@ -20,9 +22,15 @@ func (s *APIV1Service) CreateUserHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
 	}
 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(create.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
+	}
+	create.Password = string(hashedPassword)
+
 	user, err := s.Store.CreateUser(ctx, create)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create user"})
 	}
 
 	return c.JSON(http.StatusOK, user)
@@ -32,19 +40,19 @@ func (s *APIV1Service) CreateUserHandler(c *echo.Context) error {
 func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 	ctx, ok := domain.GetUserContext(c.Request().Context())
 	if !ok {
-		return c.JSON(http.StatusUnauthorized, "Not logged in - user_service.go")
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
 
 	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &ctx.ID})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get current user"})
 	}
 
 	return c.JSON(http.StatusOK, user)
 }
 
 // PATCH /api/v1/users/password
-func (s *APIV1Service) ChangePasswordHandler(c *echo.Context) error {
+func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
 	userCtx, ok := domain.GetUserContext(ctx)
@@ -80,7 +88,7 @@ func (s *APIV1Service) ChangePasswordHandler(c *echo.Context) error {
 	}
 
 	// Save
-	if err := s.Store.ChangeUserPassword(ctx, userID, string(newHash)); err != nil {
+	if err := s.Store.UpdateUserPassword(ctx, userID, string(newHash)); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
 	}
 
@@ -94,7 +102,7 @@ func (s *APIV1Service) ListUsersHandler(c *echo.Context) error {
 	// Passing an empty FindUser gets everyone
 	users, err := s.Store.ListUsers(ctx, &store.FindUser{})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to list users"})
 	}
 	return c.JSON(http.StatusOK, users)
 }
@@ -127,4 +135,41 @@ func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "User deleted"})
+}
+
+// PATCH /api/v1/users/:id/password
+func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+	idParam := c.Param("id")
+
+	// Parse the user ID from the URL parameter
+	id, err := strconv.ParseInt(idParam, 10, 32) //TODO: check userID, implement id like jdoe for John Doe instead of auto-increment int
+	if err != nil {
+		slog.Warn("Invalid user ID parameter format",
+			"provided_id", idParam,
+			"error", err.Error(),
+		)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID format"})
+	}
+
+	var req struct {
+		Password string `json:"password"`
+	}
+
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
+	}
+
+	// Hash the new password
+	newHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
+	}
+
+	// Update the user's password
+	if err := s.Store.UpdateUserPassword(ctx, domain.UserID(id), string(newHash)); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "User password reset successfully"})
 }

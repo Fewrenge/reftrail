@@ -12,28 +12,29 @@ type ReferralEntry struct {
 	CreatedTs string            `json:"createdTs"`
 	UpdatedTs string            `json:"updatedTs"`
 
-	// 2. Patient Info (Matches your requirement #1)
-	PatientLastName              string               `json:"patientLastName"`
-	PatientFirstName             string               `json:"patientFirstName"`
-	PatientDOB                   string               `json:"patientDob"`
-	PatientHealthcardNumber      string               `json:"patientHealthcardNumber"`
-	PatientHealthcardVersionCode string               `json:"patientHealthcardVersionCode"`
-	Complaints                   []*ReferralComplaint `json:"complaints"`
+	// 2. Patient Info
+	PatientLastName              string `json:"patientLastName"`
+	PatientFirstName             string `json:"patientFirstName"`
+	PatientDOB                   string `json:"patientDob"`
+	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
+	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
 
-	// 3. Juvonno Integration (Matches your requirements #2 & #3)
-	// We use string for TxtCustomerID because Juvonno IDs can sometimes be alphanumeric
+	Complaints []*ReferralComplaint `json:"complaints"`
+
+	// 3. EMR Integration
+	// Use string in case EMR updates their ID format in the future
 	TxtCustomerID    string `json:"txtCustomerId"`
 	IntCustomerDocID int64  `json:"intCustomerDocId"`
 
-	// 4. Clinical Details (Matches #4, #6, #7, #10)
+	// 4. Clinical Details
 	ReferringPhysician string `json:"referringPhysician"`
 	TriageNote         string `json:"triageNote"`
 	XRayClinic         string `json:"xrayClinic"`
 
-	// 5. Workflow & Urgency (Matches #8, #9, #11)
-	Urgency string `json:"urgency"` // Elective, Urgent, ASAP
-	Status  string `json:"status"`  // Ready to book, 1st call, etc.
-	Source  string `json:"source"`
+	// 5. Workflow & Urgency
+	Urgency domain.ReferralUrgency `json:"urgency"` // Elective, Urgent, ASAP
+	Status  domain.ReferralStatus  `json:"status"`  // Ready to book, 1st call, etc.
+	Source  domain.ReferralSource  `json:"source"`
 
 	// Appointment Info (If status is "Booked")
 	ApptDateAndTime string `json:"apptDateAndTime"`
@@ -45,7 +46,7 @@ type ReferralComplaint struct {
 	ID         int64             `json:"id"`
 	ReferralID domain.ReferralID `json:"referralId"`
 	BodyPart   string            `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
-	Side       string            `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL"`
+	Side       string            `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL OTHER"`
 	Details    string            `json:"details"`
 }
 
@@ -66,9 +67,9 @@ type CreateReferralEntry struct {
 	// XRayClinic         string `json:"xrayClinic"`
 
 	// Status
-	Urgency string `json:"urgency"`
-	Status  string `json:"status"` // Usually defaults to "READY_TO_BOOK"
-	Source  string `json:"source"`
+	Urgency domain.ReferralUrgency `json:"urgency"`
+	Status  domain.ReferralStatus  `json:"status"` // Usually defaults to "READY_TO_BOOK"
+	Source  domain.ReferralSource  `json:"source"`
 
 	// Accountability
 	CreatorID domain.UserID `json:"creatorId"`
@@ -87,8 +88,8 @@ type FindReferralEntry struct {
 	// 2. Clinical Filters (Requirement #8 & #9)
 	// We use pointers (*) so we can tell the difference between
 	// "Filter by this" and "Don't filter at all" (nil).
-	Urgency *string `json:"urgency"`
-	Status  *string `json:"status"`
+	Urgency *domain.ReferralUrgency `json:"urgency"`
+	Status  *domain.ReferralStatus  `json:"status"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
 	PatientLastName         *string `json:"patientLastName"`
@@ -101,19 +102,17 @@ type FindReferralEntry struct {
 	Offset *int `json:"offset"`
 }
 
-// UpdateReferralEntry defines which fields are allowed to be changed.
+// Admin use only, for arbiturary updates (e.g., correcting a typo, changing urgency, etc.)
+// TODO: Determine what can be updated
 type UpdateReferralEntry struct {
 	ID domain.ReferralID `json:"id"`
 
 	// Fields that change during the workflow
-	Status     *string `json:"status"`
-	TriageNote *string `json:"triageNote"`
-	Urgency    *string `json:"urgency"`
+	Status     *domain.ReferralStatus  `json:"status"`
+	TriageNote *string                 `json:"triageNote"`
+	Urgency    *domain.ReferralUrgency `json:"urgency"`
 
-	// Appt details (Requirement #11)
-	ApptDate     *string `json:"apptDate"`
-	ApptTime     *string `json:"apptTime"`
-	Practitioner *string `json:"practitioner"`
+	Note *string `json:"note"`
 
 	// Force flag
 	Force bool `json:"force"`
@@ -125,13 +124,22 @@ type UpdateReferralEntryStatus struct {
 	Note      string                `json:"note"`
 }
 
+// Only records initial appointment, not for rescheduling (which is the EMR's job)
+type UpdateReferralEntryAppointment struct {
+	// Appt details (Requirement #11)
+	ApptDateAndTime *string `json:"apptDateAndTime"`
+	Practitioner    *string `json:"practitioner"`
+	EMRApptID       *string `json:"emrApptId"`
+}
+
 type DeleteReferralEntry struct {
 	ID domain.ReferralID `json:"id"`
 }
 
 // 1. Create: The "Guard"
+// Implement log creation logic at the store level so that it can be reused across different handlers
 func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error) {
-	var finalEntry *ReferralEntry
+	var referralEntry *ReferralEntry
 
 	err := s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
 		// 1. Get User
@@ -147,14 +155,29 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		if err != nil {
 			return err
 		}
-		finalEntry = entry
+		referralEntry = entry
 
 		// 3. Insert Complaints
 		for _, c := range create.Complaints {
-			if err := s.driver.CreateReferralComplaint(txCtx, finalEntry.ID, &c); err != nil {
+			if err := s.driver.CreateReferralComplaint(txCtx, referralEntry.ID, &c); err != nil {
 				return err
 			}
 		}
+
+		// 4. Create log for creation
+		var creationLog *ReferralLog
+		creationLog = &ReferralLog{
+			EntryID:   referralEntry.ID,
+			UserID:    domain.UserID(user.ID),
+			OldStatus: "",
+			NewStatus: referralEntry.Status,
+			Note:      "Referral entry created",
+		}
+
+		if _, err := s.driver.CreateReferralLog(txCtx, creationLog); err != nil {
+			return fmt.Errorf("failed to create initial audit log: %w", err)
+		}
+
 		return nil
 	})
 
@@ -163,34 +186,24 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 	}
 
 	// 4. Return the full object that the Handler expects
-	return finalEntry, nil
+	return referralEntry, nil
 }
 
 func (s *Store) BatchCreateReferralEntries(ctx context.Context, batch *BatchCreateReferralEntries) error {
 	// 1. Run everything in one transaction
 	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
-		user, ok := domain.GetUserContext(txCtx)
+		_, ok := domain.GetUserContext(txCtx)
 		if !ok {
 			return domain.ErrUnauthorized
 		}
 
 		// 2. Loop through the entries
 		for _, create := range batch.ReferralEntries {
-			create.CreatorID = domain.UserID(user.ID)
-			// 3. Reuse your existing driver method!
-
-			createdEntry, err := s.driver.CreateReferralEntry(txCtx, &create)
+			_, err := s.CreateReferralEntry(txCtx, &create)
 			if err != nil {
-				return fmt.Errorf("batch failed at entry for %s, %s: %w", create.PatientLastName, create.PatientFirstName, err)
+				return fmt.Errorf("failed to create referral entry for patient %s, %s: %w",
+					create.PatientLastName, create.PatientFirstName, err)
 			}
-
-			for _, complaint := range create.Complaints {
-				err := s.driver.CreateReferralComplaint(txCtx, createdEntry.ID, &complaint)
-				if err != nil {
-					return fmt.Errorf("batch failed saving complaints line for %s, %s: %w", create.PatientLastName, create.PatientFirstName, err)
-				}
-			}
-
 		}
 
 		return nil
@@ -250,7 +263,6 @@ func (s *Store) GetReferralEntry(ctx context.Context, find *FindReferralEntry) (
 	return list[0], nil
 }
 
-// 4. Update: The "Editor"
 func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error {
 	// Wrap the whole operation in a transaction
 	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
@@ -260,34 +272,30 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 			return domain.ErrReferralEntryNotFound
 		}
 
-		// 2. ONLY create a log if the status is actually changing
-		if update.Status != nil && *update.Status != current.Status {
-			// Grab UserID from the context "mailbox" (set by the Bouncer)
-			userCtx, ok := domain.GetUserContext(ctx)
-			if !ok {
-				return domain.ErrUnauthorized
-			}
-
-			// 3. Tell the Worker to write the history
-			logPayload := &ReferralLog{
-				EntryID:   update.ID,
-				UserID:    domain.UserID(userCtx.ID),
-				OldStatus: current.Status,
-				NewStatus: *update.Status,
-				Note:      "Status updated via dashboard",
-			}
-
-			if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
-				return fmt.Errorf("failed to create referral history log during record update: %w", err)
-			}
+		// Grab UserID from the context "mailbox" (set by the Bouncer)
+		userCtx, ok := domain.GetUserContext(ctx)
+		if !ok {
+			return domain.ErrUnauthorized
 		}
 
-		// 4. Commit the changes to the primary referral entity record
+		// 2. Tell the Worker to write the history
+		logPayload := &ReferralLog{
+			EntryID:   update.ID,
+			UserID:    domain.UserID(userCtx.ID),
+			OldStatus: current.Status,
+			NewStatus: *update.Status,
+			Note:      *update.Note,
+		}
+
+		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
+			return fmt.Errorf("failed to create referral history log during record update: %w", err)
+		}
+
+		// 3. Commit the changes to the primary referral entity record
 		if err := s.driver.UpdateReferralEntry(txCtx, update); err != nil {
 			return fmt.Errorf("failed to execute referral entry update: %w", err)
 		}
 
-		// Happy path termination anchor
 		return nil
 	})
 }
@@ -297,7 +305,7 @@ func (s *Store) GetReferralEntryStatusByID(ctx context.Context, id domain.Referr
 }
 
 func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateReferralEntryStatus) error {
-	// You are looking at an anonymous function
+	// Anonymous function here
 	return s.driver.RunInTransaction(ctx, func(txCtx context.Context) error {
 		// 1. Get the "Who" (User Context)
 		user, ok := domain.GetUserContext(txCtx)
@@ -330,8 +338,8 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 		logPayload := &ReferralLog{
 			EntryID:   update.ID,
 			UserID:    domain.UserID(user.ID),
-			OldStatus: string(oldStatus),
-			NewStatus: string(newStatus),
+			OldStatus: oldStatus,
+			NewStatus: newStatus,
 			Note:      update.Note,
 		}
 
@@ -358,8 +366,7 @@ func (s *Store) DeleteReferralEntry(ctx context.Context, delete *DeleteReferralE
 	}
 
 	// Pass the whole struct to the worker (driver)
-	// Before deleting the entry, clean up related logs/comments
-	// So call driver.DeleteReferralLogs here later
+	// ON DELETE CASCADE activated
 	if err := s.driver.DeleteReferralEntry(ctx, delete); err != nil {
 		return fmt.Errorf("failed to delete referral entry with ID %s: %w", delete.ID, err)
 	}

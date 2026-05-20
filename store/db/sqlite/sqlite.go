@@ -29,6 +29,11 @@ func (d *Driver) conn(ctx context.Context) commonExec {
 
 // RunInTransaction is your safety container
 func (d *Driver) RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	// Crucial: check if a transaction already exists in the context, run the function if it does
+	if _, ok := ctx.Value(txKey).(*sql.Tx); ok {
+		return fn(ctx)
+	}
+
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -78,11 +83,11 @@ func (d *Driver) Migrate(ctx context.Context) error {
 	return err
 }
 
-// TODO: activate foreign key constraints so affliates (tags, logs, complaints) get deleted with referral entries
 // New opens the connection to the .db file
 func New(dbPath string) (*Driver, error) {
 	// 1. Tell Go to open (or create) the file
-	db, err := sql.Open("sqlite3", dbPath)
+	dsn := dbPath + "?_foreign_keys=on"
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, err
 	}
