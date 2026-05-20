@@ -20,7 +20,6 @@ interface Props {
 }
 
 export interface Complaint {
-  id: number;
   referralId: string;
   bodyPart: string;
   side: string;
@@ -134,9 +133,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
       onClick={handleCardClick}
       className={`relative group ${isClickable ? 'cursor-pointer' : ''}`}
     >
-      <div className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all ${
-      isClickable ? 'hover:border-blue-300' : ''
-    }`}>
+      <div className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all ${isClickable ? 'hover:border-blue-300' : ''
+        }`}>
         {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
         <div className="flex justify-between items-start mb-6">
           <div>
@@ -222,18 +220,24 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Complaints</p>
             <div className="space-y-1">
               {entry.complaints && entry.complaints.length > 0 ? (
-                entry.complaints.map((c) => (
-                  <p key={c.id} className="text-sm font-medium text-slate-700 capitalize">
-                    {`${c.side?.toLowerCase() || ''} ${c.bodyPart?.toLowerCase() || ''}`}
-                    {c.details && <span className="text-xs text-slate-400 block font-normal">{c.details}</span>}
-                  </p>
-                ))
+                entry.complaints.map((c, index) => {
+                  // Generate composite key string (including index to guard against duplicates)
+                  const compositeKey = `${c.side}-${c.bodyPart}-${index}`;
+
+                  return (
+                    <p key={compositeKey} className="text-sm font-medium text-slate-700 capitalize">
+                      {`${c.side?.toLowerCase() || ''} ${c.bodyPart?.toLowerCase() || ''}`}
+                      {c.details && <span className="text-xs text-slate-400 block font-normal">{c.details}</span>}
+                    </p>
+                  );
+                })
               ) : (
                 <p className="text-sm font-medium text-slate-400 italic">None reported</p>
               )}
             </div>
           </div>
         </div>
+
 
         {/* 3. BOTTOM SECTION: Triage Note */}
         <div className="bg-slate-50 border-l-2 border-blue-400 p-3 rounded-r-lg">
