@@ -1,14 +1,16 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ClockIcon, MessageSquareIcon, User } from "lucide-react";
+import { ArrowLeft, ClockIcon, MessageSquareIcon, UserIcon } from "lucide-react";
 import ReferralEntryCard from "../components/ReferralEntry/ReferralEntryCard";
 import type { ReferralEntry } from "../components/ReferralEntry/ReferralEntryCard";
 
 interface ReferralLog {
   id: string;
   entryId: string;
-  userId: number;
+  username: string;
+  userFirstName: string;
+  userLastName: string;
   oldStatus: string;
   newStatus: string;
   note: string;
@@ -55,7 +57,7 @@ export default function ReferralDetails() {
     try {
       const date = new Date(tsString);
       return date.toLocaleDateString(undefined, { 
-        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
       });
     } catch {
       return tsString;
@@ -117,7 +119,7 @@ export default function ReferralDetails() {
                     {/* Log Header Metadata */}
                     <div className="flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
                       <span className="font-semibold text-slate-700 flex items-center gap-0.5">
-                        <User size={12} className="text-slate-400" /> User #{log.userId}
+                        <UserIcon size={12} className="text-slate-400" /> {log.userFirstName}{' '}{log.userLastName}
                       </span>
                       <span className="text-slate-300">•</span>
                       <span>{formatTime(log.createdTs)}</span>

@@ -6,13 +6,16 @@ import (
 )
 
 type ReferralLog struct {
-	ID        domain.ReferralLogID `json:"id"`
-	EntryID   domain.ReferralID    `json:"entryId"`
-	UserID    domain.UserID        `json:"userId"`
-	OldStatus string               `json:"oldStatus"`
-	NewStatus string               `json:"newStatus"`
-	Note      string               `json:"note"`
-	CreatedTs string               `json:"createdTs"`
+	ID            domain.ReferralLogID `json:"id"`
+	EntryID       domain.ReferralID    `json:"entryId"`
+	UserID        domain.UserID        `json:"userId"`
+	Username      string               `json:"-"`
+	UserFirstName string               `json:"-"`
+	UserLastName  string               `json:"-"`
+	OldStatus     string               `json:"oldStatus"`
+	NewStatus     string               `json:"newStatus"`
+	Note          string               `json:"note"`
+	CreatedTs     string               `json:"createdTs"`
 }
 
 func (s *Store) CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error) {
