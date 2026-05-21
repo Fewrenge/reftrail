@@ -238,16 +238,30 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             </div>
           </div>
         </div>
+        {/* TAG SECTION: Tags Row */}
+        {entry.tags && entry.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-5 mt-2">
+            {entry.tags.map((tag: string, index: number) => (
+              <span
+                key={`${tag}-${index}`}
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/60 uppercase tracking-wider shadow-2xs hover:bg-slate-200 transition-colors"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
 
-
-        {/* 3. BOTTOM SECTION: Triage Note */}
+        {/* BOTTOM SECTION: Triage Note */}
         <div className="bg-slate-50 border-l-2 border-blue-400 p-3 rounded-r-lg">
           <p className="text-sm text-slate-600 italic leading-relaxed">
             {entry.triageNote ? `"${entry.triageNote}"` : "No triage notes recorded."}
           </p>
         </div>
 
-        
+
+
+
 
         {/* --- QUICK NOTE OVERLAY --- */}
         {/* This only appears AFTER they select a status from the dropdown */}
