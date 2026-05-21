@@ -37,6 +37,7 @@ export interface ReferralEntry {
   referringPhysician: string;
   complaints: Complaint[];
   triageNote: string;
+  tags: string[];
 }
 
 export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Props) {
@@ -245,6 +246,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             {entry.triageNote ? `"${entry.triageNote}"` : "No triage notes recorded."}
           </p>
         </div>
+
+        
 
         {/* --- QUICK NOTE OVERLAY --- */}
         {/* This only appears AFTER they select a status from the dropdown */}

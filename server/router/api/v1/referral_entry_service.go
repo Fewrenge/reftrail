@@ -89,6 +89,22 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 }
 
 func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	// Fetch valid system tags ONCE right here before ANY transactions start
+	definitions, err := s.Store.ListReferralTags(ctx)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to load master tags"})
+	}
+
+	// Build the in-memory map
+	validTagMap := make(map[string]int64)
+	for _, def := range definitions {
+		if def != nil && def.Name != "" {
+			validTagMap[strings.ToUpper(strings.TrimSpace(def.Name))] = def.ID
+		}
+	}
+
 	// 1. Extract the raw file from the multi-part form data
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
@@ -192,6 +208,26 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			})
 		}
 
+		// Parse semicolon-separated optional Tags column
+		var tags []string
+		if tagIdx, exists := headerMap["tag"]; exists {
+
+			rawTags := strings.SplitSeq(row[tagIdx], ";")
+			for t := range rawTags {
+				cleanTag := strings.TrimSpace(strings.ToUpper(t))
+				if cleanTag != "" {
+					// Uncomment below to enforce snake_case naming standard
+					// cleanTag = strings.ReplaceAll(cleanTag, " ", "_")
+
+					// Build the structure type matching store's expectations
+					tags = append(tags, strings.TrimSpace(cleanTag))
+				}
+			}
+		} else {
+			// Uses global slog to ensure this warning shows up in production logs too
+			slog.Warn("Skipping batch tokenization phase: Column lookup key 'tags' missing from spreadsheet template structure")
+		}
+
 		// Map spreadsheet elements into your exact structural schema
 		entry := store.CreateReferralEntry{
 			PatientLastName:              strings.TrimSpace(row[headerMap["last name"]]),
@@ -204,6 +240,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			Status:                       domain.ReferralStatus("READY_TO_BOOK"), // Workflow entry state default
 			Source:                       domain.ReferralSource("REGULAR"),
 			Complaints:                   complaints,
+			Tags:                         tags,
 		}
 
 		// Run validator on this entry
