@@ -161,9 +161,6 @@ func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
 
 // DELETE /api/v1/users/:username
 func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
-	slog.Info("Received request to delete user",
-		"requestURI", c.Request().RequestURI,
-		"requestURL", c.Request().URL.Path)
 	ctx := c.Request().Context()
 	usernameParam := c.Param("username")
 	if usernameParam == "" {
