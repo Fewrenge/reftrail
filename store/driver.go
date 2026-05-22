@@ -33,8 +33,8 @@ type Driver interface {
 	ListUsers(ctx context.Context, find *FindUser) ([]*User, error)
 	UpdateUser(ctx context.Context, update *UpdateUser) (*User, error)
 	DeleteUser(ctx context.Context, delete *DeleteUser) error
-	UpdateUserPassword(ctx context.Context, username string, newHash string) error
-	GetUserByUsername(ctx context.Context, username string) (*User, error)
+	UpdateUserPassword(ctx context.Context, username domain.Username, newHash string) error
+	GetUserByUsername(ctx context.Context, username domain.Username) (*User, error)
 
 	// 5. Transaction methods
 	RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error

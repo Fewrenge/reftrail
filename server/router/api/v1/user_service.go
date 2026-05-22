@@ -42,7 +42,7 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
 
-	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{Username: string(ctx.Username)})
+	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{Username: ctx.Username})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get current user"})
 	}
@@ -63,7 +63,7 @@ func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
 
-	currentUserName := string(userCtx.Username)
+	currentUserName := userCtx.Username
 
 	var req struct {
 		OldPassword string `json:"oldPassword"`
@@ -116,10 +116,11 @@ func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
 	if usernameParam == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
 	}
+	username := domain.Username(usernameParam)
 
 	// Dynamic inbound request form maps pointer options
 	var req struct {
-		UpdatedUsername *string          `json:"updatedUsername"`
+		UpdatedUsername *domain.Username `json:"updatedUsername"`
 		UserFirstName   *string          `json:"userFirstName"`
 		UserLastName    *string          `json:"userLastName"`
 		Password        *string          `json:"password"`
@@ -141,7 +142,7 @@ func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
 	}
 
 	updatePayload := &store.UpdateUser{
-		CurrentUsername: usernameParam,
+		CurrentUsername: username,
 		UpdatedUsername: req.UpdatedUsername,
 		UserFirstName:   req.UserFirstName,
 		UserLastName:    req.UserLastName,
@@ -165,7 +166,9 @@ func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
 	}
 
-	err := s.Store.DeleteUser(ctx, &store.DeleteUser{Username: usernameParam})
+	username := domain.Username(usernameParam)
+
+	err := s.Store.DeleteUser(ctx, &store.DeleteUser{Username: username})
 	if err != nil {
 		slog.Error("Failed to delete user from database",
 			"username", usernameParam,
@@ -181,9 +184,12 @@ func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 	usernameParam := c.Param("username")
+
 	if usernameParam == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
 	}
+
+	username := domain.Username(usernameParam)
 
 	var req struct {
 		Password string `json:"password"`
@@ -200,7 +206,7 @@ func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 	}
 
 	// Update the user's password
-	if err := s.Store.UpdateUserPassword(ctx, usernameParam, string(newHash)); err != nil {
+	if err := s.Store.UpdateUserPassword(ctx, username, string(newHash)); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
 	}
 

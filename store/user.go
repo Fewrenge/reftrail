@@ -10,7 +10,7 @@ import (
 )
 
 type User struct {
-	Username      string          `json:"username"`
+	Username      domain.Username `json:"username"`
 	PasswordHash  string          `json:"-"`
 	Role          domain.UserRole `json:"role"`
 	UserFirstName string          `json:"userFirstName"`
@@ -18,19 +18,19 @@ type User struct {
 }
 
 type UserPublicInfo struct {
-	Username      string `json:"username"`
-	UserFirstName string `json:"userFirstName"`
-	UserLastName  string `json:"userLastName"`
+	Username      domain.Username `json:"username"`
+	UserFirstName string          `json:"userFirstName"`
+	UserLastName  string          `json:"userLastName"`
 }
 
 // The "Form" for logging in
 type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username domain.Username `json:"username"`
+	Password string          `json:"password"`
 }
 
 type CreateUser struct {
-	Username      string          `json:"username"`
+	Username      domain.Username `json:"username"`
 	Password      string          `json:"password"`
 	Role          domain.UserRole `json:"role"`
 	UserFirstName string          `json:"userFirstName"`
@@ -38,7 +38,7 @@ type CreateUser struct {
 }
 
 type FindUser struct {
-	Username string `json:"username"`
+	Username domain.Username `json:"username"`
 
 	// Optional fields
 	Role          *domain.UserRole `json:"role,omitempty"`
@@ -47,8 +47,8 @@ type FindUser struct {
 }
 
 type UpdateUser struct {
-	CurrentUsername string           `json:"currentUsername"` // Used to find the user to update
-	UpdatedUsername *string          `json:"updatedUsername"`
+	CurrentUsername domain.Username  `json:"currentUsername"` // Used to find the user to update
+	UpdatedUsername *domain.Username `json:"updatedUsername"`
 	UserFirstName   *string          `json:"userFirstName"`
 	UserLastName    *string          `json:"userLastName"`
 	Password        *string          `json:"password"`
@@ -56,7 +56,7 @@ type UpdateUser struct {
 }
 
 type DeleteUser struct {
-	Username string `json:"username"`
+	Username domain.Username `json:"username"`
 }
 
 // --- THE MANAGER LOGIC ---
@@ -136,7 +136,7 @@ func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
 	return s.driver.DeleteUser(ctx, delete)
 }
 
-func (s *Store) UpdateUserPassword(ctx context.Context, username string, newHash string) error {
+func (s *Store) UpdateUserPassword(ctx context.Context, username domain.Username, newHash string) error {
 	// Relay the command to the driver (the stove)
 	return s.driver.UpdateUserPassword(ctx, username, newHash)
 }

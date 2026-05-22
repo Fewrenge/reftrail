@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"reftrail/internal/domain"
 	"reftrail/store"
 	"strings"
 )
@@ -118,7 +119,7 @@ func (d *Driver) DeleteUser(ctx context.Context, delete *store.DeleteUser) error
 	return nil
 }
 
-func (d *Driver) UpdateUserPassword(ctx context.Context, username string, newHash string) error {
+func (d *Driver) UpdateUserPassword(ctx context.Context, username domain.Username, newHash string) error {
 	_, err := d.conn(ctx).ExecContext(ctx, `
 		UPDATE user 
 		SET password_hash = ? 
@@ -127,7 +128,7 @@ func (d *Driver) UpdateUserPassword(ctx context.Context, username string, newHas
 	return err
 }
 
-func (d *Driver) GetUserByUsername(ctx context.Context, username string) (*store.User, error) {
+func (d *Driver) GetUserByUsername(ctx context.Context, username domain.Username) (*store.User, error) {
 	query := `SELECT username, password_hash, role, user_first_name, user_last_name FROM user WHERE username = ?`
 	var user store.User
 	err := d.conn(ctx).QueryRowContext(ctx, query, username).Scan(

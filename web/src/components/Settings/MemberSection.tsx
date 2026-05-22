@@ -30,14 +30,14 @@ const MemberSection = () => {
     username: string;
     role: string;
     password: string;
-    firstName: string;
-    lastName: string;
+    userFirstName: string;
+    userLastName: string;
   }>({
     username: "",
     role: ROLES.BOOKING_TEAM,
     password: '',
-    firstName: '',
-    lastName: '',
+    userFirstName: '',
+    userLastName: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,7 +57,7 @@ const MemberSection = () => {
         setMembers((prev) => [...prev, newUser]);
         // Close the dialog and reset form
         setIsCreateDialogOpen(false);
-        setFormData({ username: "", role: ROLES.BOOKING_TEAM, firstName: '', lastName: '', password: '' });
+        setFormData({ username: "", role: ROLES.BOOKING_TEAM, userFirstName: '', userLastName: '', password: '' });
       } else {
         console.error("Failed to create user");
       }
@@ -131,8 +131,8 @@ const MemberSection = () => {
                   <label className="text-sm font-medium">First Name</label>
                   <input
                     className="border rounded-md p-2 bg-white text-slate-900"
-                    value={formData.firstName || ''} // Fallback to empty string to keep input controlled
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    value={formData.userFirstName || ''} // Fallback to empty string to keep input controlled
+                    onChange={(e) => setFormData({ ...formData, userFirstName: e.target.value })}
                     placeholder="e.g. John"
                   />
                 </div>
@@ -141,8 +141,8 @@ const MemberSection = () => {
                   <label className="text-sm font-medium">Last Name</label>
                   <input
                     className="border rounded-md p-2 bg-white text-slate-900"
-                    value={formData.lastName || ''}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    value={formData.userLastName || ''}
+                    onChange={(e) => setFormData({ ...formData, userLastName: e.target.value })}
                     placeholder="e.g. Doe"
                   />
                 </div>
