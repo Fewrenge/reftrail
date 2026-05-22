@@ -180,9 +180,9 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 			}
 
 			// Generate a localized string reference lookup map for performance
-			validTagMap := make(map[string]int64)
+			validTagMap := make(map[string]string)
 			for _, def := range definitions {
-				validTagMap[strings.ToUpper(strings.TrimSpace(def.Name))] = def.ID
+				validTagMap[strings.ToUpper(strings.TrimSpace(def.Name))] = def.Name
 			}
 
 			// Match requested strings with active database constraints

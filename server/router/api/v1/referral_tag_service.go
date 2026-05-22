@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"reftrail/internal/domain"
 	"reftrail/store"
-	"strconv"
 
 	echo "github.com/labstack/echo/v5"
 )
@@ -36,15 +35,15 @@ func (s *APIV1Service) ListReferralTagsHandler(c *echo.Context) error {
 }
 
 func (s *APIV1Service) DeleteReferralTagHandler(c *echo.Context) error {
-	// 1. Get ID from the URL: /api/v1/tags/1
+	// 1. Get ID from the URL: /api/v1/tags/:tagName
 	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	name, err := url.PathUnescape(idStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, "Invalid tag ID format")
 	}
 
 	// 2. Call the store
-	err = s.Store.DeleteReferralTag(c.Request().Context(), &store.DeleteReferralTag{ID: id})
+	err = s.Store.DeleteReferralTag(c.Request().Context(), &store.DeleteReferralTag{Name: name})
 	if err != nil {
 		// If you returned "not found" in the driver, this will send that error
 		return c.JSON(http.StatusInternalServerError, err.Error())
@@ -57,9 +56,13 @@ func (s *APIV1Service) DeleteReferralTagHandler(c *echo.Context) error {
 func (s *APIV1Service) AssignTagHandler(c *echo.Context) error {
 	refIDStr := c.Param("id")
 	refID := domain.ReferralID(refIDStr)
-	tagID, _ := strconv.ParseInt(c.Param("tagId"), 10, 64)
+	tagName := c.Param("tagName")
+	tagName, err := url.PathUnescape(tagName)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Malformed tag name parameter"})
+	}
 
-	if err := s.Store.AssignTagToReferral(c.Request().Context(), refID, tagID); err != nil {
+	if err := s.Store.AssignTagToReferral(c.Request().Context(), refID, tagName); err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 	return c.NoContent(http.StatusCreated)

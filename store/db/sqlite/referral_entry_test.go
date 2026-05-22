@@ -49,16 +49,15 @@ func setupTestStore(t *testing.T) *store.Store {
 		FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
 	);
 	CREATE TABLE IF NOT EXISTS referral_tag_definition (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-    name TEXT UNIQUE, 
+    name TEXT NOT NULL UNIQUE PRIMARY KEY, 
     description TEXT
 	);
 	CREATE TABLE IF NOT EXISTS referral_tag (
     referral_id TEXT, 
-    tag_id INTEGER,
-    PRIMARY KEY (referral_id, tag_id),
+    tag_name TEXT,
+    PRIMARY KEY (referral_id, tag_name),
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES referral_tag_definition(id) ON DELETE CASCADE
+    FOREIGN KEY (tag_name) REFERENCES referral_tag_definition(name) ON DELETE CASCADE
 	);
 	CREATE TABLE IF NOT EXISTS referral_log (
     id TEXT PRIMARY KEY,

@@ -43,7 +43,7 @@ func TestReferralTag_Integration(t *testing.T) {
 		}
 
 		// --- B. Assign Tag to Referral ---
-		err = s.AssignTagToReferral(ctx, ref.ID, tag.ID)
+		err = s.AssignTagToReferral(ctx, ref.ID, tag.Name)
 		if err != nil {
 			t.Errorf("Failed to assign tag: %v", err)
 		}
@@ -56,10 +56,10 @@ func TestReferralTag_Integration(t *testing.T) {
 
 		// --- D. Test Cascade Delete ---
 		// Re-assign tag first
-		_ = s.AssignTagToReferral(ctx, ref.ID, tag.ID)
+		_ = s.AssignTagToReferral(ctx, ref.ID, tag.Name)
 
 		// Delete the definition (Admin only)
-		err = s.DeleteReferralTag(ctx, &store.DeleteReferralTag{ID: tag.ID})
+		err = s.DeleteReferralTag(ctx, &store.DeleteReferralTag{Name: tag.Name})
 		if err != nil {
 			t.Errorf("Failed to delete tag definition: %v", err)
 		}

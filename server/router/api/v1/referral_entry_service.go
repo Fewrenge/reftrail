@@ -99,10 +99,10 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 	}
 
 	// Build the in-memory map
-	validTagMap := make(map[string]int64)
+	validTagMap := make(map[string]string)
 	for _, def := range definitions {
 		if def != nil && def.Name != "" {
-			validTagMap[strings.ToUpper(strings.TrimSpace(def.Name))] = def.ID
+			validTagMap[strings.ToUpper(strings.TrimSpace(def.Name))] = def.Name
 		}
 	}
 

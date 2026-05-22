@@ -75,18 +75,17 @@ CREATE TABLE IF NOT EXISTS referral_complaint (
 -- Only Admin can edit Tags
 -- Tags are for internal use to help categorize referrals (e.g. "X-Ray completed at hospital", "Online Booking Eligible", etc.)
 CREATE TABLE IF NOT EXISTS referral_tag_definition (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL UNIQUE PRIMARY KEY,
     description TEXT
 );
 
 -- Junction table (Many-to-Many)
 CREATE TABLE IF NOT EXISTS referral_tag (
     referral_id TEXT NOT NULL,
-    tag_id INTEGER NOT NULL,
-    PRIMARY KEY (referral_id, tag_id),
+    tag_name TEXT NOT NULL,
+    PRIMARY KEY (referral_id, tag_name),
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES referral_tag_definition(id) ON DELETE CASCADE
+    FOREIGN KEY (tag_name) REFERENCES referral_tag_definition(name) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_referral_tag_ref ON referral_tag(referral_id);
