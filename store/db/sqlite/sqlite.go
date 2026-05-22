@@ -31,7 +31,7 @@ func (d *Driver) conn(ctx context.Context) commonExec {
 func (d *Driver) RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
 	// Crucial: check if a transaction already exists in the context, run the function if it does
 	if _, ok := ctx.Value(txKey).(*sql.Tx); ok {
-		return fn(ctx)
+		return fn(ctx) // Run the function with ctx since it already has a transaction
 	}
 
 	d.mu.Lock()
@@ -45,6 +45,7 @@ func (d *Driver) RunInTransaction(ctx context.Context, fn func(ctx context.Conte
 
 	txCtx := context.WithValue(ctx, txKey, tx)
 
+	// Run the function with txCtx
 	if err := fn(txCtx); err != nil {
 		// Only rollback if the context is still "alive"
 		// If ctx.Err() is not nil, the driver already rolled back for us

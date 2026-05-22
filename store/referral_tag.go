@@ -20,6 +20,11 @@ type DeleteReferralTag struct {
 	ID int64 `json:"id"`
 }
 
+type LinkedReferralTagRow struct {
+	ReferralID domain.ReferralID
+	TagName    string
+}
+
 func (s *Store) CreateReferralTag(ctx context.Context, create *CreateReferralTag) (*ReferralTag, error) {
 	user, ok := domain.GetUserContext(ctx)
 	if !ok || user.Role != "REFTRAIL_ADMIN" {

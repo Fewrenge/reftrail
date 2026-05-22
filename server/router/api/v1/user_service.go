@@ -48,6 +48,10 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get current user"})
 	}
 
+	if user == nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "User profile not found"})
+	}
+
 	return c.JSON(http.StatusOK, user)
 }
 

@@ -3,7 +3,9 @@ package store
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"reftrail/internal/domain"
+	"strings"
 )
 
 type ReferralEntry struct {
@@ -19,7 +21,8 @@ type ReferralEntry struct {
 	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
 	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
 
-	Complaints []*ReferralComplaint `json:"complaints"`
+	Complaints []*ReferralComplaint `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
+	Tags       []string             `json:"tags"`
 
 	// 3. EMR Integration
 	// Use string in case EMR updates their ID format in the future
@@ -29,12 +32,12 @@ type ReferralEntry struct {
 	// 4. Clinical Details
 	ReferringPhysician string `json:"referringPhysician"`
 	TriageNote         string `json:"triageNote"`
-	XRayClinic         string `json:"xrayClinic"`
 
 	// 5. Workflow & Urgency
-	Urgency domain.ReferralUrgency `json:"urgency"` // Elective, Urgent, ASAP
-	Status  domain.ReferralStatus  `json:"status"`  // Ready to book, 1st call, etc.
-	Source  domain.ReferralSource  `json:"source"`
+	Urgency      domain.ReferralUrgency `json:"urgency"` // Elective, Urgent, ASAP
+	Status       domain.ReferralStatus  `json:"status"`  // Ready to book, 1st call, etc.
+	Source       domain.ReferralSource  `json:"source"`
+	ReferralDate string                 `json:"referralDate"`
 
 	// Appointment Info (If status is "Booked")
 	ApptDateAndTime string `json:"apptDateAndTime"`
@@ -43,15 +46,16 @@ type ReferralEntry struct {
 }
 
 type ReferralComplaint struct {
-	ID         int64             `json:"id"`
-	ReferralID domain.ReferralID `json:"referralId"`
+	ID         int64             `json:"-"`
+	ReferralID domain.ReferralID `json:"-"`
 	BodyPart   string            `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
 	Side       string            `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL OTHER"`
 	Details    string            `json:"details"`
 }
 
+// Creation payload
 type CreateReferralEntry struct {
-	// Patient & Juvonno Info
+	// Patient Info
 	PatientLastName              string `json:"patientLastName" validate:"required"`
 	PatientFirstName             string `json:"patientFirstName" validate:"required"`
 	PatientDOB                   string `json:"patientDob"`
@@ -62,15 +66,15 @@ type CreateReferralEntry struct {
 
 	// Clinical Info
 	ReferringPhysician string              `json:"referringPhysician"`
-	Complaints         []ReferralComplaint `json:"complaints" validate:"required,min=1,dive"`
+	Complaints         []ReferralComplaint `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
+	Tags               []string            `json:"tags"` // Optional free-form tags that will be validated against the database on the store level
 	TriageNote         string              `json:"triageNote"`
-	// XRayClinic         string `json:"xrayClinic"`
 
 	// Status
-	Urgency domain.ReferralUrgency `json:"urgency"`
-	Status  domain.ReferralStatus  `json:"status"` // Usually defaults to "READY_TO_BOOK"
-	Source  domain.ReferralSource  `json:"source"`
-
+	Urgency      domain.ReferralUrgency `json:"urgency"`
+	Status       domain.ReferralStatus  `json:"status"` // Usually defaults to "READY_TO_BOOK"
+	Source       domain.ReferralSource  `json:"source"`
+	ReferralDate string                 `json:"referralDate"`
 	// Accountability
 	CreatorID domain.UserID `json:"creatorId"`
 }
@@ -90,6 +94,7 @@ type FindReferralEntry struct {
 	// "Filter by this" and "Don't filter at all" (nil).
 	Urgency *domain.ReferralUrgency `json:"urgency"`
 	Status  *domain.ReferralStatus  `json:"status"`
+	Source  *domain.ReferralSource  `json:"source"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
 	PatientLastName         *string `json:"patientLastName"`
@@ -136,6 +141,7 @@ type DeleteReferralEntry struct {
 	ID domain.ReferralID `json:"id"`
 }
 
+// TODO: Whole chain of logic of tags
 // 1. Create: The "Guard"
 // Implement log creation logic at the store level so that it can be reused across different handlers
 func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error) {
@@ -164,14 +170,47 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 			}
 		}
 
-		// 4. Create log for creation
+		// 4. Insert verified tags
+		if len(create.Tags) > 0 {
+			// Fetch clean system configuration definitions from your driver layer
+			definitions, err := s.driver.ListReferralTags(txCtx)
+			if err != nil {
+				return fmt.Errorf("failed to load baseline taxonomy matrix: %w", err)
+			}
+
+			// Generate a localized string reference lookup map for performance
+			validTagMap := make(map[string]int64)
+			for _, def := range definitions {
+				validTagMap[strings.ToUpper(strings.TrimSpace(def.Name))] = def.ID
+			}
+
+			// Match requested strings with active database constraints
+			for _, tagName := range create.Tags {
+
+				cleanName := strings.ToUpper(strings.TrimSpace(tagName))
+
+				tagID, exists := validTagMap[cleanName]
+				if !exists {
+					// Drop silently with a server warning log trace
+					slog.Warn("Skipping unmapped tag element on creation sequence", "tag", tagName, "referral_id", referralEntry.ID)
+					continue
+				}
+
+				// Insert the valid reference into the junction relational table using your handler matching pattern
+				if err := s.driver.AssignTagToReferral(txCtx, referralEntry.ID, tagID); err != nil {
+					return fmt.Errorf("failed linking taxonomy identifier element '%s': %w", tagName, err)
+				}
+			}
+		}
+
+		// 5. Create log for creation
 		var creationLog *ReferralLog
 		creationLog = &ReferralLog{
-			EntryID:   referralEntry.ID,
-			UserID:    domain.UserID(user.ID),
-			OldStatus: "",
-			NewStatus: referralEntry.Status,
-			Note:      "Referral entry created",
+			ReferralID: referralEntry.ID,
+			UserID:     domain.UserID(user.ID),
+			OldStatus:  "",
+			NewStatus:  referralEntry.Status,
+			Note:       "Referral entry created",
 		}
 
 		if _, err := s.driver.CreateReferralLog(txCtx, creationLog); err != nil {
@@ -225,7 +264,7 @@ func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry
 	// 2. Get EVERY complaint
 	allComplaints, err := s.driver.ListAllComplaints(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed fetching all complaints: %w", err)
 	}
 
 	// 3. Group complaints by ReferralID using a Map
@@ -235,12 +274,27 @@ func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry
 		complaintMap[c.ReferralID] = append(complaintMap[c.ReferralID], c)
 	}
 
-	// 4. Attach complaints to each entry
+	allTags, err := s.driver.ListAllLinkedReferralTags(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching global taxonomy relation maps: %w", err)
+	}
+
+	tagMap := make(map[domain.ReferralID][]string)
+	for _, t := range allTags {
+		tagMap[t.ReferralID] = append(tagMap[t.ReferralID], t.TagName)
+	}
+
+	// 4. Attach complaints and tags to each entry
 	for _, entry := range entries {
 		if comps, found := complaintMap[entry.ID]; found {
 			entry.Complaints = comps
 		} else {
 			entry.Complaints = []*ReferralComplaint{} // Return empty array instead of null JSON
+		}
+		if tags, found := tagMap[entry.ID]; found {
+			entry.Tags = tags
+		} else {
+			entry.Tags = []string{} // Return an empty string slice [] instead of null JSON
 		}
 	}
 
@@ -280,11 +334,11 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 
 		// 2. Tell the Worker to write the history
 		logPayload := &ReferralLog{
-			EntryID:   update.ID,
-			UserID:    domain.UserID(userCtx.ID),
-			OldStatus: current.Status,
-			NewStatus: *update.Status,
-			Note:      *update.Note,
+			ReferralID: update.ID,
+			UserID:     domain.UserID(userCtx.ID),
+			OldStatus:  current.Status,
+			NewStatus:  *update.Status,
+			Note:       *update.Note,
 		}
 
 		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
@@ -336,11 +390,11 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 
 		// 5. Create the Log
 		logPayload := &ReferralLog{
-			EntryID:   update.ID,
-			UserID:    domain.UserID(user.ID),
-			OldStatus: oldStatus,
-			NewStatus: newStatus,
-			Note:      update.Note,
+			ReferralID: update.ID,
+			UserID:     domain.UserID(user.ID),
+			OldStatus:  oldStatus,
+			NewStatus:  newStatus,
+			Note:       update.Note,
 		}
 
 		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {

@@ -20,7 +20,6 @@ interface Props {
 }
 
 export interface Complaint {
-  id: number;
   referralId: string;
   bodyPart: string;
   side: string;
@@ -29,7 +28,7 @@ export interface Complaint {
 
 // This is the "Blueprint" for what data one entry needs
 export interface ReferralEntry {
-  id: number;
+  id: string; // UUID
   patientLastName: string;
   patientFirstName: string;
   patientDob: string;
@@ -38,6 +37,7 @@ export interface ReferralEntry {
   referringPhysician: string;
   complaints: Complaint[];
   triageNote: string;
+  tags: string[];
 }
 
 export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Props) {
@@ -134,9 +134,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
       onClick={handleCardClick}
       className={`relative group ${isClickable ? 'cursor-pointer' : ''}`}
     >
-      <div className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all ${
-      isClickable ? 'hover:border-blue-300' : ''
-    }`}>
+      <div className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all ${isClickable ? 'hover:border-blue-300' : ''
+        }`}>
         {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
         <div className="flex justify-between items-start mb-6">
           <div>
@@ -222,25 +221,47 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Complaints</p>
             <div className="space-y-1">
               {entry.complaints && entry.complaints.length > 0 ? (
-                entry.complaints.map((c) => (
-                  <p key={c.id} className="text-sm font-medium text-slate-700 capitalize">
-                    {`${c.side?.toLowerCase() || ''} ${c.bodyPart?.toLowerCase() || ''}`}
-                    {c.details && <span className="text-xs text-slate-400 block font-normal">{c.details}</span>}
-                  </p>
-                ))
+                entry.complaints.map((c, index) => {
+                  // Generate composite key string (including index to guard against duplicates)
+                  const compositeKey = `${c.side}-${c.bodyPart}-${index}`;
+
+                  return (
+                    <p key={compositeKey} className="text-sm font-medium text-slate-700 capitalize">
+                      {`${c.side?.toLowerCase() || ''} ${c.bodyPart?.toLowerCase() || ''}`}
+                      {c.details && <span className="text-xs text-slate-400 block font-normal">{c.details}</span>}
+                    </p>
+                  );
+                })
               ) : (
                 <p className="text-sm font-medium text-slate-400 italic">None reported</p>
               )}
             </div>
           </div>
         </div>
+        {/* TAG SECTION: Tags Row */}
+        {entry.tags && entry.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-5 mt-2">
+            {entry.tags.map((tag: string, index: number) => (
+              <span
+                key={`${tag}-${index}`}
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/60 uppercase tracking-wider shadow-2xs hover:bg-slate-200 transition-colors"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
 
-        {/* 3. BOTTOM SECTION: Triage Note */}
+        {/* BOTTOM SECTION: Triage Note */}
         <div className="bg-slate-50 border-l-2 border-blue-400 p-3 rounded-r-lg">
           <p className="text-sm text-slate-600 italic leading-relaxed">
             {entry.triageNote ? `"${entry.triageNote}"` : "No triage notes recorded."}
           </p>
         </div>
+
+
+
+
 
         {/* --- QUICK NOTE OVERLAY --- */}
         {/* This only appears AFTER they select a status from the dropdown */}

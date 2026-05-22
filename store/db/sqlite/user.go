@@ -42,7 +42,7 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 		args = append(args, *find.Username)
 	}
 
-	query := `SELECT id, username, password_hash, role FROM user WHERE ` + strings.Join(where, " AND ")
+	query := `SELECT id, username, password_hash, role, user_first_name, user_last_name FROM user WHERE ` + strings.Join(where, " AND ")
 	rows, err := d.conn(ctx).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 	var users []*store.User
 	for rows.Next() {
 		var user store.User
-		if err := rows.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Role); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName); err != nil {
 			return nil, err
 		}
 		users = append(users, &user)

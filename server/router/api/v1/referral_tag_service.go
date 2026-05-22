@@ -35,7 +35,7 @@ func (s *APIV1Service) ListReferralTagsHandler(c *echo.Context) error {
 }
 
 func (s *APIV1Service) DeleteReferralTagHandler(c *echo.Context) error {
-	// 1. Get ID from the URL: /api/v1/admin/tags/2
+	// 1. Get ID from the URL: /api/v1/tags/1
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {

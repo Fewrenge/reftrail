@@ -81,19 +81,20 @@ const MemberSection = () => {
       key: "username",
       header: "Username",
       className: "w-[25%]",
-      render: (val: string) => <span className="font-medium">{val}</span>,
+      render: (val: string) => <span className="font-medium">{val || "N/A"}</span>,
     },
     {
       key: "role",
       header: "Role",
       className: "w-[15%]",
-      render: (val: string) => {
-        const isAdmin = val === ROLES.SYSTEM_ADMIN;
-
+       render: (val: any) => {
+      const roleStr = typeof val === 'object' ? val?.name : val;
+      const cleanRole = roleStr || "USER";
+      const isAdmin = cleanRole === ROLES.SYSTEM_ADMIN;
         return (
           <span className={isAdmin ? "text-primary font-bold" : "text-muted-foreground"}>
-            {val}
-          </span>
+          {cleanRole.replace(/_/g, ' ')}
+        </span>
         );
       },
     },
@@ -202,7 +203,7 @@ const MemberSection = () => {
           columns={columns}
           data={members}
           className="border-border bg-transparent" // Use the beige border
-          getRowKey={(row) => row.id.toString()}
+          getRowKey={(row) => row.username}
         />
       </div>
     </SettingSection>

@@ -89,6 +89,22 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 }
 
 func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	// Fetch valid system tags ONCE right here before ANY transactions start
+	definitions, err := s.Store.ListReferralTags(ctx)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to load master tags"})
+	}
+
+	// Build the in-memory map
+	validTagMap := make(map[string]int64)
+	for _, def := range definitions {
+		if def != nil && def.Name != "" {
+			validTagMap[strings.ToUpper(strings.TrimSpace(def.Name))] = def.ID
+		}
+	}
+
 	// 1. Extract the raw file from the multi-part form data
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
@@ -129,7 +145,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 	}
 
 	// Fail-fast verification check for required schema columns
-	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency"}
+	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency", "referral date"}
 	for _, field := range requiredFields {
 		if _, exists := headerMap[field]; !exists {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing column header '" + field + "'"})
@@ -192,11 +208,31 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			})
 		}
 
+		// Parse semicolon-separated optional Tags column
+		var tags []string
+		if tagIdx, exists := headerMap["tag"]; exists {
+
+			rawTags := strings.SplitSeq(row[tagIdx], ";")
+			for t := range rawTags {
+				cleanTag := strings.TrimSpace(strings.ToUpper(t))
+				if cleanTag != "" {
+					// Uncomment below to enforce snake_case naming standard
+					// cleanTag = strings.ReplaceAll(cleanTag, " ", "_")
+
+					// Build the structure type matching store's expectations
+					tags = append(tags, strings.TrimSpace(cleanTag))
+				}
+			}
+		} else {
+			// Uses global slog to ensure this warning shows up in production logs too
+			slog.Warn("Skipping batch tokenization phase: Column lookup key 'tags' missing from spreadsheet template structure")
+		}
+
 		// Map spreadsheet elements into your exact structural schema
 		entry := store.CreateReferralEntry{
 			PatientLastName:              strings.TrimSpace(row[headerMap["last name"]]),
 			PatientFirstName:             strings.TrimSpace(row[headerMap["first name"]]),
-			PatientDOB:                   "1990-01-01", // Default placeholder since template column is missing
+			PatientDOB:                   "1990-01-01", // Default placeholder since template column is missing // TODO: Add DOB column
 			PatientHealthcardNumber:      healthCardNum,
 			PatientHealthcardVersionCode: versionCode,
 			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
@@ -204,6 +240,21 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			Status:                       domain.ReferralStatus("READY_TO_BOOK"), // Workflow entry state default
 			Source:                       domain.ReferralSource("REGULAR"),
 			Complaints:                   complaints,
+			Tags:                         tags,
+		}
+
+		// Run validator on this entry
+		if err := domain.ValidateStruct(entry); err != nil {
+			slog.Warn("Batch row validation failed",
+				"patient", entry.PatientFirstName+" "+entry.PatientLastName,
+				"error", err.Error(),
+			)
+
+			// Stop execution and tell the user exactly which row broke the batch import
+			return c.JSON(http.StatusUnprocessableEntity, map[string]string{
+				"error": "Batch import rejected: Duplicate body parts or invalid fields detected for patient " +
+					entry.PatientFirstName + " " + entry.PatientLastName + ".",
+			})
 		}
 
 		batch.ReferralEntries = append(batch.ReferralEntries, entry)

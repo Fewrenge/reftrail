@@ -29,9 +29,9 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 	query := `INSERT INTO referral_entry (
 		id, created_ts, updated_ts, creator_id, 
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code,
-		 txt_customer_id, int_customer_doc_id,
-		referring_physician, triage_note, urgency, status, source
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		txt_customer_id, int_customer_doc_id,
+		referring_physician, triage_note, urgency, status, source, referral_date
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// Execute the command
 	_, err = d.conn(ctx).ExecContext(ctx, query,
@@ -39,7 +39,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		create.PatientLastName, create.PatientFirstName, create.PatientDOB,
 		create.PatientHealthcardNumber, create.PatientHealthcardVersionCode,
 		create.TxtCustomerID, create.IntCustomerDocID,
-		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source,
+		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source, create.ReferralDate,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert referral entry for patient %s, %s (creator_id: %d): %w",
@@ -62,6 +62,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		Urgency:                      create.Urgency,
 		Status:                       create.Status,
 		Source:                       create.Source,
+		ReferralDate:                 create.ReferralDate,
 	}, nil
 }
 
@@ -90,7 +91,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		id, creator_id, created_ts, updated_ts, 
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code,
 		txt_customer_id, int_customer_doc_id,
-		referring_physician, triage_note, urgency, status, source
+		referring_physician, triage_note, urgency, status, source, referral_date
 	FROM referral_entry WHERE 1 = 1`
 
 	// 2. The "Arguments" list
@@ -143,7 +144,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 			&entry.PatientLastName, &entry.PatientFirstName, &entry.PatientDOB,
 			&entry.PatientHealthcardNumber, &entry.PatientHealthcardVersionCode,
 			&entry.TxtCustomerID, &entry.IntCustomerDocID,
-			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source,
+			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source, &entry.ReferralDate,
 		)
 		if err != nil {
 			return nil, err

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { UserIcon, LogInIcon, UsersIcon } from "lucide-react";
+import { UserIcon, LogInIcon, UsersIcon, TagIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { ROLES } from "../helpers/constants";
@@ -8,24 +8,27 @@ import { ROLES } from "../helpers/constants";
 
 import ProfileSection from "../components/Settings/ProfileSection";
 import MemberSection from "../components/Settings/MemberSection";
+import TagSection from "@/components/Settings/TagSection";
 
 import SectionMenuItem from "@/components/Settings/SectionMenuItem";
 
-type SettingSection = "profile" | "login" | "member";
+type SettingSection = "profile" | "login" | "member" | "tag";
 
 const BASIC_SECTIONS: SettingSection[] = ["profile", "login"];
-const ADMIN_SECTIONS: SettingSection[] = ["member"];
+const ADMIN_SECTIONS: SettingSection[] = ["member", "tag"];
 
 const SECTION_ICON_MAP: Record<SettingSection, LucideIcon> = {
   profile: UserIcon,
   login: LogInIcon,
   member: UsersIcon,
+  tag: TagIcon,
 };
 
 const SECTION_COMPONENT_MAP: Record<SettingSection, React.ComponentType> = {
   profile: ProfileSection,
   login: () => <div className="p-4 text-muted-foreground text-sm">Security settings coming soon...</div>,
   member: MemberSection,
+  tag: TagSection,
 };
 
 const Setting = () => {

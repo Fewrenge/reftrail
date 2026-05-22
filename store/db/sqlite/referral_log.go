@@ -21,7 +21,7 @@ func (d *Driver) CreateReferralLog(ctx context.Context, create *store.ReferralLo
 			 VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 	_, err = d.conn(ctx).ExecContext(ctx, query,
-		idStr, create.EntryID, create.UserID, create.OldStatus, create.NewStatus, create.Note, ts,
+		idStr, create.ReferralID, create.UserID, create.OldStatus, create.NewStatus, create.Note, ts,
 	)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func (d *Driver) CreateReferralLog(ctx context.Context, create *store.ReferralLo
 	return create, nil
 }
 
-func (d *Driver) ListReferralLogs(ctx context.Context, entryID domain.ReferralID) ([]*store.ReferralLogWithUser, error) {
+func (d *Driver) ListReferralLogs(ctx context.Context, referralID domain.ReferralID) ([]*store.ReferralLogWithUser, error) {
 	query := `
 		SELECT l.id, l.referral_id, l.user_id, u.username, u.user_first_name, u.user_last_name, l.old_status, l.new_status, l.note, l.created_ts 
 		FROM referral_log l
@@ -41,7 +41,7 @@ func (d *Driver) ListReferralLogs(ctx context.Context, entryID domain.ReferralID
 		WHERE l.referral_id = ? 
 		ORDER BY l.created_ts DESC`
 
-	rows, err := d.conn(ctx).QueryContext(ctx, query, entryID)
+	rows, err := d.conn(ctx).QueryContext(ctx, query, referralID)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (d *Driver) ListReferralLogs(ctx context.Context, entryID domain.ReferralID
 	var logs []*store.ReferralLogWithUser
 	for rows.Next() {
 		var l store.ReferralLogWithUser
-		if err := rows.Scan(&l.ID, &l.EntryID, &l.UserID, &l.Username, &l.UserFirstName, &l.UserLastName, &l.OldStatus, &l.NewStatus, &l.Note, &l.CreatedTs); err != nil {
+		if err := rows.Scan(&l.ID, &l.ReferralID, &l.UserID, &l.Username, &l.UserFirstName, &l.UserLastName, &l.OldStatus, &l.NewStatus, &l.Note, &l.CreatedTs); err != nil {
 			return nil, err
 		}
 		logs = append(logs, &l)
