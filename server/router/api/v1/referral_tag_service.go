@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"net/url"
 	"reftrail/internal/domain"
 	"reftrail/store"
 	"strconv"
@@ -67,9 +68,18 @@ func (s *APIV1Service) AssignTagHandler(c *echo.Context) error {
 func (s *APIV1Service) RemoveTagHandler(c *echo.Context) error {
 	refIDStr := c.Param("id")
 	refID := domain.ReferralID(refIDStr)
-	tagID, _ := strconv.ParseInt(c.Param("tagId"), 10, 64)
+	tagName := c.Param("tagName")
 
-	if err := s.Store.RemoveTagFromReferral(c.Request().Context(), refID, tagID); err != nil {
+	tagName, err := url.PathUnescape(tagName)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Malformed tag name parameter"})
+	}
+
+	if tagName == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing tag name parameter"})
+	}
+
+	if err := s.Store.RemoveTagFromReferral(c.Request().Context(), refID, tagName); err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 	return c.NoContent(http.StatusNoContent)

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ROLES, ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
 import { useAuth } from "@/contexts/AuthContext";
-import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon } from "lucide-react";
+import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, XCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -47,6 +47,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
   const [isLogMode, setIsLogMode] = useState(false);
   const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [allGlobalTags, setAllGlobalTags] = useState<any[]>([]);
   const { user } = useAuth();
   const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
 
@@ -107,7 +108,45 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
     }
   };
 
+  const fetchGlobalTags = async () => {
+    try {
+      const res = await fetch('/api/v1/tags'); // Replace with your exact route
+      if (res.ok) {
+        const data = await res.json();
+        setAllGlobalTags(data);
+      }
+    } catch (err) {
+      console.error("Failed to load tag definitions:", err);
+    }
+  };
 
+
+  const handleAssignTag = async (tagId: number) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/v1/referrals/${entry.id}/tags/${tagId}`, { method: 'POST' });
+      if (res.ok) onRefresh();
+      else alert("Failed to append tag");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Native Single-Tag Delete Link Request
+  const handleRemoveTag = async (tagName: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/v1/referrals/${entry.id}/tags/${tagName}`, { method: 'DELETE' });
+      if (res.ok) onRefresh();
+      else alert("Failed to remove tag");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleDelete = async () => {
 
@@ -263,18 +302,68 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
           </div>
         </div>
         {/* TAG SECTION: Tags Row */}
-        {entry.tags && entry.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-5 mt-2">
-            {entry.tags.map((tag: string, index: number) => (
-              <span
-                key={`${tag}-${index}`}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/60 uppercase tracking-wider shadow-2xs hover:bg-slate-200 transition-colors"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-1.5 mb-5 mt-2">
+          {/* Render active capsules attached to the card */}
+          {entry.tags && entry.tags.map((tag: any, index: number) => (
+            <span
+              key={`${tag.id || index}`}
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/60 uppercase tracking-wider shadow-2xs hover:bg-slate-200 transition-colors"
+            >
+              <span>{tag.name || tag}</span>
+
+              {/* Little Cross to remove tags (Only renders for Admins) */}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag)}
+                  className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer rounded-full outline-none"
+                  disabled={isLoading}
+                >
+                  <XCircleIcon size={12} className="text-black" />
+                </button>
+              )}
+            </span>
+          ))}
+
+          {/* Administrative Dropdown Selection Tool to assign fresh tags */}
+          {isAdmin && (
+            <DropdownMenu onOpenChange={(open) => open && fetchGlobalTags()}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-slate-300 bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-colors cursor-pointer outline-none"
+                  disabled={isLoading}
+                >
+                  <PlusIcon size={12} strokeWidth={3} />
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="start" className="w-48 p-1 rounded-xl shadow-xl border-slate-200">
+                <DropdownMenuLabel className="text-[10px] font-bold uppercase text-slate-400 px-2 py-1.5">
+                  Available Tags
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                {allGlobalTags.length === 0 ? (
+                  <div className="text-xs text-slate-400 p-2 text-center">No tags left</div>
+                ) : (
+                  allGlobalTags
+                    // Filter out tags that are already attached to this specific entry card record
+                    .filter(gt => !entry.tags?.some((t: any) => (t.id === gt.id || t === gt.name)))
+                    .map((globalTag) => (
+                      <DropdownMenuItem
+                        key={globalTag.id}
+                        onSelect={() => handleAssignTag(globalTag.id)}
+                        className="text-xs font-semibold flex items-center px-3 py-2 cursor-pointer rounded-lg transition-colors"
+                      >
+                        {globalTag.name}
+                      </DropdownMenuItem>
+                    ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+
 
         {/* BOTTOM SECTION: Triage Note */}
         <div className="bg-slate-50 border-l-2 border-blue-400 p-3 rounded-r-lg">

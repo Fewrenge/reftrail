@@ -49,7 +49,7 @@ func TestReferralTag_Integration(t *testing.T) {
 		}
 
 		// --- C. Remove Tag from Referral ---
-		err = s.RemoveTagFromReferral(ctx, ref.ID, tag.ID)
+		err = s.RemoveTagFromReferral(ctx, ref.ID, tag.Name)
 		if err != nil {
 			t.Errorf("Failed to remove tag: %v", err)
 		}

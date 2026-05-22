@@ -44,5 +44,5 @@ type Driver interface {
 	ListAllLinkedReferralTags(ctx context.Context) ([]*LinkedReferralTagRow, error)
 	DeleteReferralTag(ctx context.Context, delete *DeleteReferralTag) error
 	AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error
-	RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error
+	RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagName string) error
 }

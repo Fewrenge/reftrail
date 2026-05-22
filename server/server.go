@@ -103,5 +103,5 @@ func (s *Server) registerReferralRoutes() {
 
 	admin.POST("/referrals/:id/tags/:tagId", v1Service.AssignTagHandler) // Assign a tag to a referral
 
-	admin.DELETE("/referrals/:id/tags/:tagId", v1Service.RemoveTagHandler) // Remove a tag from a referral
+	admin.DELETE("/referrals/:id/tags/:tagName", v1Service.RemoveTagHandler) // Remove a tag from a referral
 }

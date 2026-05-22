@@ -93,8 +93,19 @@ func (d *Driver) AssignTagToReferral(ctx context.Context, referralID domain.Refe
 	return err
 }
 
-func (d *Driver) RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
-	query := `DELETE FROM referral_tag WHERE referral_id = ? AND tag_id = ?`
-	_, err := d.conn(ctx).ExecContext(ctx, query, referralID, tagID)
-	return err
+func (d *Driver) RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagName string) error {
+	query := `
+		DELETE FROM referral_tag 
+		WHERE referral_id = ? 
+		AND tag_id = (SELECT id FROM referral_tag_definition WHERE name = ?)
+	`
+	result, err := d.conn(ctx).ExecContext(ctx, query, referralID, tagName)
+	if err != nil {
+		return err
+	}
+
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return domain.ErrTagNotFound
+	}
+	return nil
 }
