@@ -14,6 +14,7 @@ import (
 )
 
 // Get all referrals
+// GET /api/v1/referrals
 func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 

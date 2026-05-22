@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ROLES, ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
 import { useAuth } from "@/contexts/AuthContext";
-import { Trash2Icon, MessageSquareIcon, XIcon } from "lucide-react";
+import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -44,6 +44,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
   // --- States ---
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [isLogMode, setIsLogMode] = useState(false);
   const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
@@ -67,33 +68,45 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
   };
 
   // Logic to send the update to your Go backend
-  const handleStatusUpdate = async () => {
+  const handleSavePad = async () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`/api/v1/referrals/${entry.id}/status`, {
-        method: 'PATCH',
+      // 1. Determine target endpoint based on current active mode
+      const url = isLogMode
+        ? `/api/v1/referrals/${entry.id}/logs`
+        : `/api/v1/referrals/${entry.id}/status`;
+
+      const method = isLogMode ? 'POST' : 'PATCH';
+
+      // 2. Format body data dynamically
+      const bodyData = isLogMode
+        ? { note: note || "Manual log entry" }
+        : { newStatus: selectedStatus, note: note || "Status updated" };
+
+      const res = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          newStatus: selectedStatus,
-          note: note || "Status updated" // Default note if empty
-        })
+        body: JSON.stringify(bodyData)
       });
 
       if (res.ok) {
+        // Clear out state variables on success
         setSelectedStatus(null);
+        setIsLogMode(false);
         setNote("");
         onRefresh();
       } else {
         const err = await res.text();
-        alert(`Update failed: ${err}`);
+        alert(`Save failed: ${err}`);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Network submission error:", err);
     } finally {
       setIsLoading(false);
     }
   };
+
 
 
   const handleDelete = async () => {
@@ -116,12 +129,13 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
     }
   };
 
+
   return (
     <div
       className={`relative group`}
     >
       <div className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all ${isClickable ? 'hover:border-blue-300' : ''}`}>
-        
+
         {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
         <div className="flex justify-between items-start mb-6">
           <div>
@@ -195,6 +209,17 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl shadow-xl border-slate-200">
                 <DropdownMenuItem
+                  onSelect={() => {
+                    setIsLogMode(true); // Open the overlay window in log mode
+                  }}
+                  className="hover:bg-slate-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
+                >
+                  <LogsIcon size={16} strokeWidth={2.5} />
+                  <span>Add a Note</span>
+                </DropdownMenuItem>
+
+
+                <DropdownMenuItem
                   onSelect={() => { handleDelete(); }}
                   className="text-red-600 hover:bg-red-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
                 >
@@ -264,7 +289,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
         {/* --- QUICK NOTE OVERLAY --- */}
         {/* This only appears AFTER they select a status from the dropdown */}
-        {selectedStatus && (
+        {(selectedStatus || isLogMode) && (
           <>
             {/* 1. Backdrop: Clicking anywhere else closes the window */}
             <div
@@ -281,11 +306,15 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                     <MessageSquareIcon size={16} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase text-slate-400 leading-none">Updating Status To</p>
-                    <p className="text-xs font-bold text-slate-700">{selectedStatus.replace(/_/g, ' ')}</p>
+                    <p className="text-[10px] font-black uppercase text-slate-400 leading-none">
+                      {isLogMode ? "Adding Audit Log To" : "Updating Status To"}
+                    </p>
+                    <p className="text-xs font-bold text-slate-700">
+                      {isLogMode ? `${entry.patientLastName}, ${entry.patientFirstName}` : selectedStatus?.replace(/_/g, ' ')}
+                    </p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedStatus(null)} className="text-slate-300 hover:text-slate-600 transition-colors">
+                <button onClick={() => { setSelectedStatus(null); setIsLogMode(false); }} className="text-slate-300 hover:text-slate-600 transition-colors">
                   <XIcon size={18} />
                 </button>
               </div>
@@ -298,7 +327,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleStatusUpdate();
+                    handleSavePad();
                   }
                 }}
               />
@@ -309,7 +338,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                 <Button
                   variant="primary"
                   className="flex-1 shadow-lg shadow-blue-200"
-                  onClick={handleStatusUpdate}
+                  onClick={handleSavePad}
                   disabled={isLoading}
                 >
                   {isLoading ? "Saving..." : "Confirm & Log"}

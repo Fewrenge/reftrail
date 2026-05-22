@@ -92,9 +92,10 @@ type FindReferralEntry struct {
 	// 2. Clinical Filters (Requirement #8 & #9)
 	// We use pointers (*) so we can tell the difference between
 	// "Filter by this" and "Don't filter at all" (nil).
-	Urgency *domain.ReferralUrgency `json:"urgency"`
-	Status  *domain.ReferralStatus  `json:"status"`
-	Source  *domain.ReferralSource  `json:"source"`
+	Urgency      *domain.ReferralUrgency `json:"urgency"`
+	Status       *domain.ReferralStatus  `json:"status"`
+	Source       *domain.ReferralSource  `json:"source"`
+	ReferralDate *string                 `json:"referralDate"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
 	PatientLastName         *string `json:"patientLastName"`
@@ -374,8 +375,8 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 			return fmt.Errorf("failed to fetch current status: %w", err)
 		}
 
-		// 3. THE RULE CHECK (Calling your domain code)
-		// We convert update.NewStatus to domain.ReferralStatus type
+		// 3. THE RULE CHECK (Calling the domain code)
+		// Convert update.NewStatus to domain.ReferralStatus type
 		newStatus := domain.ReferralStatus(update.NewStatus)
 
 		if !domain.CanTransition(oldStatus, newStatus, user.Role) {
