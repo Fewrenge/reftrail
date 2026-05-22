@@ -86,11 +86,12 @@ func (s *Server) registerReferralRoutes() {
 	admin.GET("/users", v1Service.ListUsersHandler)
 
 	// Delete a user
-	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)
+	admin.DELETE("/users/:username", v1Service.DeleteUserHandler)
 
 	// Reset a user's password
-	admin.PATCH("/users/:id/password", v1Service.ResetUserPasswordHandler)
+	admin.PATCH("/users/:username/password", v1Service.ResetUserPasswordHandler)
 
+	// Update a user's info
 	admin.PATCH("/users/:username", v1Service.UpdateUserHandler)
 
 	// ------ REFERRAL ENTRY MANAGEMENT ------

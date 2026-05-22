@@ -110,6 +110,7 @@ func (s *APIV1Service) ListUsersHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, users)
 }
 
+// PATCH /api/v1/users/:username
 func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 	usernameParam := c.Param("username")
@@ -158,8 +159,11 @@ func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, updatedUser)
 }
 
-// DELETE /api/v1/users/:id
+// DELETE /api/v1/users/:username
 func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
+	slog.Info("Received request to delete user",
+		"requestURI", c.Request().RequestURI,
+		"requestURL", c.Request().URL.Path)
 	ctx := c.Request().Context()
 	usernameParam := c.Param("username")
 	if usernameParam == "" {
@@ -180,7 +184,7 @@ func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"message": "User deleted"})
 }
 
-// PATCH /api/v1/users/:id/password
+// PATCH /api/v1/users/:username/password
 func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 	usernameParam := c.Param("username")

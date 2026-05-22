@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 
 interface Member {
-  id: number;
   username: string;
   role: string;
   nickname?: string;
@@ -68,6 +67,33 @@ const MemberSection = () => {
     }
   };
 
+  const handleDeleteUser = async (username: string) => {
+  const confirmDelete = window.confirm(`Are you sure you want to delete user "${username}"?`);
+  if (!confirmDelete) return;
+
+  try {
+    const response = await fetch(`/api/v1/users/${username}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        // Add Authorization header here if your Echo admin group uses JWT middleware:
+        //"Authorization": `Bearer ${localStorage.getItem("auth_token")}`
+      },
+    });
+
+    if (response.ok) {
+      // Instantly remove the user from your local table state
+      setMembers((prev) => prev.filter((member) => member.username !== username));
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      alert(errorData.message || "Failed to delete user from server.");
+    }
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    alert("A network error occurred while trying to delete the user.");
+  }
+};
+
 
   useEffect(() => {
     fetch("/api/v1/users")
@@ -84,20 +110,62 @@ const MemberSection = () => {
       render: (val: string) => <span className="font-medium">{val || "N/A"}</span>,
     },
     {
+      key: "userFirstName",
+      header: "First Name",
+      className: "w-[25%]",
+    },
+    {
+      key: "userLastName",
+      header: "Last Name",
+      className: "w-[25%]",
+    },
+    {
       key: "role",
       header: "Role",
       className: "w-[15%]",
-       render: (val: any) => {
-      const roleStr = typeof val === 'object' ? val?.name : val;
-      const cleanRole = roleStr || "USER";
-      const isAdmin = cleanRole === ROLES.SYSTEM_ADMIN;
+      render: (val: any) => {
+        const roleStr = typeof val === 'object' ? val?.name : val;
+        const cleanRole = roleStr || "USER";
+        const isAdmin = cleanRole === ROLES.SYSTEM_ADMIN;
         return (
           <span className={isAdmin ? "text-primary font-bold" : "text-muted-foreground"}>
-          {cleanRole.replace(/_/g, ' ')}
-        </span>
+            {cleanRole.replace(/_/g, ' ')}
+          </span>
         );
       },
     },
+      {
+    key: "actions",
+    header: "",
+    className: "w-[10%] text-right",
+    render: (_: any, row: any) => (
+      <div className="flex items-center justify-end gap-1">
+        {/* EDIT BUTTON */}
+        <Button
+          variant="ghost"
+          size="sm"
+         // onClick={() => handleOpenEditModal(row)} // Handled in your next step
+          className="text-slate-400 hover:text-blue-600 rounded-lg h-8 w-8 p-0"
+        >
+          <span className="text-xs font-bold">Edit</span>
+        </Button>
+
+        {/* DELETE BUTTON */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleDeleteUser(row.username)} // Triggers our new delete function
+          className="text-slate-400 hover:text-red-600 rounded-lg h-8 w-8 p-0"
+          // Prevents self-deletion if currentUser state exists later
+          disabled={row.username === "admin"} 
+        >
+          {/* If Trash2Icon isn't imported from lucide-react, you can use text or import it */}
+          <span className="text-xs font-bold text-red-500">Delete</span>
+        </Button>
+      </div>
+    ),
+  },
+    
   ];
 
   if (loading) return <div className="p-10 flex justify-center"><Loader2Icon className="animate-spin opacity-20" /></div>;
@@ -123,7 +191,7 @@ const MemberSection = () => {
               </DialogDescription>
             </DialogHeader>
 
-{/*TODO: Implement form validation and error handling */}
+            {/*TODO: Implement form validation and error handling */}
             {/* Form */}
             <div className="py-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
