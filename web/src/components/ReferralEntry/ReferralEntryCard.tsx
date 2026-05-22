@@ -50,19 +50,6 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
   const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
 
   const navigate = useNavigate();
-  const handleCardClick = (e: React.MouseEvent) => {
-    if (!isClickable) return;
-
-    const target = e.target as HTMLElement;
-    if (
-      target.closest('button') ||
-      target.closest('[role="menuitem"]') ||
-      target.closest('[data-radix-menu-content]')
-    ) {
-      return;
-    }
-    navigate(`/referrals/${entry.id}`);
-  };
 
   const allowedStatuses = useMemo(() => {
     if (isAdmin) {
@@ -131,15 +118,27 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
   return (
     <div
-      onClick={handleCardClick}
-      className={`relative group ${isClickable ? 'cursor-pointer' : ''}`}
+      className={`relative group`}
     >
-      <div className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all ${isClickable ? 'hover:border-blue-300' : ''
-        }`}>
+      <div className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all ${isClickable ? 'hover:border-blue-300' : ''}`}>
+        
         {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h3 className="font-bold text-xl text-slate-900">{entry.patientLastName}{", "}{entry.patientFirstName}</h3>
+            {/* Wrap the patient name text in a clickable button element */}
+            {isClickable ? (
+              <button
+                onClick={() => navigate(`/referrals/${entry.id}`)}
+                className="text-left font-bold text-xl text-slate-900 hover:text-blue-600 cursor-pointer transition-colors focus:outline-none"
+              >
+                {entry.patientLastName}{", "}{entry.patientFirstName}
+              </button>
+            ) : (
+              <h3 className="font-bold text-xl text-slate-900">
+                {entry.patientLastName}{", "}{entry.patientFirstName}
+              </h3>
+            )}
+
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
               DOB: {entry.patientDob || 'N/A'}
             </p>
