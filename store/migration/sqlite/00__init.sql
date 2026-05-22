@@ -1,7 +1,6 @@
 -- 1. User Table (Needed for your Login/Accountability)
 CREATE TABLE IF NOT EXISTS user (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL UNIQUE PRIMARY KEY,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'BOOKING_TEAM' check (role IN ('BOOKING_TEAM', 'REFTRAIL_ADMIN')),
     user_first_name TEXT,
@@ -13,7 +12,7 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     id TEXT PRIMARY KEY,
     created_ts TEXT NOT NULL,
     updated_ts TEXT NOT NULL, 
-    creator_id INTEGER NOT NULL,
+    creator_id TEXT NOT NULL,
     patient_last_name TEXT NOT NULL,
     patient_first_name TEXT NOT NULL,
     patient_dob TEXT NOT NULL,
@@ -30,20 +29,20 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     '3RD_CALL_COMPLETE', 'BOOKED', 'UNABLE_TO_CONTACT', 'PATIENT_TO_CALL_BACK', 'DECLINED', 'SUSPENDED','CLOSED')),
     source TEXT CHECK(source IN ('REGULAR', 'FRACTURE_CLINIC', 'OTHER')),
     referral_date TEXT NOT NULL,
-    FOREIGN KEY (creator_id) REFERENCES user(id)
+    FOREIGN KEY (creator_id) REFERENCES user(username) ON UPDATE CASCADE -- ON DELETE SET NULL?
 );
 
 -- 3. Audit Log (Requirement #9 - Tracking who changed the status)
 CREATE TABLE IF NOT EXISTS referral_log (
     id TEXT PRIMARY KEY,
     referral_id TEXT NOT NULL,
-    user_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
     old_status TEXT,
     new_status TEXT,
     note TEXT,
     created_ts TEXT NOT NULL,
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES user(id)
+    FOREIGN KEY (user_id) REFERENCES user(username) ON UPDATE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(referral_id);
@@ -57,7 +56,7 @@ CREATE TABLE IF NOT EXISTS referral_appointment (
     practitioner TEXT,
     juvonno_appt_id TEXT,
     created_ts TEXT NOT NULL,
-    creator_id INTEGER,
+    creator_id TEXT,
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
 );
 

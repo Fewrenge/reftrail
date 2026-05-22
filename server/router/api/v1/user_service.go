@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"reftrail/internal/domain"
 	"reftrail/store"
-	"strconv"
 
 	echo "github.com/labstack/echo/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -43,7 +42,7 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
 
-	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &ctx.ID})
+	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{Username: string(ctx.Username)})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get current user"})
 	}
@@ -64,7 +63,7 @@ func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
 
-	userID := userCtx.ID
+	currentUserName := string(userCtx.Username)
 
 	var req struct {
 		OldPassword string `json:"oldPassword"`
@@ -75,7 +74,7 @@ func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
 	}
 
-	user, err := s.Store.GetUser(ctx, &store.FindUser{ID: &userID})
+	user, err := s.Store.GetUser(ctx, &store.FindUser{Username: currentUserName})
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
 	}
@@ -92,7 +91,7 @@ func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 	}
 
 	// Save
-	if err := s.Store.UpdateUserPassword(ctx, userID, string(newHash)); err != nil {
+	if err := s.Store.UpdateUserPassword(ctx, currentUserName, string(newHash)); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
 	}
 
@@ -111,31 +110,68 @@ func (s *APIV1Service) ListUsersHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, users)
 }
 
+func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+	usernameParam := c.Param("username")
+	if usernameParam == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
+	}
+
+	// Dynamic inbound request form maps pointer options
+	var req struct {
+		UpdatedUsername *string          `json:"updatedUsername"`
+		UserFirstName   *string          `json:"userFirstName"`
+		UserLastName    *string          `json:"userLastName"`
+		Password        *string          `json:"password"`
+		Role            *domain.UserRole `json:"role"`
+	}
+
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
+	}
+
+	// Hash password automatically if the administrator provided a fresh value
+	if req.Password != nil && *req.Password != "" {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
+		}
+		strHash := string(hashed)
+		req.Password = &strHash
+	}
+
+	updatePayload := &store.UpdateUser{
+		CurrentUsername: usernameParam,
+		UpdatedUsername: req.UpdatedUsername,
+		UserFirstName:   req.UserFirstName,
+		UserLastName:    req.UserLastName,
+		Password:        req.Password,
+		Role:            req.Role,
+	}
+
+	updatedUser, err := s.Store.UpdateUser(ctx, updatePayload)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, updatedUser)
+}
+
 // DELETE /api/v1/users/:id
 func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
-	idParam := c.Param("id")
-
-	// Get ID from URL /api/v1/users/5
-	id, err := strconv.ParseInt(idParam, 10, 32)
-	if err != nil {
-		slog.Warn("Invalid user ID parameter format",
-			"provided_id", idParam,
-			"error", err.Error(),
-		)
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID format"})
+	usernameParam := c.Param("username")
+	if usernameParam == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
 	}
 
-	err = s.Store.DeleteUser(ctx, &store.DeleteUser{ID: domain.UserID(id)})
+	err := s.Store.DeleteUser(ctx, &store.DeleteUser{Username: usernameParam})
 	if err != nil {
-		// 3. Smell Fixed: Log the exact system error internally for debugging
 		slog.Error("Failed to delete user from database",
-			"user_id", id,
+			"username", usernameParam,
 			"error", err.Error(),
 		)
-
-		// 4. Smell Fixed: Avoid leaking raw DB errors (SQL syntax, foreign keys) to the client
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete user"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "User deleted"})
@@ -144,16 +180,9 @@ func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 // PATCH /api/v1/users/:id/password
 func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
-	idParam := c.Param("id")
-
-	// Parse the user ID from the URL parameter
-	id, err := strconv.ParseInt(idParam, 10, 32) //TODO: check userID, implement id like jdoe for John Doe instead of auto-increment int
-	if err != nil {
-		slog.Warn("Invalid user ID parameter format",
-			"provided_id", idParam,
-			"error", err.Error(),
-		)
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID format"})
+	usernameParam := c.Param("username")
+	if usernameParam == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
 	}
 
 	var req struct {
@@ -171,7 +200,7 @@ func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 	}
 
 	// Update the user's password
-	if err := s.Store.UpdateUserPassword(ctx, domain.UserID(id), string(newHash)); err != nil {
+	if err := s.Store.UpdateUserPassword(ctx, usernameParam, string(newHash)); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
 	}
 

@@ -77,6 +77,8 @@ func (s *Server) registerReferralRoutes() {
 
 	admin.Use(auth.AdminOnlyMiddleware) // Add the extra gatekeeper
 
+	// ------ USER MANAGEMENT ------
+
 	// Create a user
 	admin.POST("/users", v1Service.CreateUserHandler)
 
@@ -89,6 +91,10 @@ func (s *Server) registerReferralRoutes() {
 	// Reset a user's password
 	admin.PATCH("/users/:id/password", v1Service.ResetUserPasswordHandler)
 
+	admin.PATCH("/users/:username", v1Service.UpdateUserHandler)
+
+	// ------ REFERRAL ENTRY MANAGEMENT ------
+
 	// Batch create referral entries
 	admin.POST("/referrals/batch", v1Service.BatchCreateReferralEntriesHandler)
 
@@ -96,6 +102,8 @@ func (s *Server) registerReferralRoutes() {
 	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler)
 
 	// admin.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler) // Gotta change the URL?
+
+	// ------ TAG MANAGEMENT ------
 
 	admin.POST("/tags", v1Service.CreateReferralTagHandler) // Add a tag to the database
 

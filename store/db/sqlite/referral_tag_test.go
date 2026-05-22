@@ -11,7 +11,7 @@ func TestReferralTag_Integration(t *testing.T) {
 	// 1. Setup isolated memory DB
 	s := setupTestStore(t)
 	ctx := WithUserContext(context.Background(), &domain.UserContext{
-		ID: 1, Role: "REFTRAIL_ADMIN",
+		Username: "admin", Role: "REFTRAIL_ADMIN",
 	})
 
 	// 2. Setup: Pre-create a referral to tag

@@ -10,7 +10,6 @@ import (
 )
 
 type User struct {
-	ID            domain.UserID   `json:"-"`
 	Username      string          `json:"username"`
 	PasswordHash  string          `json:"-"`
 	Role          domain.UserRole `json:"role"`
@@ -39,28 +38,32 @@ type CreateUser struct {
 }
 
 type FindUser struct {
-	ID       *domain.UserID `json:"id"`
-	Username *string        `json:"username"`
+	Username string `json:"username"`
+
+	// Optional fields
+	Role          *domain.UserRole `json:"role,omitempty"`
+	UserFirstName *string          `json:"userFirstName,omitempty"`
+	UserLastName  *string          `json:"userLastName,omitempty"`
 }
 
 type UpdateUser struct {
-	ID            domain.UserID    `json:"id"`
-	Username      *string          `json:"username"`
-	UserFirstName *string          `json:"userFirstName"`
-	UserLastName  *string          `json:"userLastName"`
-	Password      *string          `json:"password"`
-	Role          *domain.UserRole `json:"role"`
+	CurrentUsername string           `json:"currentUsername"` // Used to find the user to update
+	UpdatedUsername *string          `json:"updatedUsername"`
+	UserFirstName   *string          `json:"userFirstName"`
+	UserLastName    *string          `json:"userLastName"`
+	Password        *string          `json:"password"`
+	Role            *domain.UserRole `json:"role"`
 }
 
 type DeleteUser struct {
-	ID domain.UserID `json:"id"`
+	Username string `json:"username"`
 }
 
 // --- THE MANAGER LOGIC ---
 
 func (s *Store) Login(ctx context.Context, req *LoginRequest) (*User, error) {
 	// 1. Find the user by username
-	user, err := s.GetUser(ctx, &FindUser{Username: &req.Username})
+	user, err := s.GetUser(ctx, &FindUser{Username: req.Username}) // req.Username is a direct value converted by implicit dereferencing
 	if err != nil || user == nil {
 		return nil, errors.New("invalid username or password")
 	}
@@ -82,7 +85,7 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 	}
 
 	if count == 0 {
-		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost) // TODO: put default password in .env file
 
 		admin := &CreateUser{
 			Username:      "admin",
@@ -127,13 +130,13 @@ func (s *Store) UpdateUser(ctx context.Context, update *UpdateUser) (*User, erro
 }
 
 func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
-	if delete.ID == 1 {
+	if delete.Username == "admin" {
 		return errors.New("cannot delete the system administrator")
 	}
 	return s.driver.DeleteUser(ctx, delete)
 }
 
-func (s *Store) UpdateUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
+func (s *Store) UpdateUserPassword(ctx context.Context, username string, newHash string) error {
 	// Relay the command to the driver (the stove)
-	return s.driver.UpdateUserPassword(ctx, userID, newHash)
+	return s.driver.UpdateUserPassword(ctx, username, newHash)
 }

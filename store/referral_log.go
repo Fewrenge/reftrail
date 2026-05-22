@@ -7,13 +7,13 @@ import (
 )
 
 type ReferralLog struct {
-	ID         domain.ReferralLogID  `json:"id"`
-	ReferralID domain.ReferralID     `json:"referralId"`
-	UserID     domain.UserID         `json:"-"`
-	OldStatus  domain.ReferralStatus `json:"oldStatus"`
-	NewStatus  domain.ReferralStatus `json:"newStatus"`
-	Note       string                `json:"note"`
-	CreatedTs  string                `json:"createdTs"`
+	ID              domain.ReferralLogID  `json:"id"`
+	ReferralID      domain.ReferralID     `json:"referralId"`
+	CreatorUsername domain.Username       `json:"-"`
+	OldStatus       domain.ReferralStatus `json:"oldStatus"`
+	NewStatus       domain.ReferralStatus `json:"newStatus"`
+	Note            string                `json:"note"`
+	CreatedTs       string                `json:"createdTs"`
 }
 
 type ReferralLogWithUser struct {
@@ -30,7 +30,7 @@ func (s *Store) CreateReferralLog(ctx context.Context, create *ReferralLog) (*Re
 		if !ok {
 			return domain.ErrUnauthorized
 		}
-		create.UserID = domain.UserID(user.ID)
+		create.CreatorUsername = domain.Username(user.Username)
 
 		// 3. Fetch the stable current status from inside the transaction
 		currentStatus, err := s.driver.GetReferralEntryStatusByID(txCtx, create.ReferralID)

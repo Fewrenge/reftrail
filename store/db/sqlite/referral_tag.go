@@ -42,11 +42,7 @@ func (d *Driver) ListReferralTags(ctx context.Context) ([]*store.ReferralTag, er
 
 func (d *Driver) ListAllLinkedReferralTags(ctx context.Context) ([]*store.LinkedReferralTagRow, error) {
 	// This joins the link table with the string names table
-	query := `
-		SELECT rt.referral_id, rt.tag_name
-		FROM referral_tag rt
-		JOIN referral_tag_definition rtd ON rt.tag_name = rtd.name
-	`
+	query := `SELECT referral_id, tag_name FROM referral_tag`
 
 	rows, err := d.conn(ctx).QueryContext(ctx, query)
 	if err != nil {

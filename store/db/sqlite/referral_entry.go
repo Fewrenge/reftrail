@@ -35,21 +35,21 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 
 	// Execute the command
 	_, err = d.conn(ctx).ExecContext(ctx, query,
-		idStr, ts, ts, int64(create.CreatorID),
+		idStr, ts, ts, string(create.CreatorUsername),
 		create.PatientLastName, create.PatientFirstName, create.PatientDOB,
 		create.PatientHealthcardNumber, create.PatientHealthcardVersionCode,
 		create.TxtCustomerID, create.IntCustomerDocID,
 		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source, create.ReferralDate,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to insert referral entry for patient %s, %s (creator_id: %d): %w",
-			create.PatientLastName, create.PatientFirstName, create.CreatorID, err)
+		return nil, fmt.Errorf("failed to insert referral entry for patient %s, %s (creator_username: %s): %w",
+			create.PatientLastName, create.PatientFirstName, create.CreatorUsername, err)
 	}
 	return &store.ReferralEntry{
 		ID:                           domain.ReferralID(idStr), // Cast to custom type
 		CreatedTs:                    ts,
 		UpdatedTs:                    ts,
-		CreatorID:                    create.CreatorID,
+		CreatorUsername:              create.CreatorUsername,
 		PatientLastName:              create.PatientLastName,
 		PatientFirstName:             create.PatientFirstName,
 		PatientDOB:                   create.PatientDOB,
@@ -140,7 +140,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		var entry store.ReferralEntry
 		// Scan matches the columns in our SELECT statusment to our Go struct
 		err := rows.Scan(
-			&entry.ID, &entry.CreatorID, &entry.CreatedTs, &entry.UpdatedTs,
+			&entry.ID, &entry.CreatorUsername, &entry.CreatedTs, &entry.UpdatedTs,
 			&entry.PatientLastName, &entry.PatientFirstName, &entry.PatientDOB,
 			&entry.PatientHealthcardNumber, &entry.PatientHealthcardVersionCode,
 			&entry.TxtCustomerID, &entry.IntCustomerDocID,

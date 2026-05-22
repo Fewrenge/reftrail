@@ -2,20 +2,19 @@ package sqlite
 
 import (
 	"context"
-	"reftrail/internal/domain"
+	"database/sql"
+	"fmt"
 	"reftrail/store"
 	"strings"
 )
 
 func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*store.User, error) {
 	query := `INSERT INTO user (username, password_hash, role, user_first_name, user_last_name) VALUES (?, ?, ?, ?, ?)`
-	result, err := d.conn(ctx).ExecContext(ctx, query, create.Username, create.Password, create.Role, create.UserFirstName, create.UserLastName)
+	_, err := d.conn(ctx).ExecContext(ctx, query, create.Username, create.Password, create.Role, create.UserFirstName, create.UserLastName)
 	if err != nil {
 		return nil, err
 	}
-	id, _ := result.LastInsertId()
 	return &store.User{
-		ID:            domain.UserID(id), // Changes
 		Username:      create.Username,
 		Role:          create.Role,
 		UserFirstName: create.UserFirstName,
@@ -33,16 +32,12 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 	var args []any
 	where := []string{"1 = 1"}
 
-	if find.ID != nil {
-		where = append(where, "id = ?")
-		args = append(args, *find.ID)
-	}
-	if find.Username != nil {
+	if find.Username != "" {
 		where = append(where, "username = ?")
-		args = append(args, *find.Username)
+		args = append(args, find.Username)
 	}
 
-	query := `SELECT id, username, password_hash, role, user_first_name, user_last_name FROM user WHERE ` + strings.Join(where, " AND ")
+	query := `SELECT username, password_hash, role, user_first_name, user_last_name FROM user WHERE ` + strings.Join(where, " AND ")
 	rows, err := d.conn(ctx).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -52,7 +47,7 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 	var users []*store.User
 	for rows.Next() {
 		var user store.User
-		if err := rows.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName); err != nil {
+		if err := rows.Scan(&user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName); err != nil {
 			return nil, err
 		}
 		users = append(users, &user)
@@ -61,20 +56,85 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 }
 
 func (d *Driver) UpdateUser(ctx context.Context, update *store.UpdateUser) (*store.User, error) {
-	// Stub for now
-	return nil, nil
+	var updates []string
+	var args []any
+
+	// Support renaming the primary key username string! (ON UPDATE CASCADE triggers automatically)
+	if update.UpdatedUsername != nil {
+		updates = append(updates, "username = ?")
+		args = append(args, *update.UpdatedUsername)
+	}
+	if update.UserFirstName != nil {
+		updates = append(updates, "user_first_name = ?")
+		args = append(args, *update.UserFirstName)
+	}
+	if update.UserLastName != nil {
+		updates = append(updates, "user_last_name = ?")
+		args = append(args, *update.UserLastName)
+	}
+	if update.Password != nil {
+		updates = append(updates, "password_hash = ?")
+		args = append(args, *update.Password)
+	}
+	if update.Role != nil {
+		updates = append(updates, "role = ?")
+		args = append(args, *update.Role)
+	}
+
+	// If no patch modifications were passed, return the unchanged user record
+	if len(updates) == 0 {
+		// return d.conn(ctx).Driver().(*Driver).GetUserByUsername(ctx, update.CurrentUsername)
+	}
+
+	// Complete the dynamic query string matching against currentUsername string
+	query := fmt.Sprintf("UPDATE user SET %s WHERE username = ?", strings.Join(updates, ", "))
+	args = append(args, update.CurrentUsername)
+
+	_, err := d.conn(ctx).ExecContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine the lookup identity handle following potential rename sequence
+	targetUsername := update.CurrentUsername
+	if update.UpdatedUsername != nil {
+		targetUsername = *update.UpdatedUsername
+	}
+
+	return d.GetUserByUsername(ctx, targetUsername)
 }
 
 func (d *Driver) DeleteUser(ctx context.Context, delete *store.DeleteUser) error {
-	// Stub for now
+	query := `DELETE FROM user WHERE username = ?`
+	result, err := d.conn(ctx).ExecContext(ctx, query, delete.Username)
+	if err != nil {
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("user not found")
+	}
 	return nil
 }
 
-func (d *Driver) UpdateUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
+func (d *Driver) UpdateUserPassword(ctx context.Context, username string, newHash string) error {
 	_, err := d.conn(ctx).ExecContext(ctx, `
 		UPDATE user 
 		SET password_hash = ? 
-		WHERE id = ?
-	`, newHash, userID)
+		WHERE username = ?
+	`, newHash, username)
 	return err
+}
+
+func (d *Driver) GetUserByUsername(ctx context.Context, username string) (*store.User, error) {
+	query := `SELECT username, password_hash, role, user_first_name, user_last_name FROM user WHERE username = ?`
+	var user store.User
+	err := d.conn(ctx).QueryRowContext(ctx, query, username).Scan(
+		&user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &user, err
 }

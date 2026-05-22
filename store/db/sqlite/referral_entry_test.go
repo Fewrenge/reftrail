@@ -35,14 +35,14 @@ func setupTestStore(t *testing.T) *store.Store {
 
 	// 2. Run schema
 	schema := `
-	CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password_hash TEXT, role TEXT, user_first_name TEXT,
+	CREATE TABLE IF NOT EXISTS user (username TEXT UNIQUE PRIMARY KEY, password_hash TEXT, role TEXT, user_first_name TEXT,
     user_last_name TEXT);
 	CREATE TABLE IF NOT EXISTS referral_entry (
-		id TEXT PRIMARY KEY, creator_id INTEGER NOT NULL, created_ts TEXT, updated_ts TEXT,
+		id TEXT PRIMARY KEY, creator_id TEXT NOT NULL, created_ts TEXT, updated_ts TEXT,
 		patient_last_name TEXT, patient_first_name TEXT, patient_dob TEXT, patient_healthcard_number TEXT, patient_healthcard_version_code TEXT,
 		txt_customer_id TEXT, int_customer_doc_id INTEGER,
 		referring_physician TEXT, triage_note TEXT, urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')), status TEXT, source TEXT, referral_date TEXT,
-		FOREIGN KEY (creator_id) REFERENCES user(id)
+		FOREIGN KEY (creator_id) REFERENCES user(username)
 	);
 	CREATE TABLE IF NOT EXISTS referral_complaint (
 		id INTEGER PRIMARY KEY AUTOINCREMENT, referral_id TEXT, body_part TEXT, side TEXT, details TEXT,
@@ -62,13 +62,13 @@ func setupTestStore(t *testing.T) *store.Store {
 	CREATE TABLE IF NOT EXISTS referral_log (
     id TEXT PRIMARY KEY,
     referral_id TEXT NOT NULL,
-    user_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
     old_status TEXT,
     new_status TEXT,
     note TEXT,
     created_ts TEXT NOT NULL,
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES user(id)
+    FOREIGN KEY (user_id) REFERENCES user(username)
 );`
 
 	if _, err := db.Exec(schema); err != nil {
@@ -102,7 +102,7 @@ func TestCreateReferralEntry_Integration(t *testing.T) {
 		baseCtx := context.Background()
 
 		// Mock the user context so the Store doesn't error out
-		mockUser := &domain.UserContext{ID: 1, Role: "REFTRAIL_ADMIN"}
+		mockUser := &domain.UserContext{Username: "admin", Role: "REFTRAIL_ADMIN"}
 		ctx := WithUserContext(baseCtx, mockUser)
 
 		// 3. Run the store method using the context we just built
@@ -122,7 +122,7 @@ func TestCreateReferralEntry_Integration(t *testing.T) {
 
 func TestBatchCreateReferralEntries_Integration(t *testing.T) {
 	s := setupTestStore(t)
-	ctx := WithUserContext(context.Background(), &domain.UserContext{ID: 1, Role: "REFTRAIL_ADMIN"})
+	ctx := WithUserContext(context.Background(), &domain.UserContext{Username: "admin", Role: "REFTRAIL_ADMIN"})
 
 	t.Run("Should successfully import multiple entries", func(t *testing.T) {
 		batch := &store.BatchCreateReferralEntries{

@@ -34,8 +34,8 @@ func JWTMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		userCtx := &domain.UserContext{
-			ID:   claims.ID,
-			Role: claims.Role,
+			Username: claims.Username,
+			Role:     claims.Role,
 		}
 
 		// 4. Pin the UserContext to the context memory
