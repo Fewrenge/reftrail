@@ -34,9 +34,10 @@ type ReferralEntry struct {
 	TriageNote         string `json:"triageNote"`
 
 	// 5. Workflow & Urgency
-	Urgency domain.ReferralUrgency `json:"urgency"` // Elective, Urgent, ASAP
-	Status  domain.ReferralStatus  `json:"status"`  // Ready to book, 1st call, etc.
-	Source  domain.ReferralSource  `json:"source"`
+	Urgency      domain.ReferralUrgency `json:"urgency"` // Elective, Urgent, ASAP
+	Status       domain.ReferralStatus  `json:"status"`  // Ready to book, 1st call, etc.
+	Source       domain.ReferralSource  `json:"source"`
+	ReferralDate string                 `json:"referralDate"`
 
 	// Appointment Info (If status is "Booked")
 	ApptDateAndTime string `json:"apptDateAndTime"`
@@ -70,10 +71,10 @@ type CreateReferralEntry struct {
 	TriageNote         string              `json:"triageNote"`
 
 	// Status
-	Urgency domain.ReferralUrgency `json:"urgency"`
-	Status  domain.ReferralStatus  `json:"status"` // Usually defaults to "READY_TO_BOOK"
-	Source  domain.ReferralSource  `json:"source"`
-
+	Urgency      domain.ReferralUrgency `json:"urgency"`
+	Status       domain.ReferralStatus  `json:"status"` // Usually defaults to "READY_TO_BOOK"
+	Source       domain.ReferralSource  `json:"source"`
+	ReferralDate string                 `json:"referralDate"`
 	// Accountability
 	CreatorID domain.UserID `json:"creatorId"`
 }

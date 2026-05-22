@@ -145,7 +145,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 	}
 
 	// Fail-fast verification check for required schema columns
-	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency"}
+	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency", "referral date"}
 	for _, field := range requiredFields {
 		if _, exists := headerMap[field]; !exists {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing column header '" + field + "'"})

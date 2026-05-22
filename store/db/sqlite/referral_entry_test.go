@@ -35,12 +35,13 @@ func setupTestStore(t *testing.T) *store.Store {
 
 	// 2. Run schema
 	schema := `
-	CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password_hash TEXT, role TEXT);
+	CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password_hash TEXT, role TEXT, user_first_name TEXT,
+    user_last_name TEXT);
 	CREATE TABLE IF NOT EXISTS referral_entry (
 		id TEXT PRIMARY KEY, creator_id INTEGER NOT NULL, created_ts TEXT, updated_ts TEXT,
 		patient_last_name TEXT, patient_first_name TEXT, patient_dob TEXT, patient_healthcard_number TEXT, patient_healthcard_version_code TEXT,
 		txt_customer_id TEXT, int_customer_doc_id INTEGER,
-		referring_physician TEXT, triage_note TEXT, urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')), status TEXT, source TEXT,
+		referring_physician TEXT, triage_note TEXT, urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')), status TEXT, source TEXT, referral_date TEXT,
 		FOREIGN KEY (creator_id) REFERENCES user(id)
 	);
 	CREATE TABLE IF NOT EXISTS referral_complaint (
@@ -58,7 +59,18 @@ func setupTestStore(t *testing.T) *store.Store {
     PRIMARY KEY (referral_id, tag_id),
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES referral_tag_definition(id) ON DELETE CASCADE
-	);`
+	);
+	CREATE TABLE IF NOT EXISTS referral_log (
+    id TEXT PRIMARY KEY,
+    referral_id TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    old_status TEXT,
+    new_status TEXT,
+    note TEXT,
+    created_ts TEXT NOT NULL,
+    FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id)
+);`
 
 	if _, err := db.Exec(schema); err != nil {
 		t.Fatalf("failed to create schema: %v", err)
@@ -84,7 +96,8 @@ func TestCreateReferralEntry_Integration(t *testing.T) {
 			Complaints: []store.ReferralComplaint{
 				{BodyPart: "KNEE", Side: "LEFT"},
 			},
-			Urgency: "Elective",
+			Urgency:      "Elective",
+			ReferralDate: "2023-10-01",
 		}
 
 		baseCtx := context.Background()
@@ -146,6 +159,7 @@ func TestBatchCreateReferralEntries_Integration(t *testing.T) {
 					PatientLastName:  "I Should Be",
 					PatientFirstName: "Rolled Back",
 					Urgency:          "Elective", // Valid
+					ReferralDate:     "2023-10-01",
 				},
 				{
 					PatientLastName:  "I Am",
