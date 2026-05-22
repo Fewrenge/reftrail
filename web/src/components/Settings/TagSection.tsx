@@ -4,10 +4,8 @@ import { Button } from "@/components/ui/button";
 import SettingTable from "@/components/Settings/SettingTable"; // Ensure path matches your project structure
 
 interface TagDefinition {
-  id: number; // Internal identifier for table tracking
   name: string;
   description: string;
-  createdTs: string;
 }
 
 export default function TagSection() {
@@ -84,11 +82,11 @@ export default function TagSection() {
     }
   };
 
-  const handleDeleteTag = async (id: number, name: string) => {
+  const handleDeleteTag = async (name: string) => {
     if (!window.confirm(`Are you sure you want to permanently delete the tag "${name}"?`)) return;
 
     try {
-      const res = await fetch(`/api/v1/tags/${id}`, {
+      const res = await fetch(`/api/v1/tags/${name}`, {
         method: "DELETE"
       });
 
@@ -134,7 +132,7 @@ export default function TagSection() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => handleDeleteTag(row.id, row.name)}
+          onClick={() => handleDeleteTag(row.name)}
           className="text-slate-400 hover:text-red-600 rounded-lg h-8 w-8 p-0"
         >
           <Trash2Icon size={16} />
@@ -221,7 +219,7 @@ export default function TagSection() {
             data={tags}
             emptyMessage="No global tag identifiers initialized yet."
             className="border-slate-200 bg-transparent shadow-none"
-            getRowKey={(row) => row.id.toString()}
+            getRowKey={(row) => row.name}
           />
         )}
       </div>

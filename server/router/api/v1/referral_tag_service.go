@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"reftrail/internal/domain"
 	"reftrail/store"
+	"strings"
 
 	echo "github.com/labstack/echo/v5"
 )
@@ -62,7 +63,8 @@ func (s *APIV1Service) AssignTagHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Malformed tag name parameter"})
 	}
 
-	if err := s.Store.AssignTagToReferral(c.Request().Context(), refID, tagName); err != nil {
+	cleanTagName := strings.ToUpper(strings.TrimSpace(tagName))
+	if err := s.Store.AssignTagToReferral(c.Request().Context(), refID, cleanTagName); err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 	return c.NoContent(http.StatusCreated)
@@ -82,7 +84,8 @@ func (s *APIV1Service) RemoveTagHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing tag name parameter"})
 	}
 
-	if err := s.Store.RemoveTagFromReferral(c.Request().Context(), refID, tagName); err != nil {
+	cleanTagName := strings.ToUpper(strings.TrimSpace(tagName))
+	if err := s.Store.RemoveTagFromReferral(c.Request().Context(), refID, cleanTagName); err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 	return c.NoContent(http.StatusNoContent)

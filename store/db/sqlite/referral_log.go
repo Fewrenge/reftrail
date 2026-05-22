@@ -37,7 +37,7 @@ func (d *Driver) ListReferralLogs(ctx context.Context, referralID domain.Referra
 	query := `
 		SELECT l.id, l.referral_id, u.username, u.user_first_name, u.user_last_name, l.old_status, l.new_status, l.note, l.created_ts 
 		FROM referral_log l
-		INNER JOIN user u ON l.user_id = u.id
+		INNER JOIN user u ON l.user_id = u.username
 		WHERE l.referral_id = ? 
 		ORDER BY l.created_ts DESC`
 

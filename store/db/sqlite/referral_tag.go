@@ -91,7 +91,7 @@ func (d *Driver) RemoveTagFromReferral(ctx context.Context, referralID domain.Re
 	query := `
 		DELETE FROM referral_tag 
 		WHERE referral_id = ? 
-		AND tag_name = (SELECT name FROM referral_tag_definition WHERE name = ?)
+		AND tag_name = ?
 	`
 	result, err := d.conn(ctx).ExecContext(ctx, query, referralID, tagName)
 	if err != nil {

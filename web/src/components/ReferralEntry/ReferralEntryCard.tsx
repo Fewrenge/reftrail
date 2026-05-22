@@ -301,29 +301,43 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             </div>
           </div>
         </div>
+
+
+
         {/* TAG SECTION: Tags Row */}
         <div className="flex flex-wrap items-center gap-1.5 mb-5 mt-2">
-          {/* Render active capsules attached to the card */}
-          {entry.tags && entry.tags.map((tag: any, index: number) => (
-            <span
-              key={`${tag.id || index}`}
-              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/60 uppercase tracking-wider shadow-2xs hover:bg-slate-200 transition-colors"
-            >
-              <span>{tag.name || tag}</span>
+          {entry.tags && entry.tags.map((tag: any, index: number) => {
 
-              {/* Little Cross to remove tags (Only renders for Admins) */}
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTag(tag)}
-                  className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer rounded-full outline-none"
-                  disabled={isLoading}
-                >
-                  <XCircleIcon size={12} className="text-black" />
-                </button>
-              )}
-            </span>
-          ))}
+            // 1. Safely extract the string text regardless of how the backend shapes it
+            const tagNameStr = typeof tag === 'object' && tag !== null
+              ? (tag.name || tag.tagName || "")
+              : String(tag);
+
+            // 2. Ignore empty items safely
+            if (!tagNameStr) return null;
+
+            return (
+              <span
+                // 3. FIX: Combine the string text with the array index to guarantee 100% uniqueness
+                key={`tag-${tagNameStr}-${index}`}
+                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/60 uppercase tracking-wider shadow-2xs hover:bg-slate-200 transition-colors"
+              >
+                <span>{tagNameStr}</span>
+
+                {/* Little Cross to remove tags (Only renders for Admins) */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tagNameStr)}
+                    className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer rounded-full outline-none"
+                    disabled={isLoading}
+                  >
+                    <XCircleIcon size={12} fill="currentColor" className="text-white" />
+                  </button>
+                )}
+              </span>
+            );
+          })}
 
           {/* Administrative Dropdown Selection Tool to assign fresh tags */}
           {isAdmin && (
@@ -347,12 +361,16 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                   <div className="text-xs text-slate-400 p-2 text-center">No tags left</div>
                 ) : (
                   allGlobalTags
-                    // Filter out tags that are already attached to this specific entry card record
-                    .filter(gt => !entry.tags?.some((t: any) => (t.id === gt.id || t === gt.name)))
-                    .map((globalTag) => (
+                    // Safely filter out tags already applied to this specific card
+                    .filter(gt => !entry.tags?.some((t: any) => {
+                      const appliedName = typeof t === 'object' && t !== null ? (t.name || t.tagName) : String(t);
+                      return appliedName === gt.name;
+                    }))
+                    .map((globalTag, dropdownIndex) => (
                       <DropdownMenuItem
-                        key={globalTag.id}
-                        onSelect={() => handleAssignTag(globalTag.id)}
+                        // FIX: Guarantee uniqueness for the dropdown list elements too
+                        key={`available-tag-${globalTag.name}-${dropdownIndex}`}
+                        onSelect={() => handleAssignTag(globalTag.name)}
                         className="text-xs font-semibold flex items-center px-3 py-2 cursor-pointer rounded-lg transition-colors"
                       >
                         {globalTag.name}
@@ -363,6 +381,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             </DropdownMenu>
           )}
         </div>
+
 
 
         {/* BOTTOM SECTION: Triage Note */}
