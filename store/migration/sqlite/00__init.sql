@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS user (
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'BOOKING_TEAM' check (role IN ('BOOKING_TEAM', 'REFTRAIL_ADMIN')),
     user_first_name TEXT,
-    user_last_name TEXT
+    user_last_name TEXT,
+    is_archived BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- 2. Referral Table (Requirement #1 through #10)

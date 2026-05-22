@@ -88,6 +88,10 @@ func (s *Server) registerReferralRoutes() {
 	// Delete a user
 	admin.DELETE("/users/:username", v1Service.DeleteUserHandler)
 
+	// Archive a user (soft delete)
+	// TODO: kick the user out if they're currently logged in? (Might require some sort of token blacklist or short-lived tokens with refresh tokens)
+	admin.PUT("/users/:username/archive", v1Service.ArchiveUserHandler)
+
 	// Reset a user's password
 	admin.PATCH("/users/:username/password", v1Service.ResetUserPasswordHandler)
 

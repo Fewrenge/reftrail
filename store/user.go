@@ -15,6 +15,7 @@ type User struct {
 	Role          domain.UserRole `json:"role"`
 	UserFirstName string          `json:"userFirstName"`
 	UserLastName  string          `json:"userLastName"`
+	IsArchived    bool            `json:"isArchived"`
 }
 
 type UserPublicInfo struct {
@@ -65,14 +66,20 @@ func (s *Store) Login(ctx context.Context, req *LoginRequest) (*User, error) {
 	// 1. Find the user by username
 	user, err := s.GetUser(ctx, &FindUser{Username: req.Username}) // req.Username is a direct value converted by implicit dereferencing
 	if err != nil || user == nil {
-		return nil, errors.New("invalid username or password")
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	// 2. Compare passwords
 	// Integrated the method of comparing Hash
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
 	if err != nil {
-		return nil, errors.New("invalid username or password")
+		return nil, domain.ErrInvalidCredentials
+	}
+
+	// 3. Check if the user is archived
+	// Do this after comparing passwords to avoid giving away information about which usernames are valid
+	if user.IsArchived {
+		return nil, domain.ErrUserArchived
 	}
 
 	return user, nil
@@ -139,4 +146,8 @@ func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
 func (s *Store) UpdateUserPassword(ctx context.Context, username domain.Username, newHash string) error {
 	// Relay the command to the driver (the stove)
 	return s.driver.UpdateUserPassword(ctx, username, newHash)
+}
+
+func (s *Store) ArchiveUser(ctx context.Context, username domain.Username) error {
+	return s.driver.ArchiveUser(ctx, username)
 }

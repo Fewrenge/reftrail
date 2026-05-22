@@ -216,3 +216,31 @@ func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "User password reset successfully"})
 }
+
+// PUT /api/v1/users/:username/archive
+func (s *APIV1Service) ArchiveUserHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+	usernameParam := c.Param("username")
+
+	// Input Validation
+	if usernameParam == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
+	}
+
+	username := domain.Username(usernameParam)
+
+	// Security Check: Protect master root account
+	// TODO: implement a more flexible role-based access control system and use that here instead of hardcoding "admin"
+	if usernameParam == "admin" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Cannot archive the master admin account"})
+	}
+
+	if err := s.Store.ArchiveUser(ctx, username); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to archive user"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message":  "User archived successfully",
+		"username": usernameParam,
+	})
+}

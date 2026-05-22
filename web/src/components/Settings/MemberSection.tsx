@@ -76,8 +76,6 @@ const MemberSection = () => {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        // Add Authorization header here if your Echo admin group uses JWT middleware:
-        //"Authorization": `Bearer ${localStorage.getItem("auth_token")}`
       },
     });
 
@@ -93,6 +91,32 @@ const MemberSection = () => {
     alert("A network error occurred while trying to delete the user.");
   }
 };
+
+const handleArchiveUser = async (username: string) => {
+  const confirmArchive = window.confirm(
+    `Are you sure you want to archive user "${username}"? They will lose all system login access.`
+  );
+  if (!confirmArchive) return;
+
+  try {
+    const response = await fetch(`/api/v1/users/${username}/archive`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (response.ok) {
+      // Instantly filter out the archived user from your UI grid view array
+      setMembers((prev) => prev.filter((member) => member.username !== username));
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      alert(errorData.error || "Server failed to archive user.");
+    }
+  } catch (error) {
+    console.error("Archive transaction error:", error);
+    alert("A network error occurred while processing the request.");
+  }
+};
+
 
 
   useEffect(() => {
@@ -149,6 +173,17 @@ const MemberSection = () => {
         >
           <span className="text-xs font-bold">Edit</span>
         </Button>
+              {/* ARCHIVE BUTTON */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => handleArchiveUser(row.username)} // Points to our new archive handler
+        className="text-slate-400 hover:text-amber-600 rounded-lg h-8 w-8 p-0"
+        // Prevent system admins from archiving themselves or the core system admin row
+        disabled={row.username === "admin"}
+      >
+        <span className="text-xs font-bold text-amber-600">Arch</span>
+      </Button>
 
         {/* DELETE BUTTON */}
         <Button

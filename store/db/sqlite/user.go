@@ -10,8 +10,8 @@ import (
 )
 
 func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*store.User, error) {
-	query := `INSERT INTO user (username, password_hash, role, user_first_name, user_last_name) VALUES (?, ?, ?, ?, ?)`
-	_, err := d.conn(ctx).ExecContext(ctx, query, create.Username, create.Password, create.Role, create.UserFirstName, create.UserLastName)
+	query := `INSERT INTO user (username, password_hash, role, user_first_name, user_last_name, is_archived) VALUES (?, ?, ?, ?, ?, ?)`
+	_, err := d.conn(ctx).ExecContext(ctx, query, create.Username, create.Password, create.Role, create.UserFirstName, create.UserLastName, false)
 	if err != nil {
 		return nil, err
 	}
@@ -20,6 +20,7 @@ func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*sto
 		Role:          create.Role,
 		UserFirstName: create.UserFirstName,
 		UserLastName:  create.UserLastName,
+		IsArchived:    false,
 	}, nil
 }
 
@@ -38,7 +39,7 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 		args = append(args, find.Username)
 	}
 
-	query := `SELECT username, password_hash, role, user_first_name, user_last_name FROM user WHERE ` + strings.Join(where, " AND ")
+	query := `SELECT username, password_hash, role, user_first_name, user_last_name, is_archived FROM user WHERE ` + strings.Join(where, " AND ")
 	rows, err := d.conn(ctx).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -48,7 +49,7 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 	var users []*store.User
 	for rows.Next() {
 		var user store.User
-		if err := rows.Scan(&user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName); err != nil {
+		if err := rows.Scan(&user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName, &user.IsArchived); err != nil {
 			return nil, err
 		}
 		users = append(users, &user)
@@ -129,13 +130,29 @@ func (d *Driver) UpdateUserPassword(ctx context.Context, username domain.Usernam
 }
 
 func (d *Driver) GetUserByUsername(ctx context.Context, username domain.Username) (*store.User, error) {
-	query := `SELECT username, password_hash, role, user_first_name, user_last_name FROM user WHERE username = ?`
+	query := `SELECT username, password_hash, role, user_first_name, user_last_name, is_archived FROM user WHERE username = ?`
 	var user store.User
 	err := d.conn(ctx).QueryRowContext(ctx, query, username).Scan(
-		&user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName,
+		&user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName, &user.IsArchived,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return &user, err
 }
+
+func (d *Driver) ArchiveUser(ctx context.Context, username domain.Username) error {
+	query := `UPDATE user SET is_archived = 1 WHERE username = ?`
+	result, err := d.conn(ctx).ExecContext(ctx, query, username)
+	if err != nil {
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+// PLAN: UnarchiveUser method if we want to support that in the future
