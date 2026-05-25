@@ -41,7 +41,7 @@ func (s *Server) registerReferralRoutes() {
 	// PROTECTED (Requires JWT)
 	protected := s.Engine.Group("/api/v1")
 
-	protected.Use(auth.JWTMiddleware)
+	protected.Use(auth.JWTMiddleware(s.Store))
 
 	// Get all referral entries (with pagination, filtering, etc.)
 	protected.GET("/referrals", v1Service.ListReferralEntriesHandler)

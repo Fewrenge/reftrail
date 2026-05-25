@@ -124,17 +124,6 @@ func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
 	}
 
-	// Hash password automatically if the administrator provided a fresh value
-	/*
-		if req.Password != nil && *req.Password != "" {
-			hashed, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
-			if err != nil {
-				return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
-			}
-			strHash := string(hashed)
-			req.Password = &strHash
-		}*/
-
 	updatePayload := &store.UpdateUserInfo{
 		CurrentUsername: username,
 		UpdatedUsername: req.UpdatedUsername,
