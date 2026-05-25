@@ -10,6 +10,8 @@ import (
 	echo "github.com/labstack/echo/v5"
 )
 
+// PLAN: refactor the whole thing to kick the user out the moment the user gets archived or deleted. Short-lived access token & long-lived refresh token.
+// Configure front end to catch 401 errors.
 func JWTMiddleware(s *store.Store) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
