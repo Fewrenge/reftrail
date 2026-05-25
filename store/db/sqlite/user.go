@@ -99,17 +99,11 @@ func (d *Driver) UpdateUserInfo(ctx context.Context, update *store.UpdateUserInf
 }
 
 func (d *Driver) DeleteUser(ctx context.Context, delete *store.DeleteUser) error {
-	query := `DELETE FROM user WHERE username = ?`
-	result, err := d.conn(ctx).ExecContext(ctx, query, delete.Username)
-	if err != nil {
-		return err
-	}
+	query := "DELETE FROM user WHERE username = ?"
 
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return fmt.Errorf("user not found")
-	}
-	return nil
+	// Convert TargetUser domain type to string for SQLite execution
+	_, err := d.conn(ctx).ExecContext(ctx, query, string(delete.TargetUser))
+	return err
 }
 
 func (d *Driver) UpdateUserPassword(ctx context.Context, username domain.Username, newHash string) error {
