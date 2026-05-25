@@ -52,8 +52,6 @@ type UpdateUserInfo struct {
 	UpdatedUsername *domain.Username `json:"updatedUsername"`
 	UserFirstName   *string          `json:"userFirstName"`
 	UserLastName    *string          `json:"userLastName"`
-	// Password        *string          `json:"password"`
-	// Role            *domain.UserRole `json:"role"`
 }
 
 type DeleteUser struct {
@@ -184,6 +182,33 @@ func (s *Store) ResetUserPassword(ctx context.Context, actingAdmin, targetUser d
 	return s.driver.UpdateUserPassword(ctx, targetUser, string(newHash))
 }
 
-func (s *Store) ArchiveUser(ctx context.Context, username domain.Username) error {
-	return s.driver.ArchiveUser(ctx, username)
+func (s *Store) ArchiveUser(ctx context.Context, actingAdmin, targetUser domain.Username) error {
+	// Admin cannot archive themselves
+	if actingAdmin == targetUser {
+		return domain.ErrCannotArchiveSelf
+	}
+
+	// Fetch target user to check their role status
+	user, err := s.GetUser(ctx, &FindUser{Username: targetUser})
+	if err != nil {
+		return domain.ErrUserNotFound
+	}
+
+	// If target is an admin, ensure they aren't the last active one
+	if user.Role == domain.RoleReftrailAdmin {
+		activeAdminCount, err := s.CountActiveAdmins(ctx)
+		if err != nil {
+			return err
+		}
+		if activeAdminCount <= 1 {
+			return domain.ErrLastAdminLockout
+		}
+	}
+
+	// Delegate to your clean driver layer
+	return s.driver.ArchiveUser(ctx, targetUser)
+}
+
+func (s *Store) CountActiveAdmins(ctx context.Context) (int, error) {
+	return s.driver.CountActiveAdmins(ctx)
 }

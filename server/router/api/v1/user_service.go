@@ -224,23 +224,27 @@ func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 // PUT /api/v1/users/:username/archive
 func (s *APIV1Service) ArchiveUserHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
-	usernameParam := c.Param("username")
 
-	// Input Validation
+	userCtx, ok := domain.GetUserContext(ctx)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
+	}
+
+	usernameParam := c.Param("username")
 	if usernameParam == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
 	}
 
-	username := domain.Username(usernameParam)
-
-	// Security Check: Protect master root account
-	// TODO: implement a more flexible role-based access control system and use that here instead of hardcoding "admin"
-	if usernameParam == "admin" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Cannot archive the master admin account"})
-	}
-
-	if err := s.Store.ArchiveUser(ctx, username); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to archive user"})
+	err := s.Store.ArchiveUser(ctx, userCtx.Username, domain.Username(usernameParam))
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrCannotArchiveSelf), errors.Is(err, domain.ErrLastAdminLockout):
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		case errors.Is(err, domain.ErrUserNotFound):
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+		default:
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to archive user"})
+		}
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{

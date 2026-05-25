@@ -74,15 +74,6 @@ func (d *Driver) UpdateUserInfo(ctx context.Context, update *store.UpdateUserInf
 		updates = append(updates, "user_last_name = ?")
 		args = append(args, *update.UserLastName)
 	}
-	/*
-		if update.Password != nil {
-			updates = append(updates, "password_hash = ?")
-			args = append(args, *update.Password)
-		}
-		if update.Role != nil {
-			updates = append(updates, "role = ?")
-			args = append(args, *update.Role)
-		}*/
 
 	// If no patch modifications were passed, return the unchanged user record
 	if len(updates) == 0 {
@@ -151,9 +142,27 @@ func (d *Driver) ArchiveUser(ctx context.Context, username domain.Username) erro
 
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		return fmt.Errorf("user not found")
+		return err
 	}
 	return nil
 }
 
 // PLAN: UnarchiveUser method if we want to support that in the future
+
+// CountActiveAdmins returns the number of active, non-archived administrators in SQLite.
+func (d *Driver) CountActiveAdmins(ctx context.Context) (int, error) {
+	var count int
+
+	query := `
+		SELECT COUNT(*) 
+		FROM user 
+		WHERE role = 'REFTRAIL_ADMIN' AND is_archived = 0
+	`
+
+	err := d.conn(ctx).QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

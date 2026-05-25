@@ -14,4 +14,6 @@ var (
 	ErrUserNotFound          = errors.New("user not found")
 	ErrSelfResetBlocked      = errors.New("admins cannot reset their own password via override")
 	ErrPasswordMismatch      = errors.New("incorrect current password")
+	ErrCannotArchiveSelf     = errors.New("you cannot archive your own account")
+	ErrLastAdminLockout      = errors.New("cannot demote, archive, or delete the only remaining active admin")
 )
