@@ -47,13 +47,13 @@ type FindUser struct {
 	UserLastName  *string          `json:"userLastName,omitempty"`
 }
 
-type UpdateUser struct {
+type UpdateUserInfo struct {
 	CurrentUsername domain.Username  `json:"currentUsername"` // Used to find the user to update
 	UpdatedUsername *domain.Username `json:"updatedUsername"`
 	UserFirstName   *string          `json:"userFirstName"`
 	UserLastName    *string          `json:"userLastName"`
-	Password        *string          `json:"password"`
-	Role            *domain.UserRole `json:"role"`
+	// Password        *string          `json:"password"`
+	// Role            *domain.UserRole `json:"role"`
 }
 
 type DeleteUser struct {
@@ -132,8 +132,8 @@ func (s *Store) GetUser(ctx context.Context, find *FindUser) (*User, error) {
 	return list[0], nil
 }
 
-func (s *Store) UpdateUser(ctx context.Context, update *UpdateUser) (*User, error) {
-	return s.driver.UpdateUser(ctx, update)
+func (s *Store) UpdateUserInfo(ctx context.Context, update *UpdateUserInfo) (*User, error) {
+	return s.driver.UpdateUserInfo(ctx, update)
 }
 
 func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {

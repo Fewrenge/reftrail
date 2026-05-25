@@ -95,7 +95,7 @@ func (s *Server) registerReferralRoutes() {
 	// Reset a user's password
 	admin.PATCH("/users/:username/password", v1Service.ResetUserPasswordHandler)
 
-	// Update a user's info
+	// Update a user's info (Username, first name, last name)
 	admin.PATCH("/users/:username", v1Service.UpdateUserHandler)
 
 	// ------ REFERRAL ENTRY MANAGEMENT ------

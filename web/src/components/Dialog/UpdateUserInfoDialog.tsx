@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Loader2Icon } from "lucide-react";
-import { ROLES } from "@/helpers/constants";
+//import { ROLES } from "@/helpers/constants";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -11,25 +11,25 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 
-type RoleType = typeof ROLES[keyof typeof ROLES];
+//type RoleType = typeof ROLES[keyof typeof ROLES];
 
-interface UpdateUserDialogProps {
+interface UpdateUserInfoDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     user: any;
     onSuccess: (updatedUser: any) => void;
 }
 
-const UpdateUserDialog = ({ open, onOpenChange, user, onSuccess }: UpdateUserDialogProps) => {
+const UpdateUserInfoDialog = ({ open, onOpenChange, user, onSuccess }: UpdateUserInfoDialogProps) => {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState<{
         userFirstName: string;
         userLastName: string;
-        role: RoleType; // <-- This lets it accept only valid role values
+        //role: RoleType; // <-- This lets it accept only valid role values
     }>({
         userFirstName: "",
         userLastName: "",
-        role: ROLES.BOOKING_TEAM,
+        //role: ROLES.BOOKING_TEAM,
     });
 
     // Sync form data whenever a new user row is selected
@@ -38,7 +38,7 @@ const UpdateUserDialog = ({ open, onOpenChange, user, onSuccess }: UpdateUserDia
             setFormData({
                 userFirstName: user.userFirstName || "",
                 userLastName: user.userLastName || "",
-                role: typeof user.role === "object" ? user.role?.name : user.role || ROLES.BOOKING_TEAM,
+                //role: typeof user.role === "object" ? user.role?.name : user.role || ROLES.BOOKING_TEAM,
             });
         }
     }, [user]);
@@ -108,29 +108,10 @@ const UpdateUserDialog = ({ open, onOpenChange, user, onSuccess }: UpdateUserDia
                         />
                     </div>
 
-                    {/* FIELD 3: ROLE DROPDOWN */}
-                    <div className="space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">System Permission Role</p>
-                        <select
-                            value={formData.role}
-                            onChange={(e) => {
-                                const value = e.target.value as RoleType;
-                                setFormData((p) => ({
-                                    userFirstName: p.userFirstName,
-                                    userLastName: p.userLastName,
-                                    role: value, // Preserves the strict union literal type cleanly
-                                }));
-                            }}
 
-                            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                            {Object.values(ROLES).map((roleValue) => (
-                                <option key={roleValue} value={roleValue}>
-                                    {roleValue.replace(/_/g, " ")}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                
+
+
                 </div>
 
                 <DialogFooter>
@@ -145,4 +126,4 @@ const UpdateUserDialog = ({ open, onOpenChange, user, onSuccess }: UpdateUserDia
     );
 };
 
-export default UpdateUserDialog;
+export default UpdateUserInfoDialog;

@@ -14,7 +14,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
-import UpdateUserDialog from "@/components/Dialog/UpdateUserDialog";
+import UpdateUserInfoDialog from "@/components/Dialog/UpdateUserInfoDialog";
 
 interface Member {
   username: string;
@@ -41,12 +41,12 @@ const MemberSection = () => {
     userLastName: '',
   });
   const [submittingCreateUser, setSubmittingCreateUser] = useState(false);
-  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
+  const [isUpdateUserInfoDialogOpen, setIsUpdateUserInfoDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<Member | null>(null);
 
   const handleOpenEditModal = (user: Member) => {
     setEditingUser(user);
-    setIsEditUserDialogOpen(true);
+    setIsUpdateUserInfoDialogOpen(true);
   };
 
 
@@ -322,9 +322,9 @@ const MemberSection = () => {
         </div>
       </SettingSection>
 
-      <UpdateUserDialog
-        open={isEditUserDialogOpen}
-        onOpenChange={setIsEditUserDialogOpen}
+      <UpdateUserInfoDialog
+        open={isUpdateUserInfoDialogOpen}
+        onOpenChange={setIsUpdateUserInfoDialogOpen}
         user={editingUser}
         onSuccess={(updatedUser) => {
           // Automatically injects backend updates directly back into your screen grid row state

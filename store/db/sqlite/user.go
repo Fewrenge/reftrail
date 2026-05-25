@@ -57,7 +57,7 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 	return users, nil
 }
 
-func (d *Driver) UpdateUser(ctx context.Context, update *store.UpdateUser) (*store.User, error) {
+func (d *Driver) UpdateUserInfo(ctx context.Context, update *store.UpdateUserInfo) (*store.User, error) {
 	var updates []string
 	var args []any
 
@@ -74,14 +74,15 @@ func (d *Driver) UpdateUser(ctx context.Context, update *store.UpdateUser) (*sto
 		updates = append(updates, "user_last_name = ?")
 		args = append(args, *update.UserLastName)
 	}
-	if update.Password != nil {
-		updates = append(updates, "password_hash = ?")
-		args = append(args, *update.Password)
-	}
-	if update.Role != nil {
-		updates = append(updates, "role = ?")
-		args = append(args, *update.Role)
-	}
+	/*
+		if update.Password != nil {
+			updates = append(updates, "password_hash = ?")
+			args = append(args, *update.Password)
+		}
+		if update.Role != nil {
+			updates = append(updates, "role = ?")
+			args = append(args, *update.Role)
+		}*/
 
 	// If no patch modifications were passed, return the unchanged user record
 	if len(updates) == 0 {

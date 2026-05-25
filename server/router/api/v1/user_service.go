@@ -124,8 +124,8 @@ func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
 		UpdatedUsername *domain.Username `json:"updatedUsername"`
 		UserFirstName   *string          `json:"userFirstName"`
 		UserLastName    *string          `json:"userLastName"`
-		Password        *string          `json:"password"`
-		Role            *domain.UserRole `json:"role"`
+		// Password        *string          `json:"password"`
+		// Role            *domain.UserRole `json:"role"`
 	}
 
 	if err := c.Bind(&req); err != nil {
@@ -133,25 +133,26 @@ func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
 	}
 
 	// Hash password automatically if the administrator provided a fresh value
-	if req.Password != nil && *req.Password != "" {
-		hashed, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
-		}
-		strHash := string(hashed)
-		req.Password = &strHash
-	}
+	/*
+		if req.Password != nil && *req.Password != "" {
+			hashed, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
+			}
+			strHash := string(hashed)
+			req.Password = &strHash
+		}*/
 
-	updatePayload := &store.UpdateUser{
+	updatePayload := &store.UpdateUserInfo{
 		CurrentUsername: username,
 		UpdatedUsername: req.UpdatedUsername,
 		UserFirstName:   req.UserFirstName,
 		UserLastName:    req.UserLastName,
-		Password:        req.Password,
-		Role:            req.Role,
+		// Password:        req.Password,
+		// Role:            req.Role,
 	}
 
-	updatedUser, err := s.Store.UpdateUser(ctx, updatePayload)
+	updatedUser, err := s.Store.UpdateUserInfo(ctx, updatePayload)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}

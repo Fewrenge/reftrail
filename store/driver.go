@@ -31,8 +31,8 @@ type Driver interface {
 	CreateUser(ctx context.Context, create *CreateUser) (*User, error)
 	CountUsers(ctx context.Context) (int, error)
 	ListUsers(ctx context.Context, find *FindUser) ([]*User, error)
-	UpdateUser(ctx context.Context, update *UpdateUser) (*User, error)
 	DeleteUser(ctx context.Context, delete *DeleteUser) error
+	UpdateUserInfo(ctx context.Context, update *UpdateUserInfo) (*User, error)
 	UpdateUserPassword(ctx context.Context, username domain.Username, newHash string) error
 	GetUserByUsername(ctx context.Context, username domain.Username) (*User, error)
 	ArchiveUser(ctx context.Context, username domain.Username) error
