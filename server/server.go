@@ -67,8 +67,8 @@ func (s *Server) registerReferralRoutes() {
 	// Log out
 	protected.POST("/logout", v1Service.LogoutHandler)
 
-	// Change own password
-	protected.PATCH("/users/password", v1Service.ChangeOwnPasswordHandler)
+	// Change own password (old password required)
+	protected.PATCH("/users/me/password", v1Service.ChangeOwnPasswordHandler)
 
 	// List tags
 	protected.GET("/tags", v1Service.ListReferralTagsHandler)

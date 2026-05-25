@@ -143,9 +143,45 @@ func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
 	return s.driver.DeleteUser(ctx, delete)
 }
 
-func (s *Store) UpdateUserPassword(ctx context.Context, username domain.Username, newHash string) error {
-	// Relay the command to the driver (the stove)
-	return s.driver.UpdateUserPassword(ctx, username, newHash)
+func (s *Store) ChangeOwnPassword(ctx context.Context, username domain.Username, oldPassword, newPassword string) error {
+	// 1. Guard against empty inputs
+	if oldPassword == "" || newPassword == "" {
+		return errors.New("passwords cannot be empty")
+	}
+
+	// 2. Fetch the user state using existing Store capability
+	user, err := s.GetUser(ctx, &FindUser{Username: username})
+	if err != nil {
+		return domain.ErrUserNotFound // Or map your internal not found error
+	}
+
+	// 3. Verify old password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
+		return domain.ErrPasswordMismatch
+	}
+
+	// 4. Hash new password
+	newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	// 5. Execute via raw driver
+	return s.driver.UpdateUserPassword(ctx, username, string(newHash))
+}
+
+func (s *Store) ResetUserPassword(ctx context.Context, actingAdmin, targetUser domain.Username, newPassword string) error {
+	// RULE: Prevent an admin from using the override path on themselves
+	if actingAdmin == targetUser {
+		return domain.ErrSelfResetBlocked
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	return s.driver.UpdateUserPassword(ctx, targetUser, string(newHash))
 }
 
 func (s *Store) ArchiveUser(ctx context.Context, username domain.Username) error {

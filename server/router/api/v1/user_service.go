@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"reftrail/internal/domain"
@@ -54,7 +55,7 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
-// PATCH /api/v1/users/password
+// PATCH /api/v1/users/me/password
 func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -62,8 +63,6 @@ func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
-
-	currentUserName := userCtx.Username
 
 	var req struct {
 		OldPassword string `json:"oldPassword"`
@@ -74,25 +73,18 @@ func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
 	}
 
-	user, err := s.Store.GetUser(ctx, &store.FindUser{Username: currentUserName})
+	// Delegate all business logic and crypto to the Store layer
+	err := s.Store.ChangeOwnPassword(ctx, userCtx.Username, req.OldPassword, req.NewPassword)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
-	}
-
-	// Verify old password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Incorrect old password"})
-	}
-
-	// Hash new password
-	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
-	}
-
-	// Save
-	if err := s.Store.UpdateUserPassword(ctx, currentUserName, string(newHash)); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
+		// Switch case to catch specific domain errors
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+		case errors.Is(err, domain.ErrPasswordMismatch):
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Incorrect old password"})
+		default:
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
+		}
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Password updated successfully"})
@@ -182,6 +174,7 @@ func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"message": "User deleted"})
 }
 
+// Hard-reset
 // PATCH /api/v1/users/:username/password
 func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
@@ -193,6 +186,17 @@ func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 
 	username := domain.Username(usernameParam)
 
+	// Fetch the acting admin from context
+	userCtx, ok := domain.GetUserContext(ctx)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
+	}
+
+	// CRITICAL: Prevent self-reset via the admin route
+	if userCtx.Username == username {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Please use the self-service route to change your own password"})
+	}
+
 	var req struct {
 		Password string `json:"password"`
 	}
@@ -202,14 +206,16 @@ func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 	}
 
 	// Hash the new password
-	newHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	err := s.Store.ResetUserPassword(ctx, userCtx.Username, domain.Username(usernameParam), req.Password)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
-	}
-
-	// Update the user's password
-	if err := s.Store.UpdateUserPassword(ctx, username, string(newHash)); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
+		// Map domain errors to explicit HTTP statuses
+		if errors.Is(err, domain.ErrSelfResetBlocked) {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		}
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to reset password"})
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "User password reset successfully"})

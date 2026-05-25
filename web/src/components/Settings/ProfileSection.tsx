@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown";
-import ChangePasswordDialog from "@/components/Dialog/ChangePasswordDialog";
+import ChangeOwnPasswordDialog from "@/components/Dialog/ChangeOwnPasswordDialog";
 
 const ProfileSection = () => {
   const { user } = useAuth();
@@ -88,7 +88,7 @@ const ProfileSection = () => {
         </div>
       </section>
 
-      <ChangePasswordDialog 
+      <ChangeOwnPasswordDialog 
         open={isDialogOpen} 
         onOpenChange={setIsDialogOpen} 
         user={user} 
