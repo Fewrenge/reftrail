@@ -166,3 +166,13 @@ func (d *Driver) CountActiveAdmins(ctx context.Context) (int, error) {
 
 	return count, nil
 }
+
+func (d *Driver) UpdateUserRole(ctx context.Context, username domain.Username, role domain.UserRole) error {
+	query := `
+		UPDATE user 
+		SET role = ? 
+		WHERE username = ?
+	`
+	_, err := d.conn(ctx).ExecContext(ctx, query, string(role), string(username))
+	return err
+}

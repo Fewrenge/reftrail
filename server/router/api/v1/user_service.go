@@ -140,8 +140,6 @@ func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
 		UpdatedUsername: req.UpdatedUsername,
 		UserFirstName:   req.UserFirstName,
 		UserLastName:    req.UserLastName,
-		// Password:        req.Password,
-		// Role:            req.Role,
 	}
 
 	updatedUser, err := s.Store.UpdateUserInfo(ctx, updatePayload)
@@ -162,7 +160,17 @@ func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
 
 	username := domain.Username(usernameParam)
 
-	err := s.Store.DeleteUser(ctx, &store.DeleteUser{Username: username})
+	// Fetch the acting admin from context
+	userCtx, ok := domain.GetUserContext(ctx)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
+	}
+
+	var deleteReq store.DeleteUser
+	deleteReq.ActingAdmin = userCtx.Username
+	deleteReq.TargetUser = username
+
+	err := s.Store.DeleteUser(ctx, &deleteReq)
 	if err != nil {
 		slog.Error("Failed to delete user from database",
 			"username", usernameParam,
@@ -251,4 +259,44 @@ func (s *APIV1Service) ArchiveUserHandler(c *echo.Context) error {
 		"message":  "User archived successfully",
 		"username": usernameParam,
 	})
+}
+
+func (s *APIV1Service) UpdateUserRoleHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	userCtx, ok := domain.GetUserContext(ctx)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
+	}
+
+	usernameParam := c.Param("username")
+	if usernameParam == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
+	}
+
+	var req store.UpdateUserRole
+
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
+	}
+
+	// Basic input sanitization
+	if req.Role != domain.RoleReftrailAdmin && req.Role != domain.RoleBookingTeam {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid role specified"})
+	}
+
+	// Invoke the smart Store layer
+	err := s.Store.UpdateUserRole(ctx, userCtx.Username, domain.Username(usernameParam), req.Role)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrCannotDemoteSelf), errors.Is(err, domain.ErrLastAdminLockout):
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		case errors.Is(err, domain.ErrUserNotFound):
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+		default:
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update role"})
+		}
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "User role updated successfully"})
 }

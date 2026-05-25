@@ -54,8 +54,14 @@ type UpdateUserInfo struct {
 	UserLastName    *string          `json:"userLastName"`
 }
 
+type UpdateUserRole struct {
+	TargetUsername domain.Username `json:"targetUsername"`
+	Role           domain.UserRole `json:"role"`
+}
+
 type DeleteUser struct {
-	Username domain.Username `json:"username"`
+	ActingAdmin domain.Username `json:"actingAdmin"`
+	TargetUser  domain.Username `json:"targetUser"`
 }
 
 // --- THE MANAGER LOGIC ---
@@ -135,9 +141,29 @@ func (s *Store) UpdateUserInfo(ctx context.Context, update *UpdateUserInfo) (*Us
 }
 
 func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
-	if delete.Username == "admin" {
-		return errors.New("cannot delete the system administrator")
+	// Admin cannot delete themselves
+	if delete.ActingAdmin == delete.TargetUser {
+		return domain.ErrCannotDeleteSelf
 	}
+
+	// Fetch current target user to assess safety context
+	user, err := s.GetUser(ctx, &FindUser{Username: delete.TargetUser})
+	if err != nil {
+		return domain.ErrUserNotFound
+	}
+
+	// RULE 5: Check structural safety bounds if the target is an admin
+	if user.Role == domain.RoleReftrailAdmin {
+		activeAdminCount, err := s.driver.CountActiveAdmins(ctx)
+		if err != nil {
+			return err
+		}
+		if activeAdminCount <= 1 {
+			return domain.ErrLastAdminLockout
+		}
+	}
+
+	// Hand off to the secure raw driver layer
 	return s.driver.DeleteUser(ctx, delete)
 }
 
@@ -211,4 +237,36 @@ func (s *Store) ArchiveUser(ctx context.Context, actingAdmin, targetUser domain.
 
 func (s *Store) CountActiveAdmins(ctx context.Context) (int, error) {
 	return s.driver.CountActiveAdmins(ctx)
+}
+
+func (s *Store) UpdateUserRole(ctx context.Context, actingAdmin, targetUser domain.Username, newRole domain.UserRole) error {
+	// RULE 1: An admin cannot demote themselves
+	if actingAdmin == targetUser && newRole != domain.RoleReftrailAdmin {
+		return domain.ErrCannotDemoteSelf
+	}
+
+	// Fetch current state of the target user
+	user, err := s.GetUser(ctx, &FindUser{Username: targetUser})
+	if err != nil {
+		return domain.ErrUserNotFound
+	}
+
+	// If the target is already in the requested role, do nothing
+	if user.Role == newRole {
+		return nil
+	}
+
+	// RULE 5: If demoting an existing admin, protect against the last-admin lockout
+	if user.Role == domain.RoleReftrailAdmin && newRole == domain.RoleBookingTeam {
+		activeAdminCount, err := s.driver.CountActiveAdmins(ctx)
+		if err != nil {
+			return err
+		}
+		if activeAdminCount <= 1 {
+			return domain.ErrLastAdminLockout
+		}
+	}
+
+	// Delegate the direct SQL command to the driver layer
+	return s.driver.UpdateUserRole(ctx, targetUser, newRole)
 }

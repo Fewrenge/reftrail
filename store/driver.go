@@ -37,6 +37,7 @@ type Driver interface {
 	GetUserByUsername(ctx context.Context, username domain.Username) (*User, error)
 	ArchiveUser(ctx context.Context, username domain.Username) error
 	CountActiveAdmins(ctx context.Context) (int, error)
+	UpdateUserRole(ctx context.Context, username domain.Username, role domain.UserRole) error
 
 	// 5. Transaction methods
 	RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error
