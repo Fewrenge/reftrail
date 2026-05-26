@@ -9,10 +9,10 @@ import (
 )
 
 type ReferralEntry struct {
-	ID        domain.ReferralID `json:"id"`
-	CreatorID domain.UserID     `json:"-"`
-	CreatedTs string            `json:"createdTs"`
-	UpdatedTs string            `json:"updatedTs"`
+	ID              domain.ReferralID `json:"id"`
+	CreatorUsername domain.Username   `json:"-"`
+	CreatedTs       string            `json:"createdTs"`
+	UpdatedTs       string            `json:"updatedTs"`
 
 	// 2. Patient Info
 	PatientLastName              string `json:"patientLastName"`
@@ -76,7 +76,7 @@ type CreateReferralEntry struct {
 	Source       domain.ReferralSource  `json:"source"`
 	ReferralDate string                 `json:"referralDate"`
 	// Accountability
-	CreatorID domain.UserID `json:"creatorId"`
+	CreatorUsername domain.Username `json:"creatorUsername"`
 }
 
 type BatchCreateReferralEntries struct {
@@ -86,15 +86,16 @@ type BatchCreateReferralEntries struct {
 // FindReferralEntry is the "Search Filter" for your referrals.
 type FindReferralEntry struct {
 	// 1. Basic Filters
-	ID        *domain.ReferralID `json:"id"`
-	CreatorID *domain.UserID     `json:"creatorId"`
+	ID              *domain.ReferralID `json:"id"`
+	CreatorUsername *domain.Username   `json:"creatorUsername"`
 
 	// 2. Clinical Filters (Requirement #8 & #9)
 	// We use pointers (*) so we can tell the difference between
 	// "Filter by this" and "Don't filter at all" (nil).
-	Urgency *domain.ReferralUrgency `json:"urgency"`
-	Status  *domain.ReferralStatus  `json:"status"`
-	Source  *domain.ReferralSource  `json:"source"`
+	Urgency      *domain.ReferralUrgency `json:"urgency"`
+	Status       *domain.ReferralStatus  `json:"status"`
+	Source       *domain.ReferralSource  `json:"source"`
+	ReferralDate *string                 `json:"referralDate"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
 	PatientLastName         *string `json:"patientLastName"`
@@ -141,7 +142,6 @@ type DeleteReferralEntry struct {
 	ID domain.ReferralID `json:"id"`
 }
 
-// TODO: Whole chain of logic of tags
 // 1. Create: The "Guard"
 // Implement log creation logic at the store level so that it can be reused across different handlers
 func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error) {
@@ -153,7 +153,7 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		if !ok {
 			return domain.ErrUnauthorized
 		}
-		create.CreatorID = domain.UserID(user.ID)
+		create.CreatorUsername = domain.Username(user.Username)
 
 		// 2. Insert Main Entry
 		var err error
@@ -179,9 +179,9 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 			}
 
 			// Generate a localized string reference lookup map for performance
-			validTagMap := make(map[string]int64)
+			validTagMap := make(map[string]string)
 			for _, def := range definitions {
-				validTagMap[strings.ToUpper(strings.TrimSpace(def.Name))] = def.ID
+				validTagMap[strings.ToUpper(strings.TrimSpace(def.Name))] = def.Name
 			}
 
 			// Match requested strings with active database constraints
@@ -206,11 +206,11 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		// 5. Create log for creation
 		var creationLog *ReferralLog
 		creationLog = &ReferralLog{
-			ReferralID: referralEntry.ID,
-			UserID:     domain.UserID(user.ID),
-			OldStatus:  "",
-			NewStatus:  referralEntry.Status,
-			Note:       "Referral entry created",
+			ReferralID:      referralEntry.ID,
+			CreatorUsername: user.Username,
+			OldStatus:       "",
+			NewStatus:       referralEntry.Status,
+			Note:            "Referral entry created",
 		}
 
 		if _, err := s.driver.CreateReferralLog(txCtx, creationLog); err != nil {
@@ -334,11 +334,11 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 
 		// 2. Tell the Worker to write the history
 		logPayload := &ReferralLog{
-			ReferralID: update.ID,
-			UserID:     domain.UserID(userCtx.ID),
-			OldStatus:  current.Status,
-			NewStatus:  *update.Status,
-			Note:       *update.Note,
+			ReferralID:      update.ID,
+			CreatorUsername: domain.Username(userCtx.Username),
+			OldStatus:       current.Status,
+			NewStatus:       *update.Status,
+			Note:            *update.Note,
 		}
 
 		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
@@ -374,8 +374,8 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 			return fmt.Errorf("failed to fetch current status: %w", err)
 		}
 
-		// 3. THE RULE CHECK (Calling your domain code)
-		// We convert update.NewStatus to domain.ReferralStatus type
+		// 3. THE RULE CHECK (Calling the domain code)
+		// Convert update.NewStatus to domain.ReferralStatus type
 		newStatus := domain.ReferralStatus(update.NewStatus)
 
 		if !domain.CanTransition(oldStatus, newStatus, user.Role) {
@@ -390,11 +390,11 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 
 		// 5. Create the Log
 		logPayload := &ReferralLog{
-			ReferralID: update.ID,
-			UserID:     domain.UserID(user.ID),
-			OldStatus:  oldStatus,
-			NewStatus:  newStatus,
-			Note:       update.Note,
+			ReferralID:      update.ID,
+			CreatorUsername: domain.Username(user.Username),
+			OldStatus:       oldStatus,
+			NewStatus:       newStatus,
+			Note:            update.Note,
 		}
 
 		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {

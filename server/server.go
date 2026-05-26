@@ -41,7 +41,7 @@ func (s *Server) registerReferralRoutes() {
 	// PROTECTED (Requires JWT)
 	protected := s.Engine.Group("/api/v1")
 
-	protected.Use(auth.JWTMiddleware)
+	protected.Use(auth.JWTMiddleware(s.Store))
 
 	// Get all referral entries (with pagination, filtering, etc.)
 	protected.GET("/referrals", v1Service.ListReferralEntriesHandler)
@@ -67,8 +67,8 @@ func (s *Server) registerReferralRoutes() {
 	// Log out
 	protected.POST("/logout", v1Service.LogoutHandler)
 
-	// Change own password
-	protected.PATCH("/users/password", v1Service.ChangeOwnPasswordHandler)
+	// Change own password (old password required)
+	protected.PATCH("/users/me/password", v1Service.ChangeOwnPasswordHandler)
 
 	// List tags
 	protected.GET("/tags", v1Service.ListReferralTagsHandler)
@@ -77,6 +77,8 @@ func (s *Server) registerReferralRoutes() {
 
 	admin.Use(auth.AdminOnlyMiddleware) // Add the extra gatekeeper
 
+	// ------ USER MANAGEMENT ------
+
 	// Create a user
 	admin.POST("/users", v1Service.CreateUserHandler)
 
@@ -84,10 +86,22 @@ func (s *Server) registerReferralRoutes() {
 	admin.GET("/users", v1Service.ListUsersHandler)
 
 	// Delete a user
-	admin.DELETE("/users/:id", v1Service.DeleteUserHandler)
+	admin.DELETE("/users/:username", v1Service.DeleteUserHandler)
+
+	// Archive a user (soft delete)
+	// TODO: kick the user out if they're currently logged in? (Might require some sort of token blacklist or short-lived tokens with refresh tokens)
+	admin.PUT("/users/:username/archive", v1Service.ArchiveUserHandler)
+
+	// PUT /api/v1/users/:username/role
+	admin.PUT("/users/:username/role", v1Service.UpdateUserRoleHandler)
 
 	// Reset a user's password
-	admin.PATCH("/users/:id/password", v1Service.ResetUserPasswordHandler)
+	admin.PATCH("/users/:username/password", v1Service.ResetUserPasswordHandler)
+
+	// Update a user's info (Username, first name, last name)
+	admin.PATCH("/users/:username", v1Service.UpdateUserHandler)
+
+	// ------ REFERRAL ENTRY MANAGEMENT ------
 
 	// Batch create referral entries
 	admin.POST("/referrals/batch", v1Service.BatchCreateReferralEntriesHandler)
@@ -97,11 +111,13 @@ func (s *Server) registerReferralRoutes() {
 
 	// admin.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler) // Gotta change the URL?
 
+	// ------ TAG MANAGEMENT ------
+
 	admin.POST("/tags", v1Service.CreateReferralTagHandler) // Add a tag to the database
 
 	admin.DELETE("/tags/:id", v1Service.DeleteReferralTagHandler) // Delete a tag from the database
 
-	admin.POST("/referrals/:id/tags/:tagId", v1Service.AssignTagHandler) // Assign a tag to a referral
+	admin.POST("/referrals/:id/tags/:tagName", v1Service.AssignTagHandler) // Assign a tag to a referral
 
-	admin.DELETE("/referrals/:id/tags/:tagId", v1Service.RemoveTagHandler) // Remove a tag from a referral
+	admin.DELETE("/referrals/:id/tags/:tagName", v1Service.RemoveTagHandler) // Remove a tag from a referral
 }

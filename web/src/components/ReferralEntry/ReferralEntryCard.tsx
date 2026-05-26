@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ROLES, ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
 import { useAuth } from "@/contexts/AuthContext";
-import { Trash2Icon, MessageSquareIcon, XIcon } from "lucide-react";
+import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, XCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -44,25 +44,14 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
   // --- States ---
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [isLogMode, setIsLogMode] = useState(false);
   const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [allGlobalTags, setAllGlobalTags] = useState<any[]>([]);
   const { user } = useAuth();
   const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
 
   const navigate = useNavigate();
-  const handleCardClick = (e: React.MouseEvent) => {
-    if (!isClickable) return;
-
-    const target = e.target as HTMLElement;
-    if (
-      target.closest('button') ||
-      target.closest('[role="menuitem"]') ||
-      target.closest('[data-radix-menu-content]')
-    ) {
-      return;
-    }
-    navigate(`/referrals/${entry.id}`);
-  };
 
   const allowedStatuses = useMemo(() => {
     if (isAdmin) {
@@ -80,27 +69,64 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
   };
 
   // Logic to send the update to your Go backend
-  const handleStatusUpdate = async () => {
+  const handleSavePad = async () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`/api/v1/referrals/${entry.id}/status`, {
-        method: 'PATCH',
+      // 1. Determine target endpoint based on current active mode
+      const url = isLogMode
+        ? `/api/v1/referrals/${entry.id}/logs`
+        : `/api/v1/referrals/${entry.id}/status`;
+
+      const method = isLogMode ? 'POST' : 'PATCH';
+
+      // 2. Format body data dynamically
+      const bodyData = isLogMode
+        ? { note: note || "Manual log entry" }
+        : { newStatus: selectedStatus, note: note || "Status updated" };
+
+      const res = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          newStatus: selectedStatus,
-          note: note || "Status updated" // Default note if empty
-        })
+        body: JSON.stringify(bodyData)
       });
 
       if (res.ok) {
+        // Clear out state variables on success
         setSelectedStatus(null);
+        setIsLogMode(false);
         setNote("");
         onRefresh();
       } else {
         const err = await res.text();
-        alert(`Update failed: ${err}`);
+        alert(`Save failed: ${err}`);
       }
+    } catch (err) {
+      console.error("Network submission error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchGlobalTags = async () => {
+    try {
+      const res = await fetch('/api/v1/tags'); // Replace with your exact route
+      if (res.ok) {
+        const data = await res.json();
+        setAllGlobalTags(data);
+      }
+    } catch (err) {
+      console.error("Failed to load tag definitions:", err);
+    }
+  };
+
+
+  const handleAssignTag = async (tagId: number) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/v1/referrals/${entry.id}/tags/${tagId}`, { method: 'POST' });
+      if (res.ok) onRefresh();
+      else alert("Failed to append tag");
     } catch (err) {
       console.error(err);
     } finally {
@@ -108,6 +134,19 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
     }
   };
 
+  // Native Single-Tag Delete Link Request
+  const handleRemoveTag = async (tagName: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/v1/referrals/${entry.id}/tags/${tagName}`, { method: 'DELETE' });
+      if (res.ok) onRefresh();
+      else alert("Failed to remove tag");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleDelete = async () => {
 
@@ -129,17 +168,30 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
     }
   };
 
+
   return (
     <div
-      onClick={handleCardClick}
-      className={`relative group ${isClickable ? 'cursor-pointer' : ''}`}
+      className={`relative group`}
     >
-      <div className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all ${isClickable ? 'hover:border-blue-300' : ''
-        }`}>
+      <div className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all ${isClickable ? 'hover:border-blue-300' : ''}`}>
+
         {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h3 className="font-bold text-xl text-slate-900">{entry.patientLastName}{", "}{entry.patientFirstName}</h3>
+            {/* Wrap the patient name text in a clickable button element */}
+            {isClickable ? (
+              <button
+                onClick={() => navigate(`/referrals/${entry.id}`)}
+                className="text-left font-bold text-xl text-slate-900 hover:text-blue-600 cursor-pointer transition-colors focus:outline-none"
+              >
+                {entry.patientLastName}{", "}{entry.patientFirstName}
+              </button>
+            ) : (
+              <h3 className="font-bold text-xl text-slate-900">
+                {entry.patientLastName}{", "}{entry.patientFirstName}
+              </h3>
+            )}
+
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
               DOB: {entry.patientDob || 'N/A'}
             </p>
@@ -196,6 +248,17 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl shadow-xl border-slate-200">
                 <DropdownMenuItem
+                  onSelect={() => {
+                    setIsLogMode(true); // Open the overlay window in log mode
+                  }}
+                  className="hover:bg-slate-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
+                >
+                  <LogsIcon size={16} strokeWidth={2.5} />
+                  <span>Add a Note</span>
+                </DropdownMenuItem>
+
+
+                <DropdownMenuItem
                   onSelect={() => { handleDelete(); }}
                   className="text-red-600 hover:bg-red-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
                 >
@@ -238,19 +301,88 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             </div>
           </div>
         </div>
+
+
+
         {/* TAG SECTION: Tags Row */}
-        {entry.tags && entry.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-5 mt-2">
-            {entry.tags.map((tag: string, index: number) => (
+        <div className="flex flex-wrap items-center gap-1.5 mb-5 mt-2">
+          {entry.tags && entry.tags.map((tag: any, index: number) => {
+
+            // 1. Safely extract the string text regardless of how the backend shapes it
+            const tagNameStr = typeof tag === 'object' && tag !== null
+              ? (tag.name || tag.tagName || "")
+              : String(tag);
+
+            // 2. Ignore empty items safely
+            if (!tagNameStr) return null;
+
+            return (
               <span
-                key={`${tag}-${index}`}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/60 uppercase tracking-wider shadow-2xs hover:bg-slate-200 transition-colors"
+                // 3. FIX: Combine the string text with the array index to guarantee 100% uniqueness
+                key={`tag-${tagNameStr}-${index}`}
+                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/60 uppercase tracking-wider shadow-2xs hover:bg-slate-200 transition-colors"
               >
-                {tag}
+                <span>{tagNameStr}</span>
+
+                {/* Little Cross to remove tags (Only renders for Admins) */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tagNameStr)}
+                    className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer rounded-full outline-none"
+                    disabled={isLoading}
+                  >
+                    <XCircleIcon size={12} fill="currentColor" className="text-white" />
+                  </button>
+                )}
               </span>
-            ))}
-          </div>
-        )}
+            );
+          })}
+
+          {/* Administrative Dropdown Selection Tool to assign fresh tags */}
+          {isAdmin && (
+            <DropdownMenu onOpenChange={(open) => open && fetchGlobalTags()}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-slate-300 bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-colors cursor-pointer outline-none"
+                  disabled={isLoading}
+                >
+                  <PlusIcon size={12} strokeWidth={3} />
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="start" className="w-48 p-1 rounded-xl shadow-xl border-slate-200">
+                <DropdownMenuLabel className="text-[10px] font-bold uppercase text-slate-400 px-2 py-1.5">
+                  Available Tags
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                {allGlobalTags.length === 0 ? (
+                  <div className="text-xs text-slate-400 p-2 text-center">No tags left</div>
+                ) : (
+                  allGlobalTags
+                    // Safely filter out tags already applied to this specific card
+                    .filter(gt => !entry.tags?.some((t: any) => {
+                      const appliedName = typeof t === 'object' && t !== null ? (t.name || t.tagName) : String(t);
+                      return appliedName === gt.name;
+                    }))
+                    .map((globalTag, dropdownIndex) => (
+                      <DropdownMenuItem
+                        // FIX: Guarantee uniqueness for the dropdown list elements too
+                        key={`available-tag-${globalTag.name}-${dropdownIndex}`}
+                        onSelect={() => handleAssignTag(globalTag.name)}
+                        className="text-xs font-semibold flex items-center px-3 py-2 cursor-pointer rounded-lg transition-colors"
+                      >
+                        {globalTag.name}
+                      </DropdownMenuItem>
+                    ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+
+
 
         {/* BOTTOM SECTION: Triage Note */}
         <div className="bg-slate-50 border-l-2 border-blue-400 p-3 rounded-r-lg">
@@ -265,7 +397,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
         {/* --- QUICK NOTE OVERLAY --- */}
         {/* This only appears AFTER they select a status from the dropdown */}
-        {selectedStatus && (
+        {(selectedStatus || isLogMode) && (
           <>
             {/* 1. Backdrop: Clicking anywhere else closes the window */}
             <div
@@ -282,11 +414,15 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                     <MessageSquareIcon size={16} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase text-slate-400 leading-none">Updating Status To</p>
-                    <p className="text-xs font-bold text-slate-700">{selectedStatus.replace(/_/g, ' ')}</p>
+                    <p className="text-[10px] font-black uppercase text-slate-400 leading-none">
+                      {isLogMode ? "Adding Audit Log To" : "Updating Status To"}
+                    </p>
+                    <p className="text-xs font-bold text-slate-700">
+                      {isLogMode ? `${entry.patientLastName}, ${entry.patientFirstName}` : selectedStatus?.replace(/_/g, ' ')}
+                    </p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedStatus(null)} className="text-slate-300 hover:text-slate-600 transition-colors">
+                <button onClick={() => { setSelectedStatus(null); setIsLogMode(false); }} className="text-slate-300 hover:text-slate-600 transition-colors">
                   <XIcon size={18} />
                 </button>
               </div>
@@ -299,7 +435,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleStatusUpdate();
+                    handleSavePad();
                   }
                 }}
               />
@@ -310,7 +446,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                 <Button
                   variant="primary"
                   className="flex-1 shadow-lg shadow-blue-200"
-                  onClick={handleStatusUpdate}
+                  onClick={handleSavePad}
                   disabled={isLoading}
                 >
                   {isLoading ? "Saving..." : "Confirm & Log"}

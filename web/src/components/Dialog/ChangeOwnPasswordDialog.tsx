@@ -10,7 +10,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 
-const ChangePasswordDialog = ({ open, onOpenChange, user, onSuccess }: any) => {
+const ChangeOwnPasswordDialog = ({ open, onOpenChange, user, onSuccess }: any) => {
     const [showOldPassword, setShowOldPassword] = useState(false);
     const [showNewPasswords, setShowNewPasswords] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ const ChangePasswordDialog = ({ open, onOpenChange, user, onSuccess }: any) => {
         setLoading(true);
 
         try {
-            const response = await fetch("/api/v1/users/password", {
+            const response = await fetch("/api/v1/users/me/password", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -135,4 +135,4 @@ const ChangePasswordDialog = ({ open, onOpenChange, user, onSuccess }: any) => {
     );
 };
 
-export default ChangePasswordDialog;
+export default ChangeOwnPasswordDialog;

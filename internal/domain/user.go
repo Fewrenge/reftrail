@@ -2,7 +2,6 @@ package domain
 
 import "context"
 
-type UserID int64
 type UserRole string
 type Username string
 
@@ -12,9 +11,8 @@ const (
 )
 
 type UserContext struct {
-	ID       UserID
-	Role     UserRole
-	Username Username
+	Username Username `json:"username"`
+	Role     UserRole `json:"role"`
 }
 
 type contextKey string

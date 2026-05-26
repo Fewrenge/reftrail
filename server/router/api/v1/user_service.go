@@ -1,11 +1,11 @@
 package v1
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"reftrail/internal/domain"
 	"reftrail/store"
-	"strconv"
 
 	echo "github.com/labstack/echo/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -43,7 +43,7 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
 
-	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{ID: &ctx.ID})
+	user, err := s.Store.GetUser(c.Request().Context(), &store.FindUser{Username: ctx.Username})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get current user"})
 	}
@@ -55,7 +55,7 @@ func (s *APIV1Service) GetCurrentUserHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
-// PATCH /api/v1/users/password
+// PATCH /api/v1/users/me/password
 func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -63,8 +63,6 @@ func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
 	}
-
-	userID := userCtx.ID
 
 	var req struct {
 		OldPassword string `json:"oldPassword"`
@@ -75,25 +73,18 @@ func (s *APIV1Service) ChangeOwnPasswordHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
 	}
 
-	user, err := s.Store.GetUser(ctx, &store.FindUser{ID: &userID})
+	// Delegate all business logic and crypto to the Store layer
+	err := s.Store.ChangeOwnPassword(ctx, userCtx.Username, req.OldPassword, req.NewPassword)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
-	}
-
-	// Verify old password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Incorrect old password"})
-	}
-
-	// Hash new password
-	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
-	}
-
-	// Save
-	if err := s.Store.UpdateUserPassword(ctx, userID, string(newHash)); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
+		// Switch case to catch specific domain errors
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+		case errors.Is(err, domain.ErrPasswordMismatch):
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Incorrect old password"})
+		default:
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
+		}
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Password updated successfully"})
@@ -111,49 +102,96 @@ func (s *APIV1Service) ListUsersHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, users)
 }
 
-// DELETE /api/v1/users/:id
-func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
+// PATCH /api/v1/users/:username
+func (s *APIV1Service) UpdateUserHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
-	idParam := c.Param("id")
+	usernameParam := c.Param("username")
+	if usernameParam == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
+	}
+	username := domain.Username(usernameParam)
 
-	// Get ID from URL /api/v1/users/5
-	id, err := strconv.ParseInt(idParam, 10, 32)
-	if err != nil {
-		slog.Warn("Invalid user ID parameter format",
-			"provided_id", idParam,
-			"error", err.Error(),
-		)
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID format"})
+	// Dynamic inbound request form maps pointer options
+	var req struct {
+		UpdatedUsername *domain.Username `json:"updatedUsername"`
+		UserFirstName   *string          `json:"userFirstName"`
+		UserLastName    *string          `json:"userLastName"`
+		// Password        *string          `json:"password"`
+		// Role            *domain.UserRole `json:"role"`
 	}
 
-	err = s.Store.DeleteUser(ctx, &store.DeleteUser{ID: domain.UserID(id)})
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
+	}
+
+	updatePayload := &store.UpdateUserInfo{
+		CurrentUsername: username,
+		UpdatedUsername: req.UpdatedUsername,
+		UserFirstName:   req.UserFirstName,
+		UserLastName:    req.UserLastName,
+	}
+
+	updatedUser, err := s.Store.UpdateUserInfo(ctx, updatePayload)
 	if err != nil {
-		// 3. Smell Fixed: Log the exact system error internally for debugging
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, updatedUser)
+}
+
+// DELETE /api/v1/users/:username
+func (s *APIV1Service) DeleteUserHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+	usernameParam := c.Param("username")
+	if usernameParam == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
+	}
+
+	username := domain.Username(usernameParam)
+
+	// Fetch the acting admin from context
+	userCtx, ok := domain.GetUserContext(ctx)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
+	}
+
+	var deleteReq store.DeleteUser
+	deleteReq.ActingAdmin = userCtx.Username
+	deleteReq.TargetUser = username
+
+	err := s.Store.DeleteUser(ctx, &deleteReq)
+	if err != nil {
 		slog.Error("Failed to delete user from database",
-			"user_id", id,
+			"username", usernameParam,
 			"error", err.Error(),
 		)
-
-		// 4. Smell Fixed: Avoid leaking raw DB errors (SQL syntax, foreign keys) to the client
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete user"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "User deleted"})
 }
 
-// PATCH /api/v1/users/:id/password
+// Hard-reset
+// PATCH /api/v1/users/:username/password
 func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
-	idParam := c.Param("id")
+	usernameParam := c.Param("username")
 
-	// Parse the user ID from the URL parameter
-	id, err := strconv.ParseInt(idParam, 10, 32) //TODO: check userID, implement id like jdoe for John Doe instead of auto-increment int
-	if err != nil {
-		slog.Warn("Invalid user ID parameter format",
-			"provided_id", idParam,
-			"error", err.Error(),
-		)
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID format"})
+	if usernameParam == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
+	}
+
+	username := domain.Username(usernameParam)
+
+	// Fetch the acting admin from context
+	userCtx, ok := domain.GetUserContext(ctx)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
+	}
+
+	// CRITICAL: Prevent self-reset via the admin route
+	if userCtx.Username == username {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Please use the self-service route to change your own password"})
 	}
 
 	var req struct {
@@ -165,15 +203,89 @@ func (s *APIV1Service) ResetUserPasswordHandler(c *echo.Context) error {
 	}
 
 	// Hash the new password
-	newHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	err := s.Store.ResetUserPassword(ctx, userCtx.Username, domain.Username(usernameParam), req.Password)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
-	}
-
-	// Update the user's password
-	if err := s.Store.UpdateUserPassword(ctx, domain.UserID(id), string(newHash)); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Database update failed"})
+		// Map domain errors to explicit HTTP statuses
+		if errors.Is(err, domain.ErrSelfResetBlocked) {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		}
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to reset password"})
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "User password reset successfully"})
+}
+
+// PUT /api/v1/users/:username/archive
+func (s *APIV1Service) ArchiveUserHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	userCtx, ok := domain.GetUserContext(ctx)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
+	}
+
+	usernameParam := c.Param("username")
+	if usernameParam == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
+	}
+
+	err := s.Store.ArchiveUser(ctx, userCtx.Username, domain.Username(usernameParam))
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrCannotArchiveSelf), errors.Is(err, domain.ErrLastAdminLockout):
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		case errors.Is(err, domain.ErrUserNotFound):
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+		default:
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to archive user"})
+		}
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message":  "User archived successfully",
+		"username": usernameParam,
+	})
+}
+
+func (s *APIV1Service) UpdateUserRoleHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	userCtx, ok := domain.GetUserContext(ctx)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "User context not found"})
+	}
+
+	usernameParam := c.Param("username")
+	if usernameParam == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing username parameter"})
+	}
+
+	var req store.UpdateUserRole
+
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
+	}
+
+	// Basic input sanitization
+	if req.Role != domain.RoleReftrailAdmin && req.Role != domain.RoleBookingTeam {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid role specified"})
+	}
+
+	// Invoke the smart Store layer
+	err := s.Store.UpdateUserRole(ctx, userCtx.Username, domain.Username(usernameParam), req.Role)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrCannotDemoteSelf), errors.Is(err, domain.ErrLastAdminLockout):
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		case errors.Is(err, domain.ErrUserNotFound):
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+		default:
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update role"})
+		}
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "User role updated successfully"})
 }

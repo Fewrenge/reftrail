@@ -31,9 +31,13 @@ type Driver interface {
 	CreateUser(ctx context.Context, create *CreateUser) (*User, error)
 	CountUsers(ctx context.Context) (int, error)
 	ListUsers(ctx context.Context, find *FindUser) ([]*User, error)
-	UpdateUser(ctx context.Context, update *UpdateUser) (*User, error)
 	DeleteUser(ctx context.Context, delete *DeleteUser) error
-	UpdateUserPassword(ctx context.Context, userID domain.UserID, newHash string) error
+	UpdateUserInfo(ctx context.Context, update *UpdateUserInfo) (*User, error)
+	UpdateUserPassword(ctx context.Context, username domain.Username, newHash string) error
+	GetUserByUsername(ctx context.Context, username domain.Username) (*User, error)
+	ArchiveUser(ctx context.Context, username domain.Username) error
+	CountActiveAdmins(ctx context.Context) (int, error)
+	UpdateUserRole(ctx context.Context, username domain.Username, role domain.UserRole) error
 
 	// 5. Transaction methods
 	RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error
@@ -43,6 +47,6 @@ type Driver interface {
 	ListReferralTags(ctx context.Context) ([]*ReferralTag, error)
 	ListAllLinkedReferralTags(ctx context.Context) ([]*LinkedReferralTagRow, error)
 	DeleteReferralTag(ctx context.Context, delete *DeleteReferralTag) error
-	AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error
-	RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error
+	AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagName string) error
+	RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagName string) error
 }

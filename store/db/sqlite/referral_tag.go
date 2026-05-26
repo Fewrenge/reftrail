@@ -8,12 +8,10 @@ import (
 
 func (d *Driver) CreateReferralTag(ctx context.Context, create *store.CreateReferralTag) (*store.ReferralTag, error) {
 	query := `INSERT INTO referral_tag_definition (name, description) 
-              VALUES (?, ?) RETURNING id, name, description`
+              VALUES (?, ?) RETURNING name, description`
 
 	var tag store.ReferralTag
-	err := d.conn(ctx).QueryRowContext(ctx, query, create.Name, create.Description).Scan(
-		&tag.ID, &tag.Name, &tag.Description,
-	)
+	err := d.conn(ctx).QueryRowContext(ctx, query, create.Name, create.Description).Scan(&tag.Name, &tag.Description)
 	if err != nil {
 		return nil, err
 	}
@@ -21,7 +19,7 @@ func (d *Driver) CreateReferralTag(ctx context.Context, create *store.CreateRefe
 }
 
 func (d *Driver) ListReferralTags(ctx context.Context) ([]*store.ReferralTag, error) {
-	query := `SELECT id, name, description
+	query := `SELECT name, description
               FROM referral_tag_definition 
               ORDER BY name ASC`
 
@@ -34,7 +32,7 @@ func (d *Driver) ListReferralTags(ctx context.Context) ([]*store.ReferralTag, er
 	tags := []*store.ReferralTag{}
 	for rows.Next() {
 		var tag store.ReferralTag
-		if err := rows.Scan(&tag.ID, &tag.Name, &tag.Description); err != nil {
+		if err := rows.Scan(&tag.Name, &tag.Description); err != nil {
 			return nil, err
 		}
 		tags = append(tags, &tag)
@@ -44,11 +42,7 @@ func (d *Driver) ListReferralTags(ctx context.Context) ([]*store.ReferralTag, er
 
 func (d *Driver) ListAllLinkedReferralTags(ctx context.Context) ([]*store.LinkedReferralTagRow, error) {
 	// This joins the link table with the string names table
-	query := `
-		SELECT rt.referral_id, rtd.name 
-		FROM referral_tag rt
-		JOIN referral_tag_definition rtd ON rt.tag_id = rtd.id
-	`
+	query := `SELECT referral_id, tag_name FROM referral_tag`
 
 	rows, err := d.conn(ctx).QueryContext(ctx, query)
 	if err != nil {
@@ -70,9 +64,9 @@ func (d *Driver) ListAllLinkedReferralTags(ctx context.Context) ([]*store.Linked
 
 func (d *Driver) DeleteReferralTag(ctx context.Context, delete *store.DeleteReferralTag) error {
 	// Deleting from the definition table triggers the cascade in the junction table
-	query := `DELETE FROM referral_tag_definition WHERE id = ?`
+	query := `DELETE FROM referral_tag_definition WHERE name = ?`
 
-	result, err := d.conn(ctx).ExecContext(ctx, query, delete.ID)
+	result, err := d.conn(ctx).ExecContext(ctx, query, delete.Name)
 	if err != nil {
 		return err
 	}
@@ -86,15 +80,26 @@ func (d *Driver) DeleteReferralTag(ctx context.Context, delete *store.DeleteRefe
 	return nil
 }
 
-func (d *Driver) AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
-	query := `INSERT OR IGNORE INTO referral_tag (referral_id, tag_id) 
+func (d *Driver) AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagName string) error {
+	query := `INSERT OR IGNORE INTO referral_tag (referral_id, tag_name) 
               VALUES (?, ?)`
-	_, err := d.conn(ctx).ExecContext(ctx, query, referralID, tagID)
+	_, err := d.conn(ctx).ExecContext(ctx, query, referralID, tagName)
 	return err
 }
 
-func (d *Driver) RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
-	query := `DELETE FROM referral_tag WHERE referral_id = ? AND tag_id = ?`
-	_, err := d.conn(ctx).ExecContext(ctx, query, referralID, tagID)
-	return err
+func (d *Driver) RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagName string) error {
+	query := `
+		DELETE FROM referral_tag 
+		WHERE referral_id = ? 
+		AND tag_name = ?
+	`
+	result, err := d.conn(ctx).ExecContext(ctx, query, referralID, tagName)
+	if err != nil {
+		return err
+	}
+
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return domain.ErrTagNotFound
+	}
+	return nil
 }

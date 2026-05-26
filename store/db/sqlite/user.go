@@ -2,24 +2,25 @@ package sqlite
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"reftrail/internal/domain"
 	"reftrail/store"
 	"strings"
 )
 
 func (d *Driver) CreateUser(ctx context.Context, create *store.CreateUser) (*store.User, error) {
-	query := `INSERT INTO user (username, password_hash, role, user_first_name, user_last_name) VALUES (?, ?, ?, ?, ?)`
-	result, err := d.conn(ctx).ExecContext(ctx, query, create.Username, create.Password, create.Role, create.UserFirstName, create.UserLastName)
+	query := `INSERT INTO user (username, password_hash, role, user_first_name, user_last_name, is_archived) VALUES (?, ?, ?, ?, ?, ?)`
+	_, err := d.conn(ctx).ExecContext(ctx, query, create.Username, create.Password, create.Role, create.UserFirstName, create.UserLastName, false)
 	if err != nil {
 		return nil, err
 	}
-	id, _ := result.LastInsertId()
 	return &store.User{
-		ID:            domain.UserID(id), // Changes
 		Username:      create.Username,
 		Role:          create.Role,
 		UserFirstName: create.UserFirstName,
 		UserLastName:  create.UserLastName,
+		IsArchived:    false,
 	}, nil
 }
 
@@ -33,16 +34,12 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 	var args []any
 	where := []string{"1 = 1"}
 
-	if find.ID != nil {
-		where = append(where, "id = ?")
-		args = append(args, *find.ID)
-	}
-	if find.Username != nil {
+	if find.Username != "" {
 		where = append(where, "username = ?")
-		args = append(args, *find.Username)
+		args = append(args, find.Username)
 	}
 
-	query := `SELECT id, username, password_hash, role, user_first_name, user_last_name FROM user WHERE ` + strings.Join(where, " AND ")
+	query := `SELECT username, password_hash, role, user_first_name, user_last_name, is_archived FROM user WHERE ` + strings.Join(where, " AND ")
 	rows, err := d.conn(ctx).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -52,7 +49,7 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 	var users []*store.User
 	for rows.Next() {
 		var user store.User
-		if err := rows.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName); err != nil {
+		if err := rows.Scan(&user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName, &user.IsArchived); err != nil {
 			return nil, err
 		}
 		users = append(users, &user)
@@ -60,21 +57,116 @@ func (d *Driver) ListUsers(ctx context.Context, find *store.FindUser) ([]*store.
 	return users, nil
 }
 
-func (d *Driver) UpdateUser(ctx context.Context, update *store.UpdateUser) (*store.User, error) {
-	// Stub for now
-	return nil, nil
+func (d *Driver) UpdateUserInfo(ctx context.Context, update *store.UpdateUserInfo) (*store.User, error) {
+	var updates []string
+	var args []any
+
+	// Support renaming the primary key username string! (ON UPDATE CASCADE triggers automatically)
+	if update.UpdatedUsername != nil {
+		updates = append(updates, "username = ?")
+		args = append(args, *update.UpdatedUsername)
+	}
+	if update.UserFirstName != nil {
+		updates = append(updates, "user_first_name = ?")
+		args = append(args, *update.UserFirstName)
+	}
+	if update.UserLastName != nil {
+		updates = append(updates, "user_last_name = ?")
+		args = append(args, *update.UserLastName)
+	}
+
+	// If no patch modifications were passed, return the unchanged user record
+	if len(updates) == 0 {
+		// return d.conn(ctx).Driver().(*Driver).GetUserByUsername(ctx, update.CurrentUsername)
+	}
+
+	// Complete the dynamic query string matching against currentUsername string
+	query := fmt.Sprintf("UPDATE user SET %s WHERE username = ?", strings.Join(updates, ", "))
+	args = append(args, update.CurrentUsername)
+
+	_, err := d.conn(ctx).ExecContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine the lookup identity handle following potential rename sequence
+	targetUsername := update.CurrentUsername
+	if update.UpdatedUsername != nil {
+		targetUsername = *update.UpdatedUsername
+	}
+
+	return d.GetUserByUsername(ctx, targetUsername)
 }
 
 func (d *Driver) DeleteUser(ctx context.Context, delete *store.DeleteUser) error {
-	// Stub for now
-	return nil
+	query := "DELETE FROM user WHERE username = ?"
+
+	// Convert TargetUser domain type to string for SQLite execution
+	_, err := d.conn(ctx).ExecContext(ctx, query, string(delete.TargetUser))
+	return err
 }
 
-func (d *Driver) UpdateUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
+func (d *Driver) UpdateUserPassword(ctx context.Context, username domain.Username, newHash string) error {
 	_, err := d.conn(ctx).ExecContext(ctx, `
 		UPDATE user 
 		SET password_hash = ? 
-		WHERE id = ?
-	`, newHash, userID)
+		WHERE username = ?
+	`, newHash, username)
+	return err
+}
+
+func (d *Driver) GetUserByUsername(ctx context.Context, username domain.Username) (*store.User, error) {
+	query := `SELECT username, password_hash, role, user_first_name, user_last_name, is_archived FROM user WHERE username = ?`
+	var user store.User
+	err := d.conn(ctx).QueryRowContext(ctx, query, username).Scan(
+		&user.Username, &user.PasswordHash, &user.Role, &user.UserFirstName, &user.UserLastName, &user.IsArchived,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &user, err
+}
+
+func (d *Driver) ArchiveUser(ctx context.Context, username domain.Username) error {
+	query := `UPDATE user SET is_archived = 1 WHERE username = ?`
+	result, err := d.conn(ctx).ExecContext(ctx, query, username)
+	if err != nil {
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return err
+	}
+	return nil
+}
+
+// PLAN: UnarchiveUser method if we want to support that in the future
+
+// CountActiveAdmins returns the number of active, non-archived administrators in SQLite.
+func (d *Driver) CountActiveAdmins(ctx context.Context) (int, error) {
+	var count int
+
+	query := `
+		SELECT COUNT(*) 
+		FROM user 
+		WHERE role = 'REFTRAIL_ADMIN' AND is_archived = 0
+	`
+
+	err := d.conn(ctx).QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (d *Driver) UpdateUserRole(ctx context.Context, username domain.Username, role domain.UserRole) error {
+	query := `
+		UPDATE user 
+		SET role = ? 
+		WHERE username = ?
+	`
+	_, err := d.conn(ctx).ExecContext(ctx, query, string(role), string(username))
 	return err
 }

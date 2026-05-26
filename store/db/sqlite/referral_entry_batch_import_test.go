@@ -21,7 +21,7 @@ func TestBatchCreateReferralEntriesHandler_Success(t *testing.T) {
 
 	// 2. Build the domain context payload mirroring your tag integration test
 	ctx := WithUserContext(context.Background(), &domain.UserContext{
-		ID: 1, Role: "REFTRAIL_ADMIN",
+		Username: "admin", Role: "REFTRAIL_ADMIN",
 	})
 
 	// 3. Optional/Pre-seed Step:

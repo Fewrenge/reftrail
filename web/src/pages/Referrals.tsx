@@ -66,10 +66,18 @@ export default function Home() {
   });
 
   return (
+    
     <>
        <header className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Active Referrals</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Referrals</h2>
         <div className="flex gap-3">
+          
+
+          <Button variant="outline" onClick={() => setIsModalOpen(true)}>
+            <PlusIcon size={18} className="mr-2" />
+            Add Referral
+          </Button>
+
           {/* Hidden binary file input wrapper */}
           <input 
             type="file" 
@@ -79,17 +87,12 @@ export default function Home() {
             className="hidden" 
           />
           <Button 
-            variant="outline" 
+            // variant="outline" 
             onClick={() => fileInputRef.current?.click()} 
             disabled={uploading}
           >
             <UploadIcon size={18} className="mr-2" />
             {uploading ? "Importing..." : "Batch Import"}
-          </Button>
-
-          <Button onClick={() => setIsModalOpen(true)}>
-            <PlusIcon size={18} className="mr-2" />
-            Add Referral
           </Button>
         </div>
       </header>

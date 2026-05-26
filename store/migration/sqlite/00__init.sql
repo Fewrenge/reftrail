@@ -1,11 +1,11 @@
 -- 1. User Table (Needed for your Login/Accountability)
 CREATE TABLE IF NOT EXISTS user (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL UNIQUE PRIMARY KEY,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'BOOKING_TEAM' check (role IN ('BOOKING_TEAM', 'REFTRAIL_ADMIN')),
     user_first_name TEXT,
-    user_last_name TEXT
+    user_last_name TEXT,
+    is_archived BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- 2. Referral Table (Requirement #1 through #10)
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     id TEXT PRIMARY KEY,
     created_ts TEXT NOT NULL,
     updated_ts TEXT NOT NULL, 
-    creator_id INTEGER NOT NULL,
+    creator_id TEXT NOT NULL,
     patient_last_name TEXT NOT NULL,
     patient_first_name TEXT NOT NULL,
     patient_dob TEXT NOT NULL,
@@ -30,20 +30,20 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     '3RD_CALL_COMPLETE', 'BOOKED', 'UNABLE_TO_CONTACT', 'PATIENT_TO_CALL_BACK', 'DECLINED', 'SUSPENDED','CLOSED')),
     source TEXT CHECK(source IN ('REGULAR', 'FRACTURE_CLINIC', 'OTHER')),
     referral_date TEXT NOT NULL,
-    FOREIGN KEY (creator_id) REFERENCES user(id)
+    FOREIGN KEY (creator_id) REFERENCES user(username) ON UPDATE CASCADE -- ON DELETE SET NULL?
 );
 
 -- 3. Audit Log (Requirement #9 - Tracking who changed the status)
 CREATE TABLE IF NOT EXISTS referral_log (
     id TEXT PRIMARY KEY,
     referral_id TEXT NOT NULL,
-    user_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
     old_status TEXT,
     new_status TEXT,
     note TEXT,
     created_ts TEXT NOT NULL,
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES user(id)
+    FOREIGN KEY (user_id) REFERENCES user(username) ON UPDATE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(referral_id);
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS referral_appointment (
     practitioner TEXT,
     juvonno_appt_id TEXT,
     created_ts TEXT NOT NULL,
-    creator_id INTEGER,
+    creator_id TEXT,
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
 );
 
@@ -75,18 +75,17 @@ CREATE TABLE IF NOT EXISTS referral_complaint (
 -- Only Admin can edit Tags
 -- Tags are for internal use to help categorize referrals (e.g. "X-Ray completed at hospital", "Online Booking Eligible", etc.)
 CREATE TABLE IF NOT EXISTS referral_tag_definition (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
+    name TEXT PRIMARY KEY,
     description TEXT
 );
 
 -- Junction table (Many-to-Many)
 CREATE TABLE IF NOT EXISTS referral_tag (
     referral_id TEXT NOT NULL,
-    tag_id INTEGER NOT NULL,
-    PRIMARY KEY (referral_id, tag_id),
+    tag_name TEXT NOT NULL,
+    PRIMARY KEY (referral_id, tag_name),
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES referral_tag_definition(id) ON DELETE CASCADE
+    FOREIGN KEY (tag_name) REFERENCES referral_tag_definition(name) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_referral_tag_ref ON referral_tag(referral_id);

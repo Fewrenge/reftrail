@@ -6,7 +6,6 @@ import (
 )
 
 type ReferralTag struct {
-	ID          int64  `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
@@ -17,7 +16,7 @@ type CreateReferralTag struct {
 }
 
 type DeleteReferralTag struct {
-	ID int64 `json:"id"`
+	Name string `json:"name"`
 }
 
 type LinkedReferralTagRow struct {
@@ -45,10 +44,10 @@ func (s *Store) DeleteReferralTag(ctx context.Context, delete *DeleteReferralTag
 	return s.driver.DeleteReferralTag(ctx, delete)
 }
 
-func (s *Store) AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
-	return s.driver.AssignTagToReferral(ctx, referralID, tagID)
+func (s *Store) AssignTagToReferral(ctx context.Context, referralID domain.ReferralID, tagName string) error {
+	return s.driver.AssignTagToReferral(ctx, referralID, tagName)
 }
 
-func (s *Store) RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagID int64) error {
-	return s.driver.RemoveTagFromReferral(ctx, referralID, tagID)
+func (s *Store) RemoveTagFromReferral(ctx context.Context, referralID domain.ReferralID, tagName string) error {
+	return s.driver.RemoveTagFromReferral(ctx, referralID, tagName)
 }

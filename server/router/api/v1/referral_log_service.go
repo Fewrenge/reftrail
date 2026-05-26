@@ -26,23 +26,12 @@ func (s *APIV1Service) CreateReferralLogHandler(c *echo.Context) error {
 	}
 	log.ReferralID = refID
 
-	currentStatus, err := s.Store.GetReferralEntryStatusByID(ctx, refID)
-	if err != nil {
-		slog.Error("failed to get referral entry status by ID", "error", err.Error())
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to verify referral status"})
-	}
-
-	log.OldStatus = currentStatus
-	log.NewStatus = currentStatus
-
-	// 3. Ask the Manager (Store) to create the log
 	createdLog, err := s.Store.CreateReferralLog(ctx, log)
 	if err != nil {
-		slog.Error("failed to create referral log", "error", err.Error())
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create referral log"})
+		slog.Error("failed to create standalone referral log", "error", err.Error())
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to save log entry"})
 	}
 
-	// 4. Return the created log to the user
 	return c.JSON(http.StatusCreated, createdLog)
 }
 

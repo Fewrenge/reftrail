@@ -10,28 +10,28 @@ import (
 )
 
 type User struct {
-	ID            domain.UserID   `json:"-"`
-	Username      string          `json:"username"`
+	Username      domain.Username `json:"username"`
 	PasswordHash  string          `json:"-"`
 	Role          domain.UserRole `json:"role"`
 	UserFirstName string          `json:"userFirstName"`
 	UserLastName  string          `json:"userLastName"`
+	IsArchived    bool            `json:"isArchived"`
 }
 
 type UserPublicInfo struct {
-	Username      string `json:"username"`
-	UserFirstName string `json:"userFirstName"`
-	UserLastName  string `json:"userLastName"`
+	Username      domain.Username `json:"username"`
+	UserFirstName string          `json:"userFirstName"`
+	UserLastName  string          `json:"userLastName"`
 }
 
 // The "Form" for logging in
 type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username domain.Username `json:"username"`
+	Password string          `json:"password"`
 }
 
 type CreateUser struct {
-	Username      string          `json:"username"`
+	Username      domain.Username `json:"username"`
 	Password      string          `json:"password"`
 	Role          domain.UserRole `json:"role"`
 	UserFirstName string          `json:"userFirstName"`
@@ -39,37 +39,51 @@ type CreateUser struct {
 }
 
 type FindUser struct {
-	ID       *domain.UserID `json:"id"`
-	Username *string        `json:"username"`
+	Username domain.Username `json:"username"`
+
+	// Optional fields
+	Role          *domain.UserRole `json:"role,omitempty"`
+	UserFirstName *string          `json:"userFirstName,omitempty"`
+	UserLastName  *string          `json:"userLastName,omitempty"`
 }
 
-type UpdateUser struct {
-	ID            domain.UserID    `json:"id"`
-	Username      *string          `json:"username"`
-	UserFirstName *string          `json:"userFirstName"`
-	UserLastName  *string          `json:"userLastName"`
-	Password      *string          `json:"password"`
-	Role          *domain.UserRole `json:"role"`
+type UpdateUserInfo struct {
+	CurrentUsername domain.Username  `json:"currentUsername"` // Used to find the user to update
+	UpdatedUsername *domain.Username `json:"updatedUsername"`
+	UserFirstName   *string          `json:"userFirstName"`
+	UserLastName    *string          `json:"userLastName"`
+}
+
+type UpdateUserRole struct {
+	TargetUsername domain.Username `json:"targetUsername"`
+	Role           domain.UserRole `json:"role"`
 }
 
 type DeleteUser struct {
-	ID domain.UserID `json:"id"`
+	ActingAdmin domain.Username `json:"actingAdmin"`
+	TargetUser  domain.Username `json:"targetUser"`
 }
 
 // --- THE MANAGER LOGIC ---
 
 func (s *Store) Login(ctx context.Context, req *LoginRequest) (*User, error) {
 	// 1. Find the user by username
-	user, err := s.GetUser(ctx, &FindUser{Username: &req.Username})
+	user, err := s.GetUser(ctx, &FindUser{Username: req.Username}) // req.Username is a direct value converted by implicit dereferencing
 	if err != nil || user == nil {
-		return nil, errors.New("invalid username or password")
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	// 2. Compare passwords
 	// Integrated the method of comparing Hash
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
 	if err != nil {
-		return nil, errors.New("invalid username or password")
+		return nil, domain.ErrInvalidCredentials
+	}
+
+	// 3. Check if the user is archived
+	// Do this after comparing passwords to avoid giving away information about which usernames are valid
+	if user.IsArchived {
+		return nil, domain.ErrUserArchived
 	}
 
 	return user, nil
@@ -82,7 +96,7 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 	}
 
 	if count == 0 {
-		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost) // TODO: put default password in .env file
 
 		admin := &CreateUser{
 			Username:      "admin",
@@ -122,18 +136,137 @@ func (s *Store) GetUser(ctx context.Context, find *FindUser) (*User, error) {
 	return list[0], nil
 }
 
-func (s *Store) UpdateUser(ctx context.Context, update *UpdateUser) (*User, error) {
-	return s.driver.UpdateUser(ctx, update)
+func (s *Store) UpdateUserInfo(ctx context.Context, update *UpdateUserInfo) (*User, error) {
+	return s.driver.UpdateUserInfo(ctx, update)
 }
 
 func (s *Store) DeleteUser(ctx context.Context, delete *DeleteUser) error {
-	if delete.ID == 1 {
-		return errors.New("cannot delete the system administrator")
+	// Admin cannot delete themselves
+	if delete.ActingAdmin == delete.TargetUser {
+		return domain.ErrCannotDeleteSelf
 	}
+
+	// Fetch current target user to assess safety context
+	user, err := s.GetUser(ctx, &FindUser{Username: delete.TargetUser})
+	if err != nil {
+		return domain.ErrUserNotFound
+	}
+
+	// RULE 5: Check structural safety bounds if the target is an admin
+	if user.Role == domain.RoleReftrailAdmin {
+		activeAdminCount, err := s.driver.CountActiveAdmins(ctx)
+		if err != nil {
+			return err
+		}
+		if activeAdminCount <= 1 {
+			return domain.ErrLastAdminLockout
+		}
+	}
+
+	// Hand off to the secure raw driver layer
 	return s.driver.DeleteUser(ctx, delete)
 }
 
-func (s *Store) UpdateUserPassword(ctx context.Context, userID domain.UserID, newHash string) error {
-	// Relay the command to the driver (the stove)
-	return s.driver.UpdateUserPassword(ctx, userID, newHash)
+func (s *Store) ChangeOwnPassword(ctx context.Context, username domain.Username, oldPassword, newPassword string) error {
+	// 1. Guard against empty inputs
+	if oldPassword == "" || newPassword == "" {
+		return errors.New("passwords cannot be empty")
+	}
+
+	// 2. Fetch the user state using existing Store capability
+	user, err := s.GetUser(ctx, &FindUser{Username: username})
+	if err != nil {
+		return domain.ErrUserNotFound // Or map your internal not found error
+	}
+
+	// 3. Verify old password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
+		return domain.ErrPasswordMismatch
+	}
+
+	// 4. Hash new password
+	newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	// 5. Execute via raw driver
+	return s.driver.UpdateUserPassword(ctx, username, string(newHash))
+}
+
+func (s *Store) ResetUserPassword(ctx context.Context, actingAdmin, targetUser domain.Username, newPassword string) error {
+	// RULE: Prevent an admin from using the override path on themselves
+	if actingAdmin == targetUser {
+		return domain.ErrSelfResetBlocked
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	return s.driver.UpdateUserPassword(ctx, targetUser, string(newHash))
+}
+
+func (s *Store) ArchiveUser(ctx context.Context, actingAdmin, targetUser domain.Username) error {
+	// Admin cannot archive themselves
+	if actingAdmin == targetUser {
+		return domain.ErrCannotArchiveSelf
+	}
+
+	// Fetch target user to check their role status
+	user, err := s.GetUser(ctx, &FindUser{Username: targetUser})
+	if err != nil {
+		return domain.ErrUserNotFound
+	}
+
+	// If target is an admin, ensure they aren't the last active one
+	if user.Role == domain.RoleReftrailAdmin {
+		activeAdminCount, err := s.CountActiveAdmins(ctx)
+		if err != nil {
+			return err
+		}
+		if activeAdminCount <= 1 {
+			return domain.ErrLastAdminLockout
+		}
+	}
+
+	// Delegate to your clean driver layer
+	return s.driver.ArchiveUser(ctx, targetUser)
+}
+
+func (s *Store) CountActiveAdmins(ctx context.Context) (int, error) {
+	return s.driver.CountActiveAdmins(ctx)
+}
+
+func (s *Store) UpdateUserRole(ctx context.Context, actingAdmin, targetUser domain.Username, newRole domain.UserRole) error {
+	// RULE 1: An admin cannot demote themselves
+	if actingAdmin == targetUser && newRole != domain.RoleReftrailAdmin {
+		return domain.ErrCannotDemoteSelf
+	}
+
+	// Fetch current state of the target user
+	user, err := s.GetUser(ctx, &FindUser{Username: targetUser})
+	if err != nil {
+		return domain.ErrUserNotFound
+	}
+
+	// If the target is already in the requested role, do nothing
+	if user.Role == newRole {
+		return nil
+	}
+
+	// RULE 5: If demoting an existing admin, protect against the last-admin lockout
+	if user.Role == domain.RoleReftrailAdmin && newRole == domain.RoleBookingTeam {
+		activeAdminCount, err := s.driver.CountActiveAdmins(ctx)
+		if err != nil {
+			return err
+		}
+		if activeAdminCount <= 1 {
+			return domain.ErrLastAdminLockout
+		}
+	}
+
+	// Delegate the direct SQL command to the driver layer
+	return s.driver.UpdateUserRole(ctx, targetUser, newRole)
 }
