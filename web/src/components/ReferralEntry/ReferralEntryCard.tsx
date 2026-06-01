@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ROLES, ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
 import { useAuth } from "@/contexts/AuthContext";
-import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, XCircleIcon } from "lucide-react";
+import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, ExternalLinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,6 +38,7 @@ export interface ReferralEntry {
   complaints: Complaint[];
   triageNote: string;
   tags: string[];
+  txtCustomerId?: string;
 }
 
 export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Props) {
@@ -177,24 +178,43 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
         {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
         <div className="flex justify-between items-start mb-6">
-          <div>
-            {/* Wrap the patient name text in a clickable button element */}
-            {isClickable ? (
-              <button
-                onClick={() => navigate(`/referrals/${entry.id}`)}
-                className="text-left font-bold text-xl text-slate-900 hover:text-blue-600 cursor-pointer transition-colors focus:outline-none"
-              >
-                {entry.patientLastName}{", "}{entry.patientFirstName}
-              </button>
-            ) : (
-              <h3 className="font-bold text-xl text-slate-900">
-                {entry.patientLastName}{", "}{entry.patientFirstName}
-              </h3>
-            )}
 
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-              DOB: {entry.patientDob || 'N/A'}
-            </p>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              {isClickable ? (
+                <button
+                  onClick={() => navigate(`/referrals/${entry.id}`)}
+                  className="text-left font-bold text-xl text-slate-900 hover:text-blue-600 cursor-pointer transition-colors focus:outline-none"
+                >
+                  {entry.patientLastName}{", "}{entry.patientFirstName}
+                </button>
+              ) : (
+                <h3 className="font-bold text-xl text-slate-900">
+                  {entry.patientLastName}{", "}{entry.patientFirstName}
+                </h3>
+              )}
+
+              {/* External Link */}
+
+              {/*TODO: Replace with actual external patient URL in the .env file and put a fallback link*/}
+              <a
+                href={
+                  `${import.meta.env?.VITE_EXTERNAL_PATIENT_URL}/${entry.txtCustomerId || ''}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-400 hover:text-blue-600 transition-colors focus:outline-none p-1 rounded-md hover:bg-slate-100 shrink-0 self-center"
+                aria-label="Open external link"
+              >
+                <ExternalLinkIcon size={20} />
+              </a>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                DOB: {entry.patientDob || 'N/A'}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -329,10 +349,10 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                   <button
                     type="button"
                     onClick={() => handleRemoveTag(tagNameStr)}
-                    className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer rounded-full outline-none"
+                    className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer rounded-full outline-none"
                     disabled={isLoading}
                   >
-                    <XCircleIcon size={12} fill="currentColor" className="text-white" />
+                    <XIcon size={14} strokeWidth={2.5} />
                   </button>
                 )}
               </span>
