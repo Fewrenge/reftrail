@@ -172,13 +172,13 @@ const MemberSection = () => {
       header: "",
       className: "w-[10%] text-right",
       render: (_: any, row: any) => (
-        <div className="flex items-center justify-end gap-1">
+        <div className="flex items-center justify-end">
           {/* EDIT BUTTON */}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleOpenEditModal(row)} // <-- Ensure this reads your declared function!
-            className="text-slate-400 hover:text-blue-600 rounded-lg h-8 w-8 p-0"
+            className="text-slate-400 hover:text-blue-600 rounded-lg h-8"
           >
             <span className="text-xs font-bold">Edit</span>
           </Button>
@@ -188,11 +188,11 @@ const MemberSection = () => {
             variant="ghost"
             size="sm"
             onClick={() => handleArchiveUser(row.username)} // Points to our new archive handler
-            className="text-slate-400 hover:text-amber-600 rounded-lg h-8 w-8 p-0"
+            className="text-slate-400 hover:text-amber-600 rounded-lg h-8"
             // Prevent system admins from archiving themselves or the core system admin row
             disabled={row.username === "admin"}
           >
-            <span className="text-xs font-bold text-amber-600">Arch</span>
+            <span className="text-xs font-bold text-amber-600">Archive</span>
           </Button>
 
           {/* DELETE BUTTON */}
@@ -200,7 +200,7 @@ const MemberSection = () => {
             variant="ghost"
             size="sm"
             onClick={() => handleDeleteUser(row.username)} // Triggers our new delete function
-            className="text-slate-400 hover:text-red-600 rounded-lg h-8 w-8 p-0"
+            className="text-slate-400 hover:text-red-600 rounded-lg h-8"
             // Prevents self-deletion if currentUser state exists later
             disabled={row.username === "admin"}
           >
@@ -218,7 +218,7 @@ const MemberSection = () => {
   return (
     <>
       <SettingSection
-        title="Member list"
+        title="Member List"
         className="p-1"
         actions={
           <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
