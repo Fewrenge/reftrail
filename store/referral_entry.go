@@ -27,7 +27,7 @@ type ReferralEntry struct {
 	// 3. EMR Integration
 	// Use string in case EMR updates their ID format in the future
 	TxtCustomerID    string `json:"txtCustomerId"`
-	IntCustomerDocID int64  `json:"intCustomerDocId"`
+	IntCustomerDocID string `json:"intCustomerDocId"`
 
 	// 4. Clinical Details
 	ReferringPhysician string `json:"referringPhysician"`
@@ -42,7 +42,7 @@ type ReferralEntry struct {
 	// Appointment Info (If status is "Booked")
 	ApptDateAndTime string `json:"apptDateAndTime"`
 	Practitioner    string `json:"practitioner"`
-	JuvonnoApptID   string `json:"juvonnoApptId"` // e.g., #18752
+	EMRApptID       string `json:"emrApptId"` // e.g., #18752
 }
 
 type ReferralComplaint struct {
@@ -62,7 +62,7 @@ type CreateReferralEntry struct {
 	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
 	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
 	TxtCustomerID                string `json:"txtCustomerId"`
-	IntCustomerDocID             int64  `json:"intCustomerDocId"`
+	IntCustomerDocID             string `json:"intCustomerDocId"`
 
 	// Clinical Info
 	ReferringPhysician string              `json:"referringPhysician"`

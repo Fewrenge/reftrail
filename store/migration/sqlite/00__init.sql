@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     patient_healthcard_number TEXT NOT NULL,
     patient_healthcard_version_code TEXT NOT NULL,
     txt_customer_id TEXT,
-    int_customer_doc_id INTEGER,
+    int_customer_doc_id TEXT,
     referring_physician TEXT,
     consult_type TEXT CHECK(consult_type IN ('APP+LE','APP+UE','APP+SX','SX','OTHER')),
     consult_type_details TEXT, -- e.g. when patient has a preference
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS referral_appointment (
     complaint_target TEXT NOT NULL,
     appt_date_and_time TEXT,
     practitioner TEXT,
-    juvonno_appt_id TEXT,
+    emr_appt_id TEXT,
     created_ts TEXT NOT NULL,
     creator_id TEXT,
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
