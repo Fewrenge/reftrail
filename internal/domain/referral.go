@@ -6,6 +6,12 @@ type ReferralUrgency string
 type ReferralSource string
 
 const (
+	UrgencyElective ReferralUrgency = "ELECTIVE"
+	UrgencyUrgent   ReferralUrgency = "URGENT"
+	UrgencyAsap     ReferralUrgency = "ASAP"
+)
+
+const (
 	StatusReadyToBook     ReferralStatus = "READY_TO_BOOK"
 	Status1stCallComplete ReferralStatus = "1ST_CALL_COMPLETE"
 	Status2ndCallComplete ReferralStatus = "2ND_CALL_COMPLETE"

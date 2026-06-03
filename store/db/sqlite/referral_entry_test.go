@@ -36,7 +36,7 @@ func setupTestStore(t *testing.T) *store.Store {
 	// 2. Run schema
 	schema := `
 	CREATE TABLE IF NOT EXISTS user (username TEXT UNIQUE PRIMARY KEY, password_hash TEXT, role TEXT, user_first_name TEXT,
-    user_last_name TEXT);
+    user_last_name TEXT, is_archived BOOLEAN NOT NULL DEFAULT FALSE);
 	CREATE TABLE IF NOT EXISTS referral_entry (
 		id TEXT PRIMARY KEY, creator_id TEXT NOT NULL, created_ts TEXT, updated_ts TEXT,
 		patient_last_name TEXT, patient_first_name TEXT, patient_dob TEXT, patient_healthcard_number TEXT, patient_healthcard_version_code TEXT,
