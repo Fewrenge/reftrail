@@ -65,8 +65,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
   const urgencyStyles = {
     ASAP: "bg-red-50 text-red-700 border-red-100",
-    Urgent: "bg-amber-50 text-amber-700 border-amber-100",
-    Elective: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    URGENT: "bg-amber-50 text-amber-700 border-amber-100",
+    ELECTIVE: "bg-emerald-50 text-emerald-700 border-emerald-100",
   };
 
   // Logic to send the update to your Go backend
@@ -195,8 +195,6 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               )}
 
               {/* External Link */}
-
-              {/*TODO: Replace with actual external patient URL in the .env file and put a fallback link*/}
               <a
                 href={
                   `${import.meta.env?.VITE_EXTERNAL_PATIENT_URL}/${entry.txtCustomerId || ''}`

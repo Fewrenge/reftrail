@@ -84,6 +84,7 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 
 	entry, err := s.Store.CreateReferralEntry(ctx, create)
 	if err != nil {
+		slog.Warn("Failed to create referral entry in database", "error", err.Error())
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create referral"})
 	}
 	return c.JSON(http.StatusOK, entry)

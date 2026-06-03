@@ -86,7 +86,7 @@ func (d *Driver) ListAllComplaints(ctx context.Context) ([]*store.ReferralCompla
 }
 
 func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferralEntry) ([]*store.ReferralEntry, error) {
-	// 1. The Base Query
+	// Base query targeting strictly singular top-level records
 	query := `SELECT 
 		id, creator_id, created_ts, updated_ts, 
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code,
@@ -94,25 +94,81 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		referring_physician, triage_note, urgency, status, source, referral_date
 	FROM referral_entry WHERE 1 = 1`
 
-	// 2. The "Arguments" list
-	// This stores the values we will plug into the "?" placeholders
 	var args []any
 
-	// 3. Add Dynamic Filters (Requirement #8 & #9)
 	if find.ID != nil {
 		query += " AND id = ?"
 		args = append(args, *find.ID)
 	}
-	if find.Urgency != nil {
-		query += " AND urgency = ?"
-		args = append(args, *find.Urgency)
-	}
-	if find.Status != nil {
-		query += " AND status = ?"
-		args = append(args, *find.Status)
+	if find.CreatorUsername != nil {
+		query += " AND creator_id = ?"
+		args = append(args, *find.CreatorUsername)
 	}
 
-	// Fuzzy Matching for Patient Name (Requirement #1)
+	// 1. Array Parameter Slices
+	if len(find.Statuses) > 0 {
+		query += " AND status IN ("
+		for i, s := range find.Statuses {
+			if i > 0 {
+				query += ", "
+			}
+			query += "?"
+			args = append(args, string(s))
+		}
+		query += ")"
+	}
+
+	if len(find.Urgencies) > 0 {
+		query += " AND urgency IN ("
+		for i, u := range find.Urgencies {
+			if i > 0 {
+				query += ", "
+			}
+			query += "?"
+			args = append(args, string(u))
+		}
+		query += ")"
+	}
+
+	if len(find.Sources) > 0 {
+		query += " AND source IN ("
+		for i, src := range find.Sources {
+			if i > 0 {
+				query += ", "
+			}
+			query += "?"
+			args = append(args, string(src))
+		}
+		query += ")"
+	}
+
+	// 2. Filter by Associated Complaints (Body Parts) via isolated lookup subquery
+	if len(find.BodyParts) > 0 {
+		query += " AND id IN (SELECT referral_id FROM referral_complaint WHERE body_part IN ("
+		for i, bp := range find.BodyParts {
+			if i > 0 {
+				query += ", "
+			}
+			query += "?"
+			args = append(args, bp)
+		}
+		query += "))"
+	}
+
+	// 3. Filter by Associated Junction Tags via isolated lookup subquery
+	if len(find.TagNames) > 0 {
+		query += " AND id IN (SELECT referral_id FROM referral_tag WHERE tag_name IN ("
+		for i, t := range find.TagNames {
+			if i > 0 {
+				query += ", "
+			}
+			query += "?"
+			args = append(args, t)
+		}
+		query += "))"
+	}
+
+	// 4. Fuzzy Searches
 	if find.PatientLastName != nil && *find.PatientLastName != "" {
 		query += " AND patient_last_name LIKE ?"
 		args = append(args, "%"+*find.PatientLastName+"%")
@@ -121,24 +177,45 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		query += " AND patient_first_name LIKE ?"
 		args = append(args, "%"+*find.PatientFirstName+"%")
 	}
+	if find.ReferringPhysician != nil && *find.ReferringPhysician != "" {
+		query += " AND referring_physician LIKE ?"
+		args = append(args, "%"+*find.ReferringPhysician+"%")
+	}
+	if find.PatientHealthcardNumber != nil && *find.PatientHealthcardNumber != "" {
+		query += " AND patient_healthcard_number LIKE ?"
+		args = append(args, "%"+*find.PatientHealthcardNumber+"%")
+	}
 
-	// 4. Sorting (Always show newest or most urgent first)
+	// 5. Date Bounds
+	if find.ReferralDateFrom != nil && *find.ReferralDateFrom != "" {
+		query += " AND referral_date >= ?"
+		args = append(args, *find.ReferralDateFrom)
+	}
+	if find.ReferralDateTo != nil && *find.ReferralDateTo != "" {
+		query += " AND referral_date <= ?"
+		args = append(args, *find.ReferralDateTo)
+	}
+
 	query += " ORDER BY created_ts DESC"
 
-	// 5. Run the Query
+	if find.Limit != nil {
+		query += " LIMIT ?"
+		args = append(args, *find.Limit)
+	}
+	if find.Offset != nil {
+		query += " OFFSET ?"
+		args = append(args, *find.Offset)
+	}
+
 	rows, err := d.conn(ctx).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	// 6. The "Bucket" for our results
 	var list []*store.ReferralEntry
-
-	// 7. Loop through the database rows
 	for rows.Next() {
 		var entry store.ReferralEntry
-		// Scan matches the columns in our SELECT statusment to our Go struct
 		err := rows.Scan(
 			&entry.ID, &entry.CreatorUsername, &entry.CreatedTs, &entry.UpdatedTs,
 			&entry.PatientLastName, &entry.PatientFirstName, &entry.PatientDOB,
