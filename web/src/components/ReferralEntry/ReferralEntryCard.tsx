@@ -32,6 +32,10 @@ export interface ReferralEntry {
   patientLastName: string;
   patientFirstName: string;
   patientDob: string;
+    patientHealthcardNumber: string;
+  patientHealthcardVersionCode: string;
+  patientCell: string;   // Added
+  patientEmail: string;  // Added
   urgency: 'ASAP' | 'Urgent' | 'Elective';
   status: string;
   referringPhysician: string;
@@ -39,6 +43,7 @@ export interface ReferralEntry {
   triageNote: string;
   tags: string[];
   emrPatientId?: string;
+  emrReferralDocId?: string;
 }
 
 export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Props) {

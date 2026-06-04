@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { SearchIcon, PlusIcon, UploadIcon } from "lucide-react";
+import { SearchIcon, PlusIcon, UploadIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import ReferralEntryCard from '../components/ReferralEntry/ReferralEntryCard';
 import AddReferralEntryDialog from '../components/ReferralEntry/AddReferralEntryDialog';
 import type { ReferralEntry } from '../components/ReferralEntry/ReferralEntryCard';
@@ -7,26 +7,64 @@ import { Button } from "@/components/ui";
 
 export default function Home() {
   const [patients, setPatients] = useState<ReferralEntry[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25; // Aligned with Go backend defaults
+
+
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading]=useState(false);
+  const [uploading, setUploading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const refreshData = () => {
     setLoading(true);
-    fetch('/api/v1/referrals', { credentials: 'same-origin' })
+
+    const params = new URLSearchParams({
+      limit: String(pageSize),
+      offset: String((currentPage - 1) * pageSize),
+    });
+
+    if (debouncedSearch.trim() !== "") {
+      // Direct pass to your Echo c.Bind fuzzy filter variables
+      params.append("patientFirstName", debouncedSearch);
+      params.append("patientLastName", debouncedSearch);
+    }
+
+    fetch(`/api/v1/referrals?${params.toString()}`, { credentials: 'same-origin' })
       .then(res => res.json())
-      .then(data => setPatients(Array.isArray(data) ? data : []))
+      .then(data => {
+        // FIXED: Safely dissect the envelop struct contract keys
+        if (data && Array.isArray(data.referralEntries)) {
+          setPatients(data.referralEntries);
+          setTotalCount(data.totalCount || 0);
+        } else {
+          setPatients([]);
+          setTotalCount(0);
+        }
+      })
+      .catch(err => console.error("Data fetching error:", err))
       .finally(() => setLoading(false));
   };
 
+  // Trigger page re-render sequences whenever pages or filters change
   useEffect(() => {
     refreshData();
-  }, []);
+  }, [currentPage, debouncedSearch]);
 
-    // Handler to pipe the binary file stream to your new backend handler
+  // Reset pagination index if search terms shift
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
+
+  // Handler to pipe the binary file stream to your new backend handler
   const handleBatchImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -58,20 +96,21 @@ export default function Home() {
     }
   };
 
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   // Filter patients based on search input
-    const filteredPatients = patients.filter(p => {
+  const filteredPatients = patients.filter(p => {
     const fullName = `${p.patientFirstName || ''} ${p.patientLastName || ''}`.toLowerCase();
     return fullName.includes(searchQuery.toLowerCase());
   });
 
   return (
-    
+
     <>
-       <header className="flex justify-between items-center mb-8">
+      <header className="flex justify-between items-center mb-8">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">Referrals</h2>
         <div className="flex gap-3">
-          
+
 
           <Button variant="outline" onClick={() => setIsModalOpen(true)}>
             <PlusIcon size={18} className="mr-2" />
@@ -79,16 +118,16 @@ export default function Home() {
           </Button>
 
           {/* Hidden binary file input wrapper */}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleBatchImport} 
-            accept=".tsv,.csv" 
-            className="hidden" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleBatchImport}
+            accept=".tsv,.csv"
+            className="hidden"
           />
-          <Button 
+          <Button
             // variant="outline" 
-            onClick={() => fileInputRef.current?.click()} 
+            onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >
             <UploadIcon size={18} className="mr-2" />
@@ -125,6 +164,36 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* NEW INTERACTIVE PAGINATION CONTROLS FOOTER PANEL BAR */}
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
+          <p className="text-sm text-slate-500">
+            Showing Page <span className="font-semibold text-slate-700">{currentPage}</span> of{" "}
+            <span className="font-semibold text-slate-700">{totalPages}</span> ({totalCount} total records)
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeftIcon size={16} className="mr-1" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRightIcon size={16} className="ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <AddReferralEntryDialog
         isOpen={isModalOpen}
