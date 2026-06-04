@@ -25,6 +25,28 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid query filter parameters"})
 	}
 
+	// FIX: Explicitly pull repeated query slices that c.Bind skips natively by hardcoding the expected query keys
+	// TODO: make this more dynamic and reusable
+	rawQueryParams := c.QueryParams()
+
+	if rawStatuses, exists := rawQueryParams["statuses"]; exists && len(rawStatuses) > 0 {
+		find.Statuses = []domain.ReferralStatus{} // Reset slice to ensure clean allocation
+		for _, s := range rawStatuses {
+			if s != "" {
+				find.Statuses = append(find.Statuses, domain.ReferralStatus(s))
+			}
+		}
+	}
+
+	if rawUrgencies, exists := rawQueryParams["urgencies"]; exists && len(rawUrgencies) > 0 {
+		find.Urgencies = []domain.ReferralUrgency{}
+		for _, u := range rawUrgencies {
+			if u != "" {
+				find.Urgencies = append(find.Urgencies, domain.ReferralUrgency(u))
+			}
+		}
+	}
+
 	// 2. Apply business defaults if the frontend didn't pass pagination bounds
 	if find.Limit == nil {
 		defaultLimit := 25

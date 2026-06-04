@@ -1,11 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
-import { SearchIcon, PlusIcon, UploadIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { SearchIcon, PlusIcon, UploadIcon, ChevronLeftIcon, ChevronRightIcon, FilterIcon } from "lucide-react";
 import ReferralEntryCard from '../components/ReferralEntry/ReferralEntryCard';
 import AddReferralEntryDialog from '../components/ReferralEntry/AddReferralEntryDialog';
 import type { ReferralEntry } from '../components/ReferralEntry/ReferralEntryCard';
 import { Button } from "@/components/ui";
 
-export default function Home() {
+const AVAILABLE_STATUSES = [
+  { id: 'READY_TO_BOOK', label: 'Ready to Book' },
+  { id: '1ST_CALL_COMPLETE', label: '1st Call Complete' },
+  { id: '2ND_CALL_COMPLETE', label: '2nd Call Complete' },
+  { id: '3RD_CALL_COMPLETE', label: '3rd Call Complete' },
+  { id: 'BOOKED', label: 'Booked' },
+  { id: 'UNABLE_TO_CONTACT', label: 'Unable to Contact' },
+  { id: 'PATIENT_TO_CALL_BACK', label: 'Patient to Call Back' },
+  { id: 'DECLINED', label: 'Declined' },
+  { id: 'SUSPENDED', label: 'Suspended' },
+  { id: 'CLOSED', label: 'Closed' }
+];
+
+export default function Referrals() {
   const [patients, setPatients] = useState<ReferralEntry[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -15,14 +28,25 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const handler = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    const handler = setTimeout(() => setDebouncedSearch(searchQuery), 1000);
     return () => clearTimeout(handler);
   }, [searchQuery]);
+
+  const handleStatusToggle = (statusId: string) => {
+    setSelectedStatuses(prev => 
+      prev.includes(statusId) 
+        ? prev.filter(id => id !== statusId) 
+        : [...prev, statusId]
+    );
+  };
 
   const refreshData = () => {
     setLoading(true);
@@ -37,6 +61,10 @@ export default function Home() {
       params.append("patientFirstName", debouncedSearch);
       params.append("patientLastName", debouncedSearch);
     }
+
+     selectedStatuses.forEach(status => {
+      params.append("statuses", status);
+    });
 
     fetch(`/api/v1/referrals?${params.toString()}`, { credentials: 'same-origin' })
       .then(res => res.json())
@@ -57,12 +85,12 @@ export default function Home() {
   // Trigger page re-render sequences whenever pages or filters change
   useEffect(() => {
     refreshData();
-  }, [currentPage, debouncedSearch]);
+  }, [currentPage, debouncedSearch, selectedStatuses]);
 
   // Reset pagination index if search terms shift
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, selectedStatuses]);
 
   // Handler to pipe the binary file stream to your new backend handler
   const handleBatchImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,12 +125,6 @@ export default function Home() {
   };
 
   const totalPages = Math.ceil(totalCount / pageSize);
-
-  // Filter patients based on search input
-  const filteredPatients = patients.filter(p => {
-    const fullName = `${p.patientFirstName || ''} ${p.patientLastName || ''}`.toLowerCase();
-    return fullName.includes(searchQuery.toLowerCase());
-  });
 
   return (
 
@@ -150,22 +172,54 @@ export default function Home() {
         />
       </div>
 
+      {/* DYNAMIC MULTI-SELECT STATUS CHECKBOX BAR */}
+      <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+          <FilterIcon size={14} />
+          <span>Filter Statuses</span>
+          {selectedStatuses.length > 0 && (
+            <button 
+              onClick={() => setSelectedStatuses([])} 
+              className="ml-auto text-blue-600 hover:text-blue-700 lowercase font-normal"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {AVAILABLE_STATUSES.map((status) => (
+            <label 
+              key={status.id} 
+              className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none hover:text-slate-800 transition-colors"
+            >
+              <input
+                type="checkbox"
+                checked={selectedStatuses.includes(status.id)}
+                onChange={() => handleStatusToggle(status.id)}
+                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500/20"
+              />
+              <span>{status.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* PATIENT LIST */}
       <div className="space-y-4">
         {loading ? (
           <p className="text-center text-slate-400 animate-pulse py-10">Syncing database...</p>
-        ) : filteredPatients.length > 0 ? (
-          filteredPatients.map((p) => (
+        ) : patients.length > 0 ? (
+          patients.map((p) => (
             <ReferralEntryCard key={p.id} entry={p} onRefresh={refreshData} isClickable={true} />
           ))
         ) : (
           <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 italic">
-            {searchQuery ? "No patients match your search." : "No entries found."}
+            {searchQuery || selectedStatuses.length > 0 ? "No patients match your search filters." : "No entries found."}
           </div>
         )}
       </div>
 
-      {/* NEW INTERACTIVE PAGINATION CONTROLS FOOTER PANEL BAR */}
+      {/* PAGINATION CONTROLS FOOTER PANEL BAR */}
       {totalPages > 1 && (
         <div className="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
           <p className="text-sm text-slate-500">
