@@ -14,14 +14,14 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     created_ts TEXT NOT NULL,
     updated_ts TEXT NOT NULL, 
     creator_id TEXT NOT NULL,
+
     patient_last_name TEXT NOT NULL,
     patient_first_name TEXT NOT NULL,
     patient_dob TEXT NOT NULL,
     patient_healthcard_number TEXT NOT NULL,
     patient_healthcard_version_code TEXT NOT NULL,
-    txt_customer_id TEXT,
-    int_customer_doc_id TEXT,
-    referring_physician TEXT,
+
+    
     consult_type TEXT CHECK(consult_type IN ('APP+LE','APP+UE','APP+SX','SX','OTHER')),
     consult_type_details TEXT, -- e.g. when patient has a preference
     triage_note TEXT,
@@ -29,6 +29,10 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     status TEXT NOT NULL DEFAULT 'READY_TO_BOOK' CHECK (status IN ('READY_TO_BOOK', '1ST_CALL_COMPLETE', '2ND_CALL_COMPLETE',
     '3RD_CALL_COMPLETE', 'BOOKED', 'UNABLE_TO_CONTACT', 'PATIENT_TO_CALL_BACK', 'DECLINED', 'SUSPENDED','CLOSED')),
     source TEXT CHECK(source IN ('REGULAR', 'FRACTURE_CLINIC', 'OTHER')),
+
+    emr_patient_id TEXT,
+    emr_referral_doc_id TEXT,
+    referring_physician TEXT,
     referral_date TEXT NOT NULL,
     FOREIGN KEY (creator_id) REFERENCES user(username) ON UPDATE CASCADE -- ON DELETE SET NULL?
 );

@@ -26,8 +26,8 @@ type ReferralEntry struct {
 
 	// 3. EMR Integration
 	// Use string in case EMR updates their ID format in the future
-	TxtCustomerID    string `json:"txtCustomerId"`
-	IntCustomerDocID string `json:"intCustomerDocId"`
+	EMRPatientID     string `json:"emrPatientId"`
+	EMRReferralDocID string `json:"emrReferralDocId"`
 
 	// 4. Clinical Details
 	ReferringPhysician string `json:"referringPhysician"`
@@ -61,8 +61,8 @@ type CreateReferralEntry struct {
 	PatientDOB                   string `json:"patientDob"`
 	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
 	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
-	TxtCustomerID                string `json:"txtCustomerId"`
-	IntCustomerDocID             string `json:"intCustomerDocId"`
+	EMRPatientID                 string `json:"emrPatientId"`
+	EMRReferralDocID             string `json:"emrReferralDocId"`
 
 	// Clinical Info
 	ReferringPhysician string              `json:"referringPhysician"`

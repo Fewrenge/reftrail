@@ -38,7 +38,7 @@ export interface ReferralEntry {
   complaints: Complaint[];
   triageNote: string;
   tags: string[];
-  txtCustomerId?: string;
+  emrPatientId?: string;
 }
 
 export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Props) {
@@ -197,7 +197,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               {/* External Link */}
               <a
                 href={
-                  `${import.meta.env?.VITE_EXTERNAL_PATIENT_URL}/${entry.txtCustomerId || ''}`
+                  `${import.meta.env?.VITE_EXTERNAL_PATIENT_URL}/${entry.emrPatientId || ''}`
                 }
                 target="_blank"
                 rel="noopener noreferrer"

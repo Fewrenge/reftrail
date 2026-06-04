@@ -29,7 +29,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 	query := `INSERT INTO referral_entry (
 		id, created_ts, updated_ts, creator_id, 
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code,
-		txt_customer_id, int_customer_doc_id,
+		emr_patient_id, emr_referral_doc_id,
 		referring_physician, triage_note, urgency, status, source, referral_date
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
@@ -38,7 +38,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		idStr, ts, ts, string(create.CreatorUsername),
 		create.PatientLastName, create.PatientFirstName, create.PatientDOB,
 		create.PatientHealthcardNumber, create.PatientHealthcardVersionCode,
-		create.TxtCustomerID, create.IntCustomerDocID,
+		create.EMRPatientID, create.EMRReferralDocID,
 		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source, create.ReferralDate,
 	)
 	if err != nil {
@@ -55,8 +55,8 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		PatientDOB:                   create.PatientDOB,
 		PatientHealthcardNumber:      create.PatientHealthcardNumber,
 		PatientHealthcardVersionCode: create.PatientHealthcardVersionCode,
-		TxtCustomerID:                create.TxtCustomerID,
-		IntCustomerDocID:             create.IntCustomerDocID,
+		EMRPatientID:                 create.EMRPatientID,
+		EMRReferralDocID:             create.EMRReferralDocID,
 		ReferringPhysician:           create.ReferringPhysician,
 		TriageNote:                   create.TriageNote,
 		Urgency:                      create.Urgency,
@@ -90,7 +90,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	query := `SELECT 
 		id, creator_id, created_ts, updated_ts, 
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code,
-		txt_customer_id, int_customer_doc_id,
+		emr_patient_id, emr_referral_doc_id,
 		referring_physician, triage_note, urgency, status, source, referral_date
 	FROM referral_entry WHERE 1 = 1`
 
@@ -220,7 +220,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 			&entry.ID, &entry.CreatorUsername, &entry.CreatedTs, &entry.UpdatedTs,
 			&entry.PatientLastName, &entry.PatientFirstName, &entry.PatientDOB,
 			&entry.PatientHealthcardNumber, &entry.PatientHealthcardVersionCode,
-			&entry.TxtCustomerID, &entry.IntCustomerDocID,
+			&entry.EMRPatientID, &entry.EMRReferralDocID,
 			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source, &entry.ReferralDate,
 		)
 		if err != nil {
