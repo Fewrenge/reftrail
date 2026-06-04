@@ -20,6 +20,8 @@ type ReferralEntry struct {
 	PatientDOB                   string `json:"patientDob"`
 	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
 	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
+	PatientPhoneNumber           string `json:"patientPhoneNumber"`
+	PatientEmail                 string `json:"patientEmail"`
 
 	Complaints []*ReferralComplaint `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
 	Tags       []string             `json:"tags"`
@@ -61,6 +63,8 @@ type CreateReferralEntry struct {
 	PatientDOB                   string `json:"patientDob"`
 	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
 	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
+	PatientPhoneNumber           string `json:"patientPhoneNumber"`
+	PatientEmail                 string `json:"patientEmail"`
 	EMRPatientID                 string `json:"emrPatientId"`
 	EMRReferralDocID             string `json:"emrReferralDocId"`
 

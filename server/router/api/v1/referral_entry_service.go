@@ -220,6 +220,16 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			emrReferralDocID = strings.TrimSpace(row[idx])
 		}
 
+		var patientPhoneNumber string
+		if idx, exists := headerMap["phone number"]; exists {
+			patientPhoneNumber = strings.TrimSpace(row[idx])
+		}
+
+		var patientEmail string
+		if idx, exists := headerMap["email"]; exists {
+			patientEmail = strings.TrimSpace(row[idx])
+		}
+
 		// Parse semicolon-separated optional Tags column
 		var tags []string
 		if tagIdx, exists := headerMap["tag"]; exists {
@@ -250,6 +260,8 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			PatientDOB:                   "1990-01-01", // Default placeholder since template column is missing // TODO: Add DOB column
 			PatientHealthcardNumber:      healthCardNum,
 			PatientHealthcardVersionCode: versionCode,
+			PatientPhoneNumber:           patientPhoneNumber,
+			PatientEmail:                 patientEmail,
 			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
 			ReferralDate:                 strings.TrimSpace(row[headerMap["referral date"]]),
 			Urgency:                      domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),

@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     patient_dob TEXT NOT NULL,
     patient_healthcard_number TEXT NOT NULL,
     patient_healthcard_version_code TEXT NOT NULL,
+    patient_phone_number TEXT,
+    patient_email TEXT,
 
     
     consult_type TEXT CHECK(consult_type IN ('APP+LE','APP+UE','APP+SX','SX','OTHER')),
