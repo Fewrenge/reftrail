@@ -147,7 +147,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 	}
 
 	// Fail-fast verification check for required schema columns
-	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency", "referral date"}
+	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency", "referral date", "emr patient id", "emr referral doc id"}
 	for _, field := range requiredFields {
 		if _, exists := headerMap[field]; !exists {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing required column header '" + field + "'"})
@@ -210,6 +210,16 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			})
 		}
 
+		var emrPatientID string
+		if idx, exists := headerMap["emr patient id"]; exists {
+			emrPatientID = strings.TrimSpace(row[idx])
+		}
+
+		var emrReferralDocID string
+		if idx, exists := headerMap["emr referral doc id"]; exists {
+			emrReferralDocID = strings.TrimSpace(row[idx])
+		}
+
 		// Parse semicolon-separated optional Tags column
 		var tags []string
 		if tagIdx, exists := headerMap["tag"]; exists {
@@ -247,6 +257,8 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			Source:                       domain.ReferralSource("REGULAR"),
 			Complaints:                   complaints,
 			Tags:                         tags,
+			EMRPatientID:                 emrPatientID,
+			EMRReferralDocID:             emrReferralDocID,
 		}
 
 		// Run validator on this entry
