@@ -58,6 +58,7 @@ export default function Referrals() {
 
     if (debouncedSearch.trim() !== "") {
       // Direct pass to your Echo c.Bind fuzzy filter variables
+      // TODO: Fix this - branch feat/filter-referrals
       params.append("patientFirstName", debouncedSearch);
       params.append("patientLastName", debouncedSearch);
     }
@@ -172,7 +173,7 @@ export default function Referrals() {
         />
       </div>
 
-      {/* DYNAMIC MULTI-SELECT STATUS CHECKBOX BAR */}
+       {/* VISUAL BADGE TOGGLE PILLS FILTER BAR */}
       <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6">
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
           <FilterIcon size={14} />
@@ -180,29 +181,35 @@ export default function Referrals() {
           {selectedStatuses.length > 0 && (
             <button 
               onClick={() => setSelectedStatuses([])} 
-              className="ml-auto text-blue-600 hover:text-blue-700 lowercase font-normal"
+              className="ml-auto text-blue-600 hover:text-blue-700 font-normal transition-colors cursor-pointer"
             >
-              Clear filters
+              CLEAR FILTERS
             </button>
           )}
         </div>
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
-          {AVAILABLE_STATUSES.map((status) => (
-            <label 
-              key={status.id} 
-              className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none hover:text-slate-800 transition-colors"
-            >
-              <input
-                type="checkbox"
-                checked={selectedStatuses.includes(status.id)}
-                onChange={() => handleStatusToggle(status.id)}
-                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500/20"
-              />
-              <span>{status.label}</span>
-            </label>
-          ))}
+        
+        {/* Horizontal flex wrap panel layout */}
+        <div className="flex flex-wrap gap-2">
+          {AVAILABLE_STATUSES.map((status) => {
+            const isSelected = selectedStatuses.includes(status.id);
+            return (
+              <button
+                key={status.id}
+                type="button"
+                onClick={() => handleStatusToggle(status.id)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer  active:scale-95 ${
+                  isSelected 
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-blue-500/10 font-semibold shadow-sm' 
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
+                }`}
+              >
+                {status.label}
+              </button>
+            );
+          })}
         </div>
       </div>
+
 
       {/* PATIENT LIST */}
       <div className="space-y-4">

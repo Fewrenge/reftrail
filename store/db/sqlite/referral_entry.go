@@ -172,6 +172,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	}
 
 	// 4. Fuzzy Searches
+	// TODO: Fix this - branch feat/filter-referrals
 	if find.PatientLastName != nil && *find.PatientLastName != "" {
 		query += " AND patient_last_name LIKE ?"
 		args = append(args, "%"+*find.PatientLastName+"%")
