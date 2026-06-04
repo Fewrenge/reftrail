@@ -150,7 +150,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency", "referral date"}
 	for _, field := range requiredFields {
 		if _, exists := headerMap[field]; !exists {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing column header '" + field + "'"})
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing required column header '" + field + "'"})
 		}
 	}
 
@@ -198,7 +198,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			}
 
 			// Core zip pattern: resolve matching sides index, fallback to BILATERAL if data length mismatches
-			sideVal := "BILATERAL"
+			sideVal := "OTHER"
 			if i < len(rawSides) && strings.TrimSpace(rawSides[i]) != "" {
 				sideVal = strings.TrimSpace(strings.ToUpper(rawSides[i]))
 			}
@@ -214,15 +214,18 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		var tags []string
 		if tagIdx, exists := headerMap["tag"]; exists {
 
+			// NOTE: strings.SplitSeq handles streaming tokens lazily without upfront allocations.
+			// It returns an iter.Seq[string], which strictly allows ONLY ONE loop variable (t).
 			rawTags := strings.SplitSeq(row[tagIdx], ";")
 			for t := range rawTags {
-				cleanTag := strings.TrimSpace(strings.ToUpper(t))
+				// FIX: 't' points directly to the mutable CSV reader memory buffer.
+				// Modifying 't' or appending it raw causes a memory escape loop that breaks the file reader.
+				// That truncates row execution and dropping subsequent fields (like referral date).
+				// strings.Clone(t) safely decouples the string data before any transformations.
+				cleanTag := strings.TrimSpace(strings.ToUpper(strings.Clone(t)))
 				if cleanTag != "" {
-					// Uncomment below to enforce snake_case naming standard
-					// cleanTag = strings.ReplaceAll(cleanTag, " ", "_")
-
 					// Build the structure type matching store's expectations
-					tags = append(tags, strings.TrimSpace(cleanTag))
+					tags = append(tags, cleanTag)
 				}
 			}
 		} else {
@@ -238,6 +241,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			PatientHealthcardNumber:      healthCardNum,
 			PatientHealthcardVersionCode: versionCode,
 			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
+			ReferralDate:                 strings.TrimSpace(row[headerMap["referral date"]]),
 			Urgency:                      domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),
 			Status:                       domain.ReferralStatus("READY_TO_BOOK"), // Workflow entry state default
 			Source:                       domain.ReferralSource("REGULAR"),
