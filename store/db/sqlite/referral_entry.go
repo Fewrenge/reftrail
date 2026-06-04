@@ -236,6 +236,123 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	return list, nil
 }
 
+func (d *Driver) GetReferralEntriesCount(ctx context.Context, find *store.FindReferralEntry) (int, error) {
+	// 1. Target the base rows using a COUNT query
+	query := `SELECT COUNT(*) FROM referral_entry WHERE 1 = 1`
+	var args []any
+
+	if find.ID != nil {
+		query += " AND id = ?"
+		args = append(args, *find.ID)
+	}
+	if find.CreatorUsername != nil {
+		query += " AND creator_id = ?"
+		args = append(args, *find.CreatorUsername)
+	}
+
+	// 2. Multi-Select Slices (Matches your list logic)
+	if len(find.Statuses) > 0 {
+		query += " AND status IN ("
+		for i, s := range find.Statuses {
+			if i > 0 {
+				query += ", "
+			}
+			query += "?"
+			args = append(args, string(s))
+		}
+		query += ")"
+	}
+
+	if len(find.Urgencies) > 0 {
+		query += " AND urgency IN ("
+		for i, u := range find.Urgencies {
+			if i > 0 {
+				query += ", "
+			}
+			query += "?"
+			args = append(args, string(u))
+		}
+		query += ")"
+	}
+
+	if len(find.Sources) > 0 {
+		query += " AND source IN ("
+		for i, src := range find.Sources {
+			if i > 0 {
+				query += ", "
+			}
+			query += "?"
+			args = append(args, string(src))
+		}
+		query += ")"
+	}
+
+	// 3. Subquery Multi-Filters
+	if len(find.BodyParts) > 0 {
+		query += " AND id IN (SELECT referral_id FROM referral_complaint WHERE body_part IN ("
+		for i, bp := range find.BodyParts {
+			if i > 0 {
+				query += ", "
+			}
+			query += "?"
+			args = append(args, bp)
+		}
+		query += "))"
+	}
+
+	if len(find.TagNames) > 0 {
+		query += " AND id IN (SELECT referral_id FROM referral_tag WHERE tag_name IN ("
+		for i, t := range find.TagNames {
+			if i > 0 {
+				query += ", "
+			}
+			query += "?"
+			args = append(args, t)
+		}
+		query += "))"
+	}
+
+	// 4. Fuzzy Text Queries
+	if find.PatientLastName != nil && *find.PatientLastName != "" {
+		query += " AND patient_last_name LIKE ?"
+		args = append(args, "%"+*find.PatientLastName+"%")
+	}
+	if find.PatientFirstName != nil && *find.PatientFirstName != "" {
+		query += " AND patient_first_name LIKE ?"
+		args = append(args, "%"+*find.PatientFirstName+"%")
+	}
+	if find.ReferringPhysician != nil && *find.ReferringPhysician != "" {
+		query += " AND referring_physician LIKE ?"
+		args = append(args, "%"+*find.ReferringPhysician+"%")
+	}
+	if find.PatientHealthcardNumber != nil && *find.PatientHealthcardNumber != "" {
+		query += " AND patient_healthcard_number LIKE ?"
+		args = append(args, "%"+*find.PatientHealthcardNumber+"%")
+	}
+
+	// 5. Date Ranges
+	if find.ReferralDateFrom != nil && *find.ReferralDateFrom != "" {
+		query += " AND referral_date >= ?"
+		args = append(args, *find.ReferralDateFrom)
+	}
+	if find.ReferralDateTo != nil && *find.ReferralDateTo != "" {
+		query += " AND referral_date <= ?"
+		args = append(args, *find.ReferralDateTo)
+	}
+
+	// NOTE: We DO NOT append LIMIT or OFFSET here!
+	// We want the count of ALL matching entries across the system, not just the page size chunk.
+
+	// 6. Execute the query
+	var count int
+	err := d.conn(ctx).QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed executing count context lookup: %w", err)
+	}
+
+	return count, nil
+}
+
 // For miscellaneous updates (e.g., correcting a typo, changing urgency, etc.)
 func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateReferralEntry) error {
 	// 1. Build the "SET" part of our SQL dynamically

@@ -40,6 +40,7 @@ func setupTestStore(t *testing.T) *store.Store {
 	CREATE TABLE IF NOT EXISTS referral_entry (
 		id TEXT PRIMARY KEY, creator_id TEXT NOT NULL, created_ts TEXT, updated_ts TEXT,
 		patient_last_name TEXT, patient_first_name TEXT, patient_dob TEXT, patient_healthcard_number TEXT, patient_healthcard_version_code TEXT,
+		patient_phone_number TEXT, patient_email TEXT,
 		emr_patient_id TEXT, emr_referral_doc_id INTEGER,
 		referring_physician TEXT, triage_note TEXT, urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')), status TEXT, source TEXT, referral_date TEXT,
 		FOREIGN KEY (creator_id) REFERENCES user(username)
@@ -138,15 +139,18 @@ func TestBatchCreateReferralEntries_Integration(t *testing.T) {
 			t.Fatalf("batch failed: %v", err)
 		}
 
-		// 2. Use the existing public List method to verify
-		// This doesn't need access to s.driver!
-		entries, err := s.ListReferralEntries(ctx, &store.FindReferralEntry{})
+		// 2. FIXED: Drill into the paginated structural return layout contract
+		paginated, err := s.ListReferralEntries(ctx, &store.FindReferralEntry{})
 		if err != nil {
 			t.Fatalf("could not verify entries: %v", err)
 		}
 
-		if len(entries) != 2 {
-			t.Errorf("expected 2 entries, got %d", len(entries))
+		// FIXED: Check lengths of inner array and counter tracking values
+		if len(paginated.ReferralEntries) != 2 {
+			t.Errorf("expected 2 entries, got %d", len(paginated.ReferralEntries))
+		}
+		if paginated.TotalCount != 2 {
+			t.Errorf("expected global count size tracking to equal 2, got %d", paginated.TotalCount)
 		}
 	})
 
@@ -175,18 +179,17 @@ func TestBatchCreateReferralEntries_Integration(t *testing.T) {
 		}
 
 		// 3. VERIFY ROLLBACK
-		// We search for the first patient. If the rollback worked, they shouldn't exist.
 		firstName := "I Should Be"
 		lastName := "Rolled Back"
-		entries, err := s.ListReferralEntries(ctx, &store.FindReferralEntry{
-			// Adjust this search filter to match your actual List method logic
+
+		// FIXED: Drill into inner struct fields to check transaction cleanup safety
+		paginated, err := s.ListReferralEntries(ctx, &store.FindReferralEntry{
 			PatientFirstName: &firstName,
 			PatientLastName:  &lastName,
 		})
 
-		if err == nil && len(entries) > 0 {
+		if err == nil && len(paginated.ReferralEntries) > 0 {
 			t.Errorf("Rollback failed! 'I Should Be Rolled Back' was found in the database despite the batch failing.")
 		}
 	})
-
 }

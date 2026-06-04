@@ -17,20 +17,37 @@ import (
 // GET /api/v1/referrals
 func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
+	find := &store.FindReferralEntry{}
 
-	list, err := s.Store.ListReferralEntries(ctx, &store.FindReferralEntry{})
+	// Let Echo automatically extract all query strings and arrays into the find struct
+	if err := c.Bind(find); err != nil {
+		slog.Warn("Failed parsing list query parameters", "error", err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid query filter parameters"})
+	}
+
+	// 2. Apply business defaults if the frontend didn't pass pagination bounds
+	if find.Limit == nil {
+		defaultLimit := 25
+		find.Limit = &defaultLimit
+	}
+	if find.Offset == nil {
+		defaultOffset := 0
+		find.Offset = &defaultOffset
+	}
+
+	// 3. Fetch the paginated dataset
+	paginated, err := s.Store.ListReferralEntries(ctx, find)
 	if err != nil {
 		slog.Error("failed to get referral entries list", "error", err.Error())
-
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "failed to retrieve referral records",
-		})
-	}
-	if list == nil {
-		list = []*store.ReferralEntry{}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve records"})
 	}
 
-	return c.JSON(http.StatusOK, list)
+	// 4. Ensure arrays inside the JSON object return as [] instead of null
+	if paginated.ReferralEntries == nil {
+		paginated.ReferralEntries = []*store.ReferralEntry{}
+	}
+
+	return c.JSON(http.StatusOK, paginated)
 }
 
 // GetReferralEntryHandler handles GET /api/v1/referrals/:id
@@ -136,21 +153,32 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Failed to read file spreadsheet headers"})
 	}
 
+	//  PASTE THIS INSTEAD:
+	cleanRegex := regexp.MustCompile(`[\s\t\_\-]+`)
+
+	// Getting the header map for flexible column order
 	headerMap := make(map[string]int)
 	for idx, name := range headers {
-		cleanHeader := strings.TrimSpace(strings.ToLower(name))
-
-		// Fix hidden character issue: Remove UTF-8 Byte Order Marks (BOM) if exported from Excel
+		cleanHeader := strings.ToLower(name)
 		cleanHeader = strings.TrimPrefix(cleanHeader, "\xef\xbb\xbf")
+		cleanHeader = cleanRegex.ReplaceAllString(cleanHeader, " ")
+		cleanHeader = strings.TrimSpace(cleanHeader)
 
 		headerMap[cleanHeader] = idx
 	}
 
-	// Fail-fast verification check for required schema columns
-	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency", "referral date", "emr patient id", "emr referral doc id"}
-	for _, field := range requiredFields {
-		if _, exists := headerMap[field]; !exists {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing required column header '" + field + "'"})
+	// Invoke the centralized domain schema validator
+	if missingFields := domain.ValidateCSVHeaders(headerMap); len(missingFields) > 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Invalid file format: missing absolutely required column headers: " + strings.Join(missingFields, ", "),
+		})
+	}
+
+	// Track which fields from the domain schema are actually present in this session
+	presentFields := make(map[string]bool)
+	for fieldName := range domain.ImportDocumentHeaderSchema {
+		if _, exists := headerMap[fieldName]; exists {
+			presentFields[fieldName] = true
 		}
 	}
 
@@ -220,16 +248,6 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			emrReferralDocID = strings.TrimSpace(row[idx])
 		}
 
-		var patientPhoneNumber string
-		if idx, exists := headerMap["phone number"]; exists {
-			patientPhoneNumber = strings.TrimSpace(row[idx])
-		}
-
-		var patientEmail string
-		if idx, exists := headerMap["email"]; exists {
-			patientEmail = strings.TrimSpace(row[idx])
-		}
-
 		// Parse semicolon-separated optional Tags column
 		var tags []string
 		if tagIdx, exists := headerMap["tag"]; exists {
@@ -257,11 +275,11 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		entry := store.CreateReferralEntry{
 			PatientLastName:              strings.TrimSpace(row[headerMap["last name"]]),
 			PatientFirstName:             strings.TrimSpace(row[headerMap["first name"]]),
-			PatientDOB:                   "1990-01-01", // Default placeholder since template column is missing // TODO: Add DOB column
+			PatientDOB:                   strings.TrimSpace(row[headerMap["dob"]]),
 			PatientHealthcardNumber:      healthCardNum,
 			PatientHealthcardVersionCode: versionCode,
-			PatientPhoneNumber:           patientPhoneNumber,
-			PatientEmail:                 patientEmail,
+			PatientPhoneNumber:           strings.TrimSpace(row[headerMap["phone number"]]),
+			PatientEmail:                 strings.TrimSpace(row[headerMap["email"]]),
 			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
 			ReferralDate:                 strings.TrimSpace(row[headerMap["referral date"]]),
 			Urgency:                      domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),
@@ -269,6 +287,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			Source:                       domain.ReferralSource("REGULAR"),
 			Complaints:                   complaints,
 			Tags:                         tags,
+			TriageNote:                   strings.TrimSpace(row[headerMap["triage note"]]),
 			EMRPatientID:                 emrPatientID,
 			EMRReferralDocID:             emrReferralDocID,
 		}

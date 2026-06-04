@@ -116,6 +116,11 @@ type FindReferralEntry struct {
 	Offset *int `json:"offset"`
 }
 
+type PaginatedReferralEntries struct {
+	ReferralEntries []*ReferralEntry `json:"referralEntries"`
+	TotalCount      int              `json:"totalCount"`
+}
+
 // Admin use only, for arbiturary updates (e.g., correcting a typo, changing urgency, etc.)
 // TODO: Determine what can be updated
 type UpdateReferralEntry struct {
@@ -258,7 +263,13 @@ func (s *Store) BatchCreateReferralEntries(ctx context.Context, batch *BatchCrea
 }
 
 // 2. List: The "Broadcaster"
-func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error) {
+func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry) (*PaginatedReferralEntries, error) {
+
+	totalCount, err := s.driver.GetReferralEntriesCount(ctx, find)
+	if err != nil {
+		return nil, err
+	}
+
 	// 1. Get the list of referrals (Your existing query)
 	entries, err := s.driver.ListReferralEntries(ctx, find)
 	if err != nil {
@@ -266,7 +277,10 @@ func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry
 	}
 
 	if len(entries) == 0 {
-		return entries, nil
+		return &PaginatedReferralEntries{
+			ReferralEntries: []*ReferralEntry{},
+			TotalCount:      totalCount,
+		}, nil
 	}
 
 	// 2. Get EVERY complaint
@@ -306,23 +320,27 @@ func (s *Store) ListReferralEntries(ctx context.Context, find *FindReferralEntry
 		}
 	}
 
-	return entries, nil
+	return &PaginatedReferralEntries{
+		ReferralEntries: entries,
+		TotalCount:      totalCount,
+	}, nil
 }
 
 // 3. Get: The "Sniper"
 func (s *Store) GetReferralEntry(ctx context.Context, find *FindReferralEntry) (*ReferralEntry, error) {
-	// Instead of writing new SQL, it just reuses "List"
-	list, err := s.ListReferralEntries(ctx, find)
+	// 1. Call the updated paginated method (Returns *PaginatedReferralEntries)
+	paginated, err := s.ListReferralEntries(ctx, find)
 	if err != nil {
 		return nil, err
 	}
-	// If the list is empty, return "nil" (nothing found)
-	if len(list) == 0 {
-		return nil, nil
+
+	// 2. FIXED: Drill into the .ReferralEntries slice inside the paginated container struct
+	if len(paginated.ReferralEntries) == 0 {
+		return nil, nil // Nothing found
 	}
 
-	// Just return the first one found
-	return list[0], nil
+	// 3. FIXED: Extract the first matched item out of the inner array slice
+	return paginated.ReferralEntries[0], nil
 }
 
 func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error {

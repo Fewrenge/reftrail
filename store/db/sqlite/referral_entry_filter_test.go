@@ -69,16 +69,23 @@ func TestListReferralEntries_Filtering(t *testing.T) {
 			BodyParts: []string{"KNEE", "ANKLE"},
 		}
 
-		results, err := s.ListReferralEntries(ctx, filter)
+		// FIXED: paginated holds the *store.PaginatedReferralEntries container struct
+		paginated, err := s.ListReferralEntries(ctx, filter)
 		if err != nil {
 			t.Fatalf("Store query execution failed: %v", err)
 		}
 
-		if len(results) != 2 {
-			t.Errorf("Expected exactly 2 matched entries, but found %d", len(results))
+		// FIXED: Check the actual list length inside the container struct
+		if len(paginated.ReferralEntries) != 2 {
+			t.Errorf("Expected exactly 2 matched entries, but found %d", len(paginated.ReferralEntries))
 		}
 
-		for _, entry := range results {
+		// FIXED: Check that totalCount across pagination boundaries says exactly 2 records
+		if paginated.TotalCount != 2 {
+			t.Errorf("Expected TotalCount to evaluate to 2, received %d", paginated.TotalCount)
+		}
+
+		for _, entry := range paginated.ReferralEntries {
 			if entry.Urgency != "Urgent" {
 				t.Errorf("Expected Urgency to be Urgent, but got %s", entry.Urgency)
 			}
@@ -101,13 +108,17 @@ func TestListReferralEntries_Filtering(t *testing.T) {
 			ReferralDateTo:   &dateTo,
 		}
 
-		results, err := s.ListReferralEntries(ctx, filter)
+		paginated, err := s.ListReferralEntries(ctx, filter)
 		if err != nil {
 			t.Fatalf("Store date query execution failed: %v", err)
 		}
 
-		if len(results) != 1 {
-			t.Errorf("Expected exactly 1 entry within range, but found %d", len(results))
+		if len(paginated.ReferralEntries) != 1 {
+			t.Errorf("Expected exactly 1 entry within range, but found %d", len(paginated.ReferralEntries))
+		}
+
+		if paginated.TotalCount != 1 {
+			t.Errorf("Expected total date intersection window size count of 1, got %d", paginated.TotalCount)
 		}
 	})
 
@@ -123,13 +134,19 @@ func TestListReferralEntries_Filtering(t *testing.T) {
 			Offset: &offsetValue,
 		}
 
-		results, err := s.ListReferralEntries(ctx, filter)
+		paginated, err := s.ListReferralEntries(ctx, filter)
 		if err != nil {
 			t.Fatalf("Store pagination query execution failed: %v", err)
 		}
 
-		if len(results) != 1 {
-			t.Errorf("Expected page size limit constraint of 1, received %d items", len(results))
+		// FIXED: The limit constraints ensure this SPECIFIC page returns exactly 1 item
+		if len(paginated.ReferralEntries) != 1 {
+			t.Errorf("Expected page size limit constraint of 1, received %d items", len(paginated.ReferralEntries))
+		}
+
+		// FIXED: But the TotalCount must still equal 3, because there are 3 total rows in the table!
+		if paginated.TotalCount != 3 {
+			t.Errorf("Expected global unpaged record counter matching 3, received %d", paginated.TotalCount)
 		}
 	})
 }
