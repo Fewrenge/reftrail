@@ -278,6 +278,7 @@ export default function Referrals() {
           </div>
           <input
             type="text"
+            // TODO: Search by healthcard number or other identifiers in addition to patient name
             placeholder="Search by name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -417,6 +418,8 @@ export default function Referrals() {
             </button>
           )}
         </div>
+
+        {/* TODO: implement search by date function with calendar UI */}
 
         {/* 1. PRIORITIES ROW (HIGH VISIBILITY SEMANTIC COLOR-CODED PILLS) */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">

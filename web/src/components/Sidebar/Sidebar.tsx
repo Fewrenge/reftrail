@@ -1,10 +1,10 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { 
-  HospitalIcon, 
-  ScrollTextIcon, 
-  ChartNoAxesCombinedIcon, 
-  SettingsIcon, 
-  LogOutIcon 
+import {
+  HospitalIcon,
+  ScrollTextIcon,
+  ChartNoAxesCombinedIcon,
+  SettingsIcon,
+  LogOutIcon
 } from "lucide-react";
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from "@/components/ui/button"; // Ensure this matches your export path
@@ -14,9 +14,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown";
+import { ROLES } from '@/helpers/constants';
 
 export default function Sidebar() {
   const { user, onLogout } = useAuth();
+  const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
   const navigate = useNavigate();
 
   return (
@@ -33,8 +35,7 @@ export default function Sidebar() {
           to="/referrals"
           end
           className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${
-              isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
+            `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
             }`
           }
         >
@@ -42,17 +43,19 @@ export default function Sidebar() {
           <span>Referrals</span>
         </NavLink>
 
-        <NavLink
-          to="/analytics"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${
-              isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
-            }`
-          }
-        >
-          <ChartNoAxesCombinedIcon size={20} strokeWidth={2.5} />
-          <span>Analytics</span>
-        </NavLink>
+        {isAdmin &&
+          <NavLink
+            to="/analytics"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
+              }`
+            }
+          >
+            <ChartNoAxesCombinedIcon size={20} strokeWidth={2.5} />
+            <span>Analytics</span>
+          </NavLink>
+
+        }
       </nav>
 
       {/* USER MENU SECTION */}

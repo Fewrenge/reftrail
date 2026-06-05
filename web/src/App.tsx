@@ -1,3 +1,5 @@
+import ProtectedRoute from "@/components/ProtectedRoutes"; // Adjust path based on your choice
+import { ROLES } from "@/helpers/constants";
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Login from './pages/Login';
 import Settings from './pages/Settings';
@@ -6,25 +8,26 @@ import { useAuth } from './contexts/AuthContext';
 import { AlertCircleIcon, LayoutDashboardIcon } from "lucide-react";
 import Referrals from './pages/Referrals';
 import ReferralDetails from './pages/ReferralDetails';
+import Analytics from './pages/Analytics';
 
 
 export default function App() {
-  const { user, loading } = useAuth();
+  const { user, isAuthenticating } = useAuth();
 
   // Auth Guard: Show Login if no user is found
-  if (!user && !loading) {
+  if (!user && !isAuthenticating) {
     return <Login onLoginSuccess={() => window.location.reload()} />;
   }
 
   // Loading Screen: While checking auth
-  if (loading) {
+  if (isAuthenticating) {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400">Loading RefTrail...</div>;
   }
 
   return (
     <BrowserRouter>
       <div className="flex min-h-screen bg-slate-50 text-slate-900">
-        
+
         <Sidebar />
 
         <main className="flex-1 p-8 max-w-4xl mx-auto">
@@ -46,9 +49,13 @@ export default function App() {
 
 
             <Route path="/referrals" element={<Referrals />} />
+            <Route element={<ProtectedRoute allowedRoles={[ROLES.SYSTEM_ADMIN]} />}>
+              <Route path="/analytics" element={<Analytics />} />
+            </Route>
+            
             <Route path="/referrals/:referralId" element={<ReferralDetails />} />
             <Route path="/settings/*" element={<Settings />} />
-            
+
             {/* 404 CATCH-ALL */}
             <Route path="*" element={
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 text-center">

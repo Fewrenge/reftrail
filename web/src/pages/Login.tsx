@@ -4,7 +4,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const res = await fetch('/api/v1/login', {
       method: 'POST',
