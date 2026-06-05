@@ -47,6 +47,13 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 		}
 	}
 
+	// Bind the new unified name query token safely
+	if nameSearch := c.QueryParam("patient_name_search"); nameSearch != "" {
+		trimmed := strings.TrimSpace(nameSearch)
+		find.PatientLastName = &trimmed
+		find.PatientFirstName = &trimmed
+	}
+
 	// 2. Apply business defaults if the frontend didn't pass pagination bounds
 	if find.Limit == nil {
 		defaultLimit := 25

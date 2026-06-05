@@ -107,87 +107,103 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		query += " AND creator_id = ?"
 		args = append(args, *find.CreatorUsername)
 	}
+	if find.PatientDOB != nil && *find.PatientDOB != "" {
+		query += " AND patient_dob = ?"
+		args = append(args, *find.PatientDOB)
+	}
 
 	// 1. Array Parameter Slices
 	if len(find.Statuses) > 0 {
-		query += " AND status IN ("
+		placeholders := make([]string, len(find.Statuses))
 		for i, s := range find.Statuses {
-			if i > 0 {
-				query += ", "
-			}
-			query += "?"
+			placeholders[i] = "?"
 			args = append(args, string(s))
 		}
-		query += ")"
+		query += fmt.Sprintf(" AND status IN (%s)", strings.Join(placeholders, ", "))
 	}
 
 	if len(find.Urgencies) > 0 {
-		query += " AND urgency IN ("
+		placeholders := make([]string, len(find.Urgencies))
 		for i, u := range find.Urgencies {
-			if i > 0 {
-				query += ", "
-			}
-			query += "?"
+			placeholders[i] = "?"
 			args = append(args, string(u))
 		}
-		query += ")"
+		query += fmt.Sprintf(" AND urgency IN (%s)", strings.Join(placeholders, ", "))
 	}
 
 	if len(find.Sources) > 0 {
-		query += " AND source IN ("
+		placeholders := make([]string, len(find.Sources))
 		for i, src := range find.Sources {
-			if i > 0 {
-				query += ", "
-			}
-			query += "?"
+			placeholders[i] = "?"
 			args = append(args, string(src))
 		}
-		query += ")"
+		query += fmt.Sprintf(" AND source IN (%s)", strings.Join(placeholders, ", "))
 	}
 
-	// 2. Filter by Associated Complaints (Body Parts) via isolated lookup subquery
+	// 2. Clinical Workflow Checkbox Filters (Consult Types)
+	if len(find.ConsultTypes) > 0 {
+		placeholders := make([]string, len(find.ConsultTypes))
+		for i, ct := range find.ConsultTypes {
+			placeholders[i] = "?"
+			args = append(args, string(ct))
+		}
+		query += fmt.Sprintf(" AND consult_type IN (%s)", strings.Join(placeholders, ", "))
+	}
+
 	if len(find.BodyParts) > 0 {
-		query += " AND id IN (SELECT referral_id FROM referral_complaint WHERE body_part IN ("
+		placeholders := make([]string, len(find.BodyParts))
 		for i, bp := range find.BodyParts {
-			if i > 0 {
-				query += ", "
-			}
-			query += "?"
+			placeholders[i] = "?"
 			args = append(args, bp)
 		}
-		query += "))"
+		query += fmt.Sprintf(
+			" AND id IN (SELECT referral_id FROM referral_complaint WHERE body_part IN (%s))",
+			strings.Join(placeholders, ", "),
+		)
 	}
 
-	// 3. Filter by Associated Junction Tags via isolated lookup subquery
+	// 3. Filter by Associated Junction Tags (Strict AND matching)
 	if len(find.TagNames) > 0 {
-		query += " AND id IN (SELECT referral_id FROM referral_tag WHERE tag_name IN ("
+		placeholders := make([]string, len(find.TagNames))
 		for i, t := range find.TagNames {
-			if i > 0 {
-				query += ", "
-			}
-			query += "?"
+			placeholders[i] = "?"
 			args = append(args, t)
 		}
-		query += "))"
+		query += fmt.Sprintf(` AND id IN (
+			SELECT referral_id FROM referral_tag 
+			WHERE tag_name IN (%s) 
+			GROUP BY referral_id 
+			HAVING COUNT(DISTINCT tag_name) = ?
+		)`, strings.Join(placeholders, ", "))
+		args = append(args, len(find.TagNames))
 	}
 
-	// 4. Fuzzy Searches
-	// TODO: Fix this - branch feat/filter-referrals
-	if find.PatientLastName != nil && *find.PatientLastName != "" {
-		query += " AND patient_last_name LIKE ?"
-		args = append(args, "%"+*find.PatientLastName+"%")
+	// Patient Directory Lookups & Searches
+	// Left-anchored fuzzy searches preserve B-Tree index optimization
+	if find.PatientLastName != nil && find.PatientFirstName != nil && *find.PatientLastName == *find.PatientFirstName {
+		// If both pointers hold the identical search query string, run an OR group lookup
+		searchTerm := *find.PatientLastName + "%"
+		query += " AND (patient_last_name LIKE ? OR patient_first_name LIKE ?)"
+		args = append(args, searchTerm, searchTerm)
+	} else {
+		// Fallback to standalone isolated filters if inputs are distinct
+		if find.PatientLastName != nil && *find.PatientLastName != "" {
+			query += " AND patient_last_name LIKE ?"
+			args = append(args, *find.PatientLastName+"%")
+		}
+		if find.PatientFirstName != nil && *find.PatientFirstName != "" {
+			query += " AND patient_first_name LIKE ?"
+			args = append(args, *find.PatientFirstName+"%")
+		}
 	}
-	if find.PatientFirstName != nil && *find.PatientFirstName != "" {
-		query += " AND patient_first_name LIKE ?"
-		args = append(args, "%"+*find.PatientFirstName+"%")
-	}
+
 	if find.ReferringPhysician != nil && *find.ReferringPhysician != "" {
 		query += " AND referring_physician LIKE ?"
 		args = append(args, "%"+*find.ReferringPhysician+"%")
 	}
 	if find.PatientHealthcardNumber != nil && *find.PatientHealthcardNumber != "" {
 		query += " AND patient_healthcard_number LIKE ?"
-		args = append(args, "%"+*find.PatientHealthcardNumber+"%")
+		args = append(args, *find.PatientHealthcardNumber+"%")
 	}
 
 	// 5. Date Bounds
@@ -200,8 +216,10 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		args = append(args, *find.ReferralDateTo)
 	}
 
+	// Sorting
 	query += " ORDER BY created_ts DESC"
 
+	// Pagination
 	if find.Limit != nil {
 		query += " LIMIT ?"
 		args = append(args, *find.Limit)
@@ -239,9 +257,10 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 
 func (d *Driver) GetReferralEntriesCount(ctx context.Context, find *store.FindReferralEntry) (int, error) {
 	// 1. Target the base rows using a COUNT query
-	query := `SELECT COUNT(*) FROM referral_entry WHERE 1 = 1`
+	query := `SELECT COUNT(1) FROM referral_entry WHERE 1 = 1`
 	var args []any
 
+	// Exact matches (High performance index hits)
 	if find.ID != nil {
 		query += " AND id = ?"
 		args = append(args, *find.ID)
@@ -250,88 +269,93 @@ func (d *Driver) GetReferralEntriesCount(ctx context.Context, find *store.FindRe
 		query += " AND creator_id = ?"
 		args = append(args, *find.CreatorUsername)
 	}
+	if find.PatientDOB != nil && *find.PatientDOB != "" {
+		query += " AND patient_dob = ?"
+		args = append(args, *find.PatientDOB)
+	}
 
-	// 2. Multi-Select Slices (Matches your list logic)
+	// 2. Multi-Select Enums
 	if len(find.Statuses) > 0 {
-		query += " AND status IN ("
+		placeholders := make([]string, len(find.Statuses))
 		for i, s := range find.Statuses {
-			if i > 0 {
-				query += ", "
-			}
-			query += "?"
+			placeholders[i] = "?"
 			args = append(args, string(s))
 		}
-		query += ")"
+		query += fmt.Sprintf(" AND status IN (%s)", strings.Join(placeholders, ", "))
 	}
 
 	if len(find.Urgencies) > 0 {
-		query += " AND urgency IN ("
+		placeholders := make([]string, len(find.Urgencies))
 		for i, u := range find.Urgencies {
-			if i > 0 {
-				query += ", "
-			}
-			query += "?"
+			placeholders[i] = "?"
 			args = append(args, string(u))
 		}
-		query += ")"
+		query += fmt.Sprintf(" AND urgency IN (%s)", strings.Join(placeholders, ", "))
 	}
 
 	if len(find.Sources) > 0 {
-		query += " AND source IN ("
+		placeholders := make([]string, len(find.Sources))
 		for i, src := range find.Sources {
-			if i > 0 {
-				query += ", "
-			}
-			query += "?"
+			placeholders[i] = "?"
 			args = append(args, string(src))
 		}
-		query += ")"
+		query += fmt.Sprintf(" AND source IN (%s)", strings.Join(placeholders, ", "))
 	}
 
-	// 3. Subquery Multi-Filters
-	if len(find.BodyParts) > 0 {
-		query += " AND id IN (SELECT referral_id FROM referral_complaint WHERE body_part IN ("
-		for i, bp := range find.BodyParts {
-			if i > 0 {
-				query += ", "
-			}
-			query += "?"
-			args = append(args, bp)
+	// 3. Clinical Workflow Checkbox Filters (Consult Types)
+	if len(find.ConsultTypes) > 0 {
+		placeholders := make([]string, len(find.ConsultTypes))
+		for i, ct := range find.ConsultTypes {
+			placeholders[i] = "?"
+			args = append(args, string(ct))
 		}
-		query += "))"
+		query += fmt.Sprintf(" AND consult_type IN (%s)", strings.Join(placeholders, ", "))
 	}
 
+	// 4. Filter by Associated Junction Tags (Strict AND matching)
 	if len(find.TagNames) > 0 {
-		query += " AND id IN (SELECT referral_id FROM referral_tag WHERE tag_name IN ("
+		placeholders := make([]string, len(find.TagNames))
 		for i, t := range find.TagNames {
-			if i > 0 {
-				query += ", "
-			}
-			query += "?"
+			placeholders[i] = "?"
 			args = append(args, t)
 		}
-		query += "))"
+		query += fmt.Sprintf(` AND id IN (
+			SELECT referral_id FROM referral_tag 
+			WHERE tag_name IN (%s) 
+			GROUP BY referral_id 
+			HAVING COUNT(DISTINCT tag_name) = ?
+		)`, strings.Join(placeholders, ", "))
+		args = append(args, len(find.TagNames))
 	}
 
-	// 4. Fuzzy Text Queries
-	if find.PatientLastName != nil && *find.PatientLastName != "" {
-		query += " AND patient_last_name LIKE ?"
-		args = append(args, "%"+*find.PatientLastName+"%")
+	// Patient Directory Lookups & Searches
+	if find.PatientLastName != nil && find.PatientFirstName != nil && *find.PatientLastName == *find.PatientFirstName {
+		// If both pointers hold the identical search query string, run an OR group lookup
+		searchTerm := *find.PatientLastName + "%"
+		query += " AND (patient_last_name LIKE ? OR patient_first_name LIKE ?)"
+		args = append(args, searchTerm, searchTerm)
+	} else {
+		// Fallback to standalone isolated filters if inputs are distinct
+		if find.PatientLastName != nil && *find.PatientLastName != "" {
+			query += " AND patient_last_name LIKE ?"
+			args = append(args, *find.PatientLastName+"%")
+		}
+		if find.PatientFirstName != nil && *find.PatientFirstName != "" {
+			query += " AND patient_first_name LIKE ?"
+			args = append(args, *find.PatientFirstName+"%")
+		}
 	}
-	if find.PatientFirstName != nil && *find.PatientFirstName != "" {
-		query += " AND patient_first_name LIKE ?"
-		args = append(args, "%"+*find.PatientFirstName+"%")
-	}
+
 	if find.ReferringPhysician != nil && *find.ReferringPhysician != "" {
 		query += " AND referring_physician LIKE ?"
 		args = append(args, "%"+*find.ReferringPhysician+"%")
 	}
 	if find.PatientHealthcardNumber != nil && *find.PatientHealthcardNumber != "" {
 		query += " AND patient_healthcard_number LIKE ?"
-		args = append(args, "%"+*find.PatientHealthcardNumber+"%")
+		args = append(args, *find.PatientHealthcardNumber+"%")
 	}
 
-	// 5. Date Ranges
+	// 6. Date Ranges
 	if find.ReferralDateFrom != nil && *find.ReferralDateFrom != "" {
 		query += " AND referral_date >= ?"
 		args = append(args, *find.ReferralDateFrom)
@@ -341,10 +365,7 @@ func (d *Driver) GetReferralEntriesCount(ctx context.Context, find *store.FindRe
 		args = append(args, *find.ReferralDateTo)
 	}
 
-	// NOTE: We DO NOT append LIMIT or OFFSET here!
-	// We want the count of ALL matching entries across the system, not just the page size chunk.
-
-	// 6. Execute the query
+	// 7. Execute the query
 	var count int
 	err := d.conn(ctx).QueryRowContext(ctx, query, args...).Scan(&count)
 	if err != nil {

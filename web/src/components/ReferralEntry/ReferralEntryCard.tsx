@@ -202,7 +202,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               {/* External Link */}
               <a
                 href={
-                  `${import.meta.env?.VITE_EXTERNAL_PATIENT_URL}/${entry.emrPatientId || ''}`
+                  `${import.meta.env?.VITE_EXTERNAL_PATIENT_URL}${entry.emrPatientId || ''}`
                 }
                 target="_blank"
                 rel="noopener noreferrer"
@@ -300,7 +300,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
         {/* 2. MIDDLE SECTION: Details Grid */}
         <div className="grid grid-cols-2 gap-8 mb-4">
           <div>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Physician</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Referring Physician</p>
             <p className="text-sm font-medium text-slate-700">{entry.referringPhysician || 'Unassigned'}</p>
           </div>
           <div>
@@ -313,7 +313,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
                   return (
                     <p key={compositeKey} className="text-sm font-medium text-slate-700 capitalize">
-                      {`${c.side?.toLowerCase() || ''} ${c.bodyPart?.toLowerCase() || ''}`}
+                      {` ${c.bodyPart?.toLowerCase() || ''} ${'-'} ${c.side?.toLowerCase() || ''}`}
                       {c.details && <span className="text-xs text-slate-400 block font-normal">{c.details}</span>}
                     </p>
                   );

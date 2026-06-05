@@ -36,52 +36,68 @@ export default function Referrals() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const handler = setTimeout(() => setDebouncedSearch(searchQuery), 1000);
-    return () => clearTimeout(handler);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, [searchQuery]);
 
   const handleStatusToggle = (statusId: string) => {
-    setSelectedStatuses(prev => 
-      prev.includes(statusId) 
-        ? prev.filter(id => id !== statusId) 
+    setSelectedStatuses(prev =>
+      prev.includes(statusId)
+        ? prev.filter(id => id !== statusId)
         : [...prev, statusId]
     );
   };
 
-  const refreshData = () => {
+  const refreshData = async () => {
     setLoading(true);
+    try {
+      // 1. Instantiate a clean URL constructor
+      const params = new URLSearchParams();
 
-    const params = new URLSearchParams({
-      limit: String(pageSize),
-      offset: String((currentPage - 1) * pageSize),
-    });
+      // 2. Append Pagination Indices
+      const limit = 10; // Change this to match your backend page sizes
+      const offset = (currentPage - 1) * limit;
+      params.append("limit", limit.toString());
+      params.append("offset", offset.toString());
 
-    if (debouncedSearch.trim() !== "") {
-      // Direct pass to your Echo c.Bind fuzzy filter variables
-      // TODO: Fix this - branch feat/filter-referrals
-      params.append("patientFirstName", debouncedSearch);
-      params.append("patientLastName", debouncedSearch);
+      // Append Status Badges
+      if (selectedStatuses.length > 0) {
+        selectedStatuses.forEach(status => {
+          params.append("statuses", status); // Repeated keys (e.g., ?statuses=Ready&statuses=Booked)
+        });
+      }
+
+      // Passes a single token to the backend
+      const cleanSearch = debouncedSearch.trim();
+      if (cleanSearch !== "") {
+        params.append("patient_name_search", cleanSearch);
+      }
+
+
+
+      // 5. Fire off the synchronized fetch call
+      const response = await fetch(`/api/v1/referrals?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'same-origin'
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Failed to fetch entries");
+
+      // Map your response parameters to state variables
+      setPatients(result.referralEntries || []);
+      setTotalCount(result.totalCount || 0);
+
+    } catch (err: any) {
+      console.error("Pipeline refresh error:", err);
+    } finally {
+      setLoading(false);
     }
-
-     selectedStatuses.forEach(status => {
-      params.append("statuses", status);
-    });
-
-    fetch(`/api/v1/referrals?${params.toString()}`, { credentials: 'same-origin' })
-      .then(res => res.json())
-      .then(data => {
-        // FIXED: Safely dissect the envelop struct contract keys
-        if (data && Array.isArray(data.referralEntries)) {
-          setPatients(data.referralEntries);
-          setTotalCount(data.totalCount || 0);
-        } else {
-          setPatients([]);
-          setTotalCount(0);
-        }
-      })
-      .catch(err => console.error("Data fetching error:", err))
-      .finally(() => setLoading(false));
   };
+
 
   // Trigger page re-render sequences whenever pages or filters change
   useEffect(() => {
@@ -173,21 +189,21 @@ export default function Referrals() {
         />
       </div>
 
-       {/* VISUAL BADGE TOGGLE PILLS FILTER BAR */}
+      {/* VISUAL BADGE TOGGLE PILLS FILTER BAR */}
       <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6">
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
           <FilterIcon size={14} />
           <span>Filter Statuses</span>
           {selectedStatuses.length > 0 && (
-            <button 
-              onClick={() => setSelectedStatuses([])} 
+            <button
+              onClick={() => setSelectedStatuses([])}
               className="ml-auto text-blue-600 hover:text-blue-700 font-normal transition-colors cursor-pointer"
             >
               CLEAR FILTERS
             </button>
           )}
         </div>
-        
+
         {/* Horizontal flex wrap panel layout */}
         <div className="flex flex-wrap gap-2">
           {AVAILABLE_STATUSES.map((status) => {
@@ -197,11 +213,10 @@ export default function Referrals() {
                 key={status.id}
                 type="button"
                 onClick={() => handleStatusToggle(status.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer  active:scale-95 ${
-                  isSelected 
-                    ? 'bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-blue-500/10 font-semibold shadow-sm' 
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
-                }`}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer  active:scale-95 ${isSelected
+                  ? 'bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-blue-500/10 font-semibold shadow-sm'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
+                  }`}
               >
                 {status.label}
               </button>

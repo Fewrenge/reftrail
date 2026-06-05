@@ -96,11 +96,12 @@ type FindReferralEntry struct {
 	// 2. Clinical Filters (Requirement #8 & #9)
 	// We use pointers (*) so we can tell the difference between
 	// "Filter by this" and "Don't filter at all" (nil).
-	Urgencies []domain.ReferralUrgency `json:"urgencies"`
-	Statuses  []domain.ReferralStatus  `json:"statuses"`
-	Sources   []domain.ReferralSource  `json:"sources"`
-	BodyParts []string                 `json:"bodyParts"`
-	TagNames  []string                 `json:"tagNames"`
+	Urgencies    []domain.ReferralUrgency `json:"urgencies"`
+	Statuses     []domain.ReferralStatus  `json:"statuses"`
+	Sources      []domain.ReferralSource  `json:"sources"`
+	BodyParts    []string                 `json:"bodyParts"`
+	ConsultTypes []string                 `json:"consultTypes"`
+	TagNames     []string                 `json:"tagNames"`
 
 	ReferralDateFrom *string `json:"referralDateFrom"`
 	ReferralDateTo   *string `json:"referralDateTo"`
@@ -108,6 +109,7 @@ type FindReferralEntry struct {
 	// 3. Search Filters (For Fuzzy Physician matching)
 	PatientLastName         *string `json:"patientLastName"`
 	PatientFirstName        *string `json:"patientFirstName"`
+	PatientDOB              *string `json:"patientDob"`
 	ReferringPhysician      *string `json:"referringPhysician"`
 	PatientHealthcardNumber *string `json:"patientHealthcardNumber"`
 
