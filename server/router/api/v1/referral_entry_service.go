@@ -46,6 +46,14 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 			}
 		}
 	}
+	if rawTags, exists := rawQueryParams["tagNames"]; exists && len(rawTags) > 0 {
+		find.TagNames = []string{}
+		for _, t := range rawTags {
+			if t != "" {
+				find.TagNames = append(find.TagNames, t)
+			}
+		}
+	}
 
 	// Bind the new unified name query token safely
 	if nameSearch := c.QueryParam("patient_name_search"); nameSearch != "" {

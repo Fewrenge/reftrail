@@ -25,15 +25,42 @@ export default function Referrals() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 25; // Aligned with Go backend defaults
 
-
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
 
-  // 1. Pipeline Queue Statuses (Defaults to READY_TO_BOOK if local storage is blank)
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const response = await fetch('/api/v1/tags', {
+          method: 'GET',
+          credentials: 'same-origin'
+        });
+
+        if (!response.ok) throw new Error("Failed to pull tag definitions");
+        const data = await response.json();
+
+        // Assumes your API returns a flat array of strings like ["SAN", "DAN"] 
+        // or an array of objects like [{ name: "SAN" }]. Adjust mapping accordingly:
+        if (Array.isArray(data)) {
+          const tagNames = data.map((t: any) => typeof t === 'string' ? t : t.name);
+          setAvailableTags(tagNames);
+        }
+      } catch (err) {
+        console.error("Failed fetching dynamic tag layout structures:", err);
+      }
+    };
+
+    fetchTags();
+  }, []); // Empty brackets ensure this runs exactly once on initial load
+
+
+
+  // Pipeline Queue Statuses (Defaults to READY_TO_BOOK if local storage is blank)
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("reftrail_selected_statuses");
@@ -44,7 +71,7 @@ export default function Referrals() {
     }
   });
 
-  // 2. Urgent / ASAP Priorities (Defaults to an empty array so all display initially)
+  // Urgent / ASAP Priorities (Defaults to an empty array so all display initially)
   const [selectedUrgencies, setSelectedUrgencies] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("reftrail_selected_urgencies");
@@ -55,7 +82,7 @@ export default function Referrals() {
     }
   });
 
-  // 3. Clinical Identification Tags (Defaults to an empty array)
+  // Clinical Identification Tags (Defaults to an empty array)
   const [selectedTags, setSelectedTags] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("reftrail_selected_tags");
@@ -65,6 +92,8 @@ export default function Referrals() {
       return [];
     }
   });
+
+
 
   // Sync status queue alterations to browser local disk
   useEffect(() => {
@@ -80,6 +109,8 @@ export default function Referrals() {
   useEffect(() => {
     localStorage.setItem("reftrail_selected_tags", JSON.stringify(selectedTags));
   }, [selectedTags]);
+
+
 
 
 
@@ -117,7 +148,7 @@ export default function Referrals() {
 
       // Clear tag lookup string parameters mapped repetitively 
       if (selectedTags.length > 0) {
-        selectedTags.forEach(tag => params.append("tag_names", tag));
+        selectedTags.forEach(tag => params.append("tagNames", tag));
       }
 
 
@@ -275,6 +306,7 @@ export default function Referrals() {
                   <DropdownMenuCheckboxItem
                     key={status.id}
                     checked={isChecked}
+                    onSelect={(e) => e.preventDefault()}
                     onCheckedChange={() => {
                       setSelectedStatuses((prev) =>
                         prev.includes(status.id)
@@ -282,12 +314,14 @@ export default function Referrals() {
                           : [...prev, status.id]
                       );
                     }}
-                    className="rounded-lg px-2.5 py-2 text-sm text-slate-600 focus:bg-slate-50 focus:text-slate-900 data-[state=checked]:text-blue-700 data-[state=checked]:bg-blue-50/50 data-[state=checked]:font-medium transition-all duration-150 cursor-pointer mb-0.5"
+                    // FIXED: Swapped 'px-2.5' for 'pr-2.5' to preserve the internal 'pl-8' room for the check icon
+                    className="rounded-lg pr-2.5 py-2 text-sm text-slate-600 focus:bg-slate-50 focus:text-slate-900 data-[state=checked]:text-blue-700 data-[state=checked]:bg-blue-50/50 data-[state=checked]:font-medium transition-all duration-150 cursor-pointer mb-0.5"
                   >
                     {status.label}
                   </DropdownMenuCheckboxItem>
                 );
               })}
+
 
               {selectedStatuses.length > 0 && (
                 <>
@@ -362,31 +396,37 @@ export default function Referrals() {
         </div>
 
         {/* 2. TAGS ROW (NEUTRAL INTERACTION PILLS) */}
+        {/* 2. TAGS ROW (DYNAMICAL RESILIENT PILLS LOWER WRAPPER) */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-20">Tags:</span>
           <div className="flex flex-wrap gap-2">
-            {["SAN", "DAN", "ORANGE", "BANANA"].map((tagName) => {
-              const isSelected = selectedTags.includes(tagName);
-              return (
-                <button
-                  key={tagName}
-                  type="button"
-                  onClick={() => {
-                    setSelectedTags(prev =>
-                      prev.includes(tagName) ? prev.filter(t => t !== tagName) : [...prev, tagName]
-                    );
-                  }}
-                  className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
-                    ? 'bg-purple-50 text-purple-700 border-purple-200 ring-2 ring-purple-500/10 font-semibold shadow-sm'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
-                    }`}
-                >
-                  {tagName}
-                </button>
-              );
-            })}
+            {availableTags.length > 0 ? (
+              availableTags.map((tagName) => {
+                const isSelected = selectedTags.includes(tagName);
+                return (
+                  <button
+                    key={tagName}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTags(prev =>
+                        prev.includes(tagName) ? prev.filter(t => t !== tagName) : [...prev, tagName]
+                      );
+                    }}
+                    className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
+                      ? 'bg-purple-50 text-purple-700 border-purple-200 ring-2 ring-purple-500/10 font-semibold shadow-sm'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                      }`}
+                  >
+                    {tagName}
+                  </button>
+                );
+              })
+            ) : (
+              <span className="text-xs italic text-slate-400">No tag definitions configured.</span>
+            )}
           </div>
         </div>
+
       </div>
 
       {/* PATIENT LIST */}
