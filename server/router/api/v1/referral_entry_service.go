@@ -8,6 +8,7 @@ import (
 	"reftrail/internal/domain"
 	"reftrail/store"
 	"regexp"
+	"strconv"
 	"strings"
 
 	echo "github.com/labstack/echo/v5"
@@ -62,9 +63,20 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 		find.PatientFirstName = &trimmed
 	}
 
-	// 2. Apply business defaults if the frontend didn't pass pagination bounds
+	if limitQuery := c.QueryParam("limit"); limitQuery != "" {
+		if val, err := strconv.Atoi(limitQuery); err == nil {
+			find.Limit = &val
+		}
+	}
+	if offsetQuery := c.QueryParam("offset"); offsetQuery != "" {
+		if val, err := strconv.Atoi(offsetQuery); err == nil {
+			find.Offset = &val
+		}
+	}
+
+	// Apply business defaults if the frontend didn't pass pagination bounds
 	if find.Limit == nil {
-		defaultLimit := 25
+		defaultLimit := 10
 		find.Limit = &defaultLimit
 	}
 	if find.Offset == nil {
@@ -72,7 +84,7 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 		find.Offset = &defaultOffset
 	}
 
-	// 3. Fetch the paginated dataset
+	// Fetch the paginated dataset
 	paginated, err := s.Store.ListReferralEntries(ctx, find)
 	if err != nil {
 		slog.Error("failed to get referral entries list", "error", err.Error())

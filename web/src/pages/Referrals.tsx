@@ -23,7 +23,7 @@ export default function Referrals() {
   const [patients, setPatients] = useState<ReferralEntry[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 25; // Aligned with Go backend defaults
+  const pageSize = 10; // Aligned with Go backend defaults
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -283,11 +283,11 @@ export default function Referrals() {
                 <div className="flex items-center gap-2 truncate">
                   <FilterIcon size={16} className="text-slate-400 shrink-0" />
                   <span className="truncate">
-                    {selectedStatuses.length === 0
-                      ? "All Queues Active"
+                    {selectedStatuses.length === 0 || selectedStatuses.length === AVAILABLE_STATUSES.length
+                      ? "All Statuses Selected"
                       : selectedStatuses.length === 1
-                        ? AVAILABLE_STATUSES.find((s) => s.id === selectedStatuses[0])?.label || "1 Queue Selected"
-                        : `Queues (${selectedStatuses.length} Active)`}
+                        ? AVAILABLE_STATUSES.find((s) => s.id === selectedStatuses[0])?.label || "0 Status Selected"
+                        : `Statuses (${selectedStatuses.length} Active)`}
                   </span>
                 </div>
                 <ChevronRightIcon size={16} className="text-slate-400 rotate-90 shrink-0 transition-transform duration-200" />
@@ -296,32 +296,72 @@ export default function Referrals() {
 
             <DropdownMenuContent align="end" className="w-64 max-h-95 overflow-y-auto bg-white shadow-xl rounded-xl border border-slate-200/80 p-1.5 z-50">
               <DropdownMenuLabel className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-2.5 py-2">
-                Select Workflow Queues
+                Select Statuses
               </DropdownMenuLabel>
+
+              {/* MASTER SELECT ALL / DESELECT ALL SHORTCUT SWITCH */}
+              <DropdownMenuItem
+                onSelect={(e) => e.preventDefault()} // Prevents dropdown from closing when clicking the shortcut
+                onClick={() => {
+                  setSelectedStatuses((prev) => {
+                    // If everything is already active/checked, deselecting all clears the array entirely.
+                    // We initialize it with an explicit invalid string or mock state to show all unchecked without triggering the default fallback.
+                    const isEverythingChecked = prev.length === 0 || prev.length === AVAILABLE_STATUSES.length;
+                    if (isEverythingChecked) {
+                      // If you want "Deselect All" to show zero items, pass an item that won't match any queue ID
+                      return ["__NONE__"];
+                    } else {
+                      // Select All: Clears back to empty array to switch on all checkboxes natively
+                      return [];
+                    }
+                  });
+                }}
+                className="text-xs font-medium text-slate-500 hover:text-slate-800 focus:bg-slate-50 rounded-lg py-1.5 px-2.5 mb-1 cursor-pointer transition-colors flex justify-between items-center"
+              >
+                <span>Toggle Selection:</span>
+                <span className="text-blue-600 font-semibold uppercase tracking-wide text-[10px]">
+                  {selectedStatuses.length === 0 || selectedStatuses.length === AVAILABLE_STATUSES.length ? "Deselect All" : "Select All"}
+                </span>
+              </DropdownMenuItem>
+
               <DropdownMenuSeparator className="bg-slate-100 my-1" />
 
               {AVAILABLE_STATUSES.map((status) => {
-                const isChecked = selectedStatuses.includes(status.id);
+                // FIXED VISUAL LOGIC: Box is checked if explicitly selected OR if the system is in "All Active" mode
+                const isAllActiveMode = selectedStatuses.length === 0;
+                const isChecked = isAllActiveMode || selectedStatuses.includes(status.id);
+
                 return (
                   <DropdownMenuCheckboxItem
                     key={status.id}
                     checked={isChecked}
                     onSelect={(e) => e.preventDefault()}
                     onCheckedChange={() => {
-                      setSelectedStatuses((prev) =>
-                        prev.includes(status.id)
+                      setSelectedStatuses((prev) => {
+                        // Scenario A: Transitioning from "All Active" to single item exclusion mode
+                        if (prev.length === 0) {
+                          return AVAILABLE_STATUSES.map(s => s.id).filter(id => id !== status.id);
+                        }
+
+                        // Scenario B: Standard multi-select toggle
+                        const updated = prev.includes(status.id)
                           ? prev.filter((id) => id !== status.id)
-                          : [...prev, status.id]
-                      );
+                          : [...prev, status.id];
+
+                        // Performance Optimization: If the user explicitly checks everything, 
+                        // clean the memory back to [] to let the backend run optimized base queries
+                        if (updated.length === AVAILABLE_STATUSES.length) {
+                          return [];
+                        }
+                        return updated;
+                      });
                     }}
-                    // FIXED: Swapped 'px-2.5' for 'pr-2.5' to preserve the internal 'pl-8' room for the check icon
-                    className="rounded-lg pr-2.5 py-2 text-sm text-slate-600 focus:bg-slate-50 focus:text-slate-900 data-[state=checked]:text-blue-700 data-[state=checked]:bg-blue-50/50 data-[state=checked]:font-medium transition-all duration-150 cursor-pointer mb-0.5"
+                    className="rounded-lg pr-2.5 py-2 text-sm text-slate-600 focus:bg-slate-50 focus:text-slate-900 data-[state=checked]:text-blue-700 data-[state=checked]:bg-blue-50/50 data-[state=checked]:font-semibold transition-all duration-150 cursor-pointer mb-0.5"
                   >
                     {status.label}
                   </DropdownMenuCheckboxItem>
                 );
               })}
-
 
               {selectedStatuses.length > 0 && (
                 <>
@@ -340,6 +380,7 @@ export default function Referrals() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
       </div>
 
       {/* METRIC MODULAR FILTERS PANEL (URGENCIES & TAGS) */}
