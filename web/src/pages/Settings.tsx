@@ -33,7 +33,7 @@ const SECTION_COMPONENT_MAP: Record<SettingSection, React.ComponentType> = {
 
 const Setting = () => {
   const location = useLocation();
-  const { user, loading } = useAuth();
+  const { user, isAuthenticating } = useAuth();
   const [selectedSection, setSelectedSection] = useState<SettingSection>("profile");
 
   const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
@@ -48,7 +48,7 @@ const Setting = () => {
     setSelectedSection(nextSection);
   }, [location.hash, settingsSectionList]);
 
-  if (loading) return <div className="p-10 text-muted-foreground">Loading...</div>;
+  if (isAuthenticating) return <div className="p-10 text-muted-foreground">Loading...</div>;
 
   const ActiveSection = SECTION_COMPONENT_MAP[selectedSection];
 

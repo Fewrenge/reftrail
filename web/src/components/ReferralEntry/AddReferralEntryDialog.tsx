@@ -30,7 +30,7 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [source, setSource] = useState('REGULAR');
-  const [urgency, setUrgency] = useState('Elective');
+  const [urgency, setUrgency] = useState('ELECTIVE');
   const [complaints, setComplaints] = useState<Complaint[]>([
     //{ bodyPart: 'KNEE', side: 'LEFT', details: '' }
   ]);

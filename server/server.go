@@ -49,9 +49,6 @@ func (s *Server) registerReferralRoutes() {
 	// Get ONE specific referrals entry (The :id sniper)
 	protected.GET("/referrals/:id", v1Service.GetReferralEntryHandler)
 
-	// Create a new referral entry
-	protected.POST("/referrals", v1Service.CreateReferralEntryHandler)
-
 	// Update a referral entry's status
 	protected.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryStatusHandler)
 
@@ -102,6 +99,9 @@ func (s *Server) registerReferralRoutes() {
 	admin.PATCH("/users/:username", v1Service.UpdateUserHandler)
 
 	// ------ REFERRAL ENTRY MANAGEMENT ------
+
+	// Create a new referral entry
+	admin.POST("/referrals", v1Service.CreateReferralEntryHandler)
 
 	// Batch create referral entries
 	admin.POST("/referrals/batch", v1Service.BatchCreateReferralEntriesHandler)

@@ -5,6 +5,8 @@ import AddReferralEntryDialog from '../components/ReferralEntry/AddReferralEntry
 import type { ReferralEntry } from '../components/ReferralEntry/ReferralEntryCard';
 import { Button } from "@/components/ui";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem } from "@/components/ui/dropdown";
+import { useAuth } from '@/contexts/AuthContext';
+import { ROLES } from '@/helpers/constants';
 
 const AVAILABLE_STATUSES = [
   { id: 'READY_TO_BOOK', label: 'Ready to Book' },
@@ -20,6 +22,10 @@ const AVAILABLE_STATUSES = [
 ];
 
 export default function Referrals() {
+
+  const { user: authUser } = useAuth();
+  const isAdmin = authUser?.role === ROLES.SYSTEM_ADMIN;
+
   const [patients, setPatients] = useState<ReferralEntry[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -231,29 +237,36 @@ export default function Referrals() {
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">Referrals</h2>
         <div className="flex gap-3">
 
+          {isAdmin && (
+            <>
+              <Button variant="outline" onClick={() => setIsModalOpen(true)}>
+                <PlusIcon size={18} className="mr-2" />
+                Add Referral
+              </Button>
 
-          <Button variant="outline" onClick={() => setIsModalOpen(true)}>
-            <PlusIcon size={18} className="mr-2" />
-            Add Referral
-          </Button>
+              {/* Hidden binary file input wrapper */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleBatchImport}
+                accept=".tsv,.csv"
+                className="hidden"
+              />
+              <Button
+                // variant="outline" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                <UploadIcon size={18} className="mr-2" />
+                {uploading ? "Importing..." : "Batch Import"}
+              </Button>
+            </>
+          )}
 
-          {/* Hidden binary file input wrapper */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleBatchImport}
-            accept=".tsv,.csv"
-            className="hidden"
-          />
-          <Button
-            // variant="outline" 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            <UploadIcon size={18} className="mr-2" />
-            {uploading ? "Importing..." : "Batch Import"}
-          </Button>
+
+
         </div>
+
       </header>
 
       {/* WORKFLOW CONTROLS SECTION (SEARCH BAR & STATUS DROPDOWN MENU) */}
