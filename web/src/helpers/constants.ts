@@ -1,8 +1,4 @@
-// Matches user.go
-export const ROLES = {
-  SYSTEM_ADMIN: "REFTRAIL_ADMIN",
-  BOOKING_TEAM: "BOOKING_TEAM",
-} as const;
+// TODO: move to types/referrals.ts or similar
 
 export const ALL_STATUSES = [
   'READY_TO_BOOK', '1ST_CALL_COMPLETE', '2ND_CALL_COMPLETE', '3RD_CALL_COMPLETE',

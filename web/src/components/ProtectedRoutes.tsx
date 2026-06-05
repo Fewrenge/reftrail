@@ -1,8 +1,9 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import type { UserRole } from "../types/users";
 
 interface ProtectedRouteProps {
-  allowedRoles: string[];
+  allowedRoles: UserRole[];
 }
 
 // Bounces users back to referrals if they try to access a route they don't have permissions for, or to login if they're not authenticated at all

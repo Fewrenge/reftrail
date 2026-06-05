@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { PlusIcon, Loader2Icon } from "lucide-react";
-import { ROLES } from "@/helpers/constants";
+import { UserRole } from "@/types/users";
 import { Button } from "@/components/ui/button";
 import SettingSection from "./SettingSection";
 import SettingTable from "./SettingTable";
@@ -35,7 +35,7 @@ const MemberSection = () => {
     userLastName: string;
   }>({
     username: "",
-    role: ROLES.BOOKING_TEAM,
+    role: UserRole.BOOKING_TEAM,
     password: '',
     userFirstName: '',
     userLastName: '',
@@ -65,7 +65,7 @@ const MemberSection = () => {
         setMembers((prev) => [...prev, newUser]);
         // Close the dialog and reset form
         setIsCreateUserDialogOpen(false);
-        setFormData({ username: "", role: ROLES.BOOKING_TEAM, userFirstName: '', userLastName: '', password: '' });
+        setFormData({ username: "", role: UserRole.BOOKING_TEAM, userFirstName: '', userLastName: '', password: '' });
       } else {
         console.error("Failed to create user");
       }
@@ -159,7 +159,7 @@ const MemberSection = () => {
       render: (val: any) => {
         const roleStr = typeof val === 'object' ? val?.name : val;
         const cleanRole = roleStr || "USER";
-        const isAdmin = cleanRole === ROLES.SYSTEM_ADMIN;
+        const isAdmin = cleanRole === UserRole .REFTRAIL_ADMIN;
         return (
           <span className={isAdmin ? "text-primary font-bold" : "text-muted-foreground"}>
             {cleanRole.replace(/_/g, ' ')}
@@ -291,8 +291,8 @@ const MemberSection = () => {
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   >
-                    <option value={ROLES.BOOKING_TEAM}>{ROLES.BOOKING_TEAM}</option>
-                    <option value={ROLES.SYSTEM_ADMIN}>{ROLES.SYSTEM_ADMIN}</option>
+                    <option value={UserRole.BOOKING_TEAM}>{UserRole.BOOKING_TEAM}</option>
+                    <option value={UserRole.REFTRAIL_ADMIN}>{UserRole.REFTRAIL_ADMIN}</option>
                   </select>
                 </div>
               </div>

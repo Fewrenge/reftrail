@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { ROLES, ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
+import {UserRole} from "@/types/users";
+import { ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, ExternalLinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
   const [isLoading, setIsLoading] = useState(false);
   const [allGlobalTags, setAllGlobalTags] = useState<any[]>([]);
   const { user } = useAuth();
-  const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
+  const isAdmin = user?.role === UserRole.REFTRAIL_ADMIN;
 
   const navigate = useNavigate();
 

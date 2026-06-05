@@ -6,7 +6,7 @@ import type { ReferralEntry } from '../components/ReferralEntry/ReferralEntryCar
 import { Button } from "@/components/ui";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem } from "@/components/ui/dropdown";
 import { useAuth } from '@/contexts/AuthContext';
-import { ROLES } from '@/helpers/constants';
+import { UserRole } from '@/types/users';
 
 const AVAILABLE_STATUSES = [
   { id: 'READY_TO_BOOK', label: 'Ready to Book' },
@@ -24,7 +24,7 @@ const AVAILABLE_STATUSES = [
 export default function Referrals() {
 
   const { user: authUser } = useAuth();
-  const isAdmin = authUser?.role === ROLES.SYSTEM_ADMIN;
+  const isAdmin = authUser?.role === UserRole.REFTRAIL_ADMIN;
 
   const [patients, setPatients] = useState<ReferralEntry[]>([]);
   const [totalCount, setTotalCount] = useState(0);

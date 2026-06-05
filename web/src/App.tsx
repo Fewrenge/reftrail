@@ -1,5 +1,5 @@
 import ProtectedRoute from "@/components/ProtectedRoutes"; // Adjust path based on your choice
-import { ROLES } from "@/helpers/constants";
+import { UserRole } from "@/types/users";
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Login from './pages/Login';
 import Settings from './pages/Settings';
@@ -49,10 +49,10 @@ export default function App() {
 
 
             <Route path="/referrals" element={<Referrals />} />
-            <Route element={<ProtectedRoute allowedRoles={[ROLES.SYSTEM_ADMIN]} />}>
+            <Route element={<ProtectedRoute allowedRoles={[UserRole.REFTRAIL_ADMIN]} />}>
               <Route path="/analytics" element={<Analytics />} />
             </Route>
-            
+
             <Route path="/referrals/:referralId" element={<ReferralDetails />} />
             <Route path="/settings/*" element={<Settings />} />
 

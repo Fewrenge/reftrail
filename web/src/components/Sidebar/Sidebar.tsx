@@ -14,11 +14,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown";
-import { ROLES } from '@/helpers/constants';
+import { UserRole } from '@/types/users';
 
 export default function Sidebar() {
   const { user, onLogout } = useAuth();
-  const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
+  const isAdmin = user?.role === UserRole.REFTRAIL_ADMIN;
   const navigate = useNavigate();
 
   return (
