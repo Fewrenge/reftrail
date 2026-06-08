@@ -30,8 +30,8 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		id, created_ts, updated_ts, creator_id, 
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code, patient_phone_number, patient_email,
 		emr_patient_id, emr_referral_doc_id,
-		referring_physician, triage_note, urgency, status, source, referral_date
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		referring_physician, triage_note, urgency, status, source, referral_date, consult_type
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// Execute the command
 	_, err = d.conn(ctx).ExecContext(ctx, query,
@@ -40,7 +40,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		create.PatientHealthcardNumber, create.PatientHealthcardVersionCode,
 		create.PatientPhoneNumber, create.PatientEmail,
 		create.EMRPatientID, create.EMRReferralDocID,
-		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source, create.ReferralDate,
+		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source, create.ReferralDate, create.ConsultType,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert referral entry for patient %s, %s (creator_username: %s): %w",
@@ -94,7 +94,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		id, creator_id, created_ts, updated_ts, 
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code, patient_phone_number, patient_email,
 		emr_patient_id, emr_referral_doc_id,
-		referring_physician, triage_note, urgency, status, source, referral_date
+		referring_physician, triage_note, urgency, status, source, referral_date, consult_type
 	FROM referral_entry WHERE 1 = 1`
 
 	var args []any
@@ -244,7 +244,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 			&entry.PatientHealthcardNumber, &entry.PatientHealthcardVersionCode,
 			&entry.PatientPhoneNumber, &entry.PatientEmail,
 			&entry.EMRPatientID, &entry.EMRReferralDocID,
-			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source, &entry.ReferralDate,
+			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source, &entry.ReferralDate, &entry.ConsultType,
 		)
 		if err != nil {
 			return nil, err

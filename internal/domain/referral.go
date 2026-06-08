@@ -4,6 +4,7 @@ type ReferralID string
 type ReferralStatus string
 type ReferralUrgency string
 type ReferralSource string
+type ReferralConsultType string
 
 const (
 	UrgencyElective ReferralUrgency = "ELECTIVE"
@@ -22,6 +23,13 @@ const (
 	StatusDeclined        ReferralStatus = "DECLINED"
 	StatusSuspended       ReferralStatus = "SUSPENDED" // Temporary halt (e.g., patient is on vacation)
 	StatusClosed          ReferralStatus = "CLOSED"    // Permanent end (Audit trail: patient died, moved, etc.)
+)
+
+const (
+	ConsultTypeAppLowerExtremity ReferralConsultType = "APP+LE"
+	ConsultTypeAppUpperExtremity ReferralConsultType = "APP+UE"
+	ConsultTypeAppAnySurgeon     ReferralConsultType = "APP+SX"
+	ConsultTypeSurgeon           ReferralConsultType = "APP+SX"
 )
 
 // TransitionRule now only needs to track what the standard user can do

@@ -45,6 +45,7 @@ export interface ReferralEntry {
   complaints: Complaint[];
   triageNote: string;
   tags: string[];
+  consultType: string;
   emrPatientId?: string;
   emrReferralDocId?: string;
 }
@@ -438,6 +439,11 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
           </div>
 
           <div>
+            <span>Consult Type: </span>
+            <span className="font-bold text-slate-600">{entry.consultType}</span>
+          </div>
+
+          <div>
             <span>Referral Received: </span>
             <span className="font-bold text-slate-600">{entry.referralDate}</span>
           </div>
@@ -492,8 +498,6 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                   }
                 }}
               />
-
-              {/* TODO: Quick note function */}
 
               <div className="flex gap-2">
                 <Button

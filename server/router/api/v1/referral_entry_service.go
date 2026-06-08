@@ -27,8 +27,6 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid query filter parameters"})
 	}
 
-	// FIX: Explicitly pull repeated query slices that c.Bind skips natively by hardcoding the expected query keys
-	// TODO: make this more dynamic and reusable
 	if nameSearch := c.QueryParam("patient_name_search"); nameSearch != "" {
 		trimmed := strings.TrimSpace(nameSearch)
 		find.PatientLastName = &trimmed
@@ -195,7 +193,6 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Failed to read file spreadsheet headers"})
 	}
 
-	//  PASTE THIS INSTEAD:
 	cleanRegex := regexp.MustCompile(`[\s\t\_\-]+`)
 
 	// Getting the header map for flexible column order
@@ -320,18 +317,23 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			PatientDOB:                   strings.TrimSpace(row[headerMap["dob"]]),
 			PatientHealthcardNumber:      healthCardNum,
 			PatientHealthcardVersionCode: versionCode,
-			PatientPhoneNumber:           strings.TrimSpace(row[headerMap["phone number"]]),
-			PatientEmail:                 strings.TrimSpace(row[headerMap["email"]]),
-			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
-			ReferralDate:                 strings.TrimSpace(row[headerMap["referral date"]]),
-			Urgency:                      domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),
-			Status:                       domain.ReferralStatus("READY_TO_BOOK"), // Workflow entry state default
-			Source:                       domain.ReferralSource("REGULAR"),
-			Complaints:                   complaints,
-			Tags:                         tags,
-			TriageNote:                   strings.TrimSpace(row[headerMap["triage note"]]),
-			EMRPatientID:                 emrPatientID,
-			EMRReferralDocID:             emrReferralDocID,
+
+			PatientPhoneNumber: strings.TrimSpace(row[headerMap["phone number"]]),
+			PatientEmail:       strings.TrimSpace(row[headerMap["email"]]),
+			ReferringPhysician: strings.TrimSpace(row[headerMap["referring physician"]]),
+			ReferralDate:       strings.TrimSpace(row[headerMap["referral date"]]),
+
+			Urgency:    domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),
+			Status:     domain.ReferralStatus("READY_TO_BOOK"), // Workflow entry state default
+			Source:     domain.ReferralSource("REGULAR"),
+			Complaints: complaints,
+
+			Tags:        tags,
+			TriageNote:  strings.TrimSpace(row[headerMap["triage note"]]),
+			ConsultType: domain.ReferralConsultType(strings.TrimSpace(row[headerMap["consult type"]])),
+
+			EMRPatientID:     emrPatientID,
+			EMRReferralDocID: emrReferralDocID,
 		}
 
 		// Run validator on this entry

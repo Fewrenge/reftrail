@@ -89,6 +89,7 @@ func (s *Store) Login(ctx context.Context, req *LoginRequest) (*User, error) {
 	return user, nil
 }
 
+// TODO: implement a better seeding mechanism
 func (s *Store) SeedAdminUser(ctx context.Context) error {
 	count, err := s.driver.CountUsers(ctx)
 	if err != nil {
@@ -96,7 +97,7 @@ func (s *Store) SeedAdminUser(ctx context.Context) error {
 	}
 
 	if count == 0 {
-		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost) // TODO: put default password in .env file
+		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 
 		admin := &CreateUser{
 			Username:      "admin",

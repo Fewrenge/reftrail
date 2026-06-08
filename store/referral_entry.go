@@ -32,8 +32,9 @@ type ReferralEntry struct {
 	EMRReferralDocID string `json:"emrReferralDocId"`
 
 	// 4. Clinical Details
-	ReferringPhysician string `json:"referringPhysician"`
-	TriageNote         string `json:"triageNote"`
+	ReferringPhysician string                     `json:"referringPhysician"`
+	TriageNote         string                     `json:"triageNote"`
+	ConsultType        domain.ReferralConsultType `json:"consultType"`
 
 	// 5. Workflow & Urgency
 	Urgency      domain.ReferralUrgency `json:"urgency"` // Elective, Urgent, ASAP
@@ -69,16 +70,18 @@ type CreateReferralEntry struct {
 	EMRReferralDocID             string `json:"emrReferralDocId"`
 
 	// Clinical Info
-	ReferringPhysician string              `json:"referringPhysician"`
-	Complaints         []ReferralComplaint `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
-	Tags               []string            `json:"tags"` // Optional free-form tags that will be validated against the database on the store level
-	TriageNote         string              `json:"triageNote"`
+	ReferringPhysician string                     `json:"referringPhysician"`
+	Complaints         []ReferralComplaint        `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
+	Tags               []string                   `json:"tags"` // Optional free-form tags that will be validated against the database on the store level
+	TriageNote         string                     `json:"triageNote"`
+	ConsultType        domain.ReferralConsultType `json:"consultType"`
 
 	// Status
 	Urgency      domain.ReferralUrgency `json:"urgency"`
 	Status       domain.ReferralStatus  `json:"status"` // Usually defaults to "READY_TO_BOOK"
 	Source       domain.ReferralSource  `json:"source"`
 	ReferralDate string                 `json:"referralDate"`
+
 	// Accountability
 	CreatorUsername domain.Username `json:"creatorUsername"`
 }
