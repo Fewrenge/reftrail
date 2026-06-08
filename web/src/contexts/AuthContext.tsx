@@ -6,16 +6,16 @@ import type { User } from "../types/users";
 
 interface AuthContextType {
   user: User | null; // Removed any to make it safer
-  loading: boolean;
+  isAuthenticating: boolean;
   onLogout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true, onLogout: async () => {} });
+const AuthContext = createContext<AuthContextType>({ user: null, isAuthenticating: true, onLogout: async () => {} });
 
 // 2. The Provider (The wrapper for your whole app)
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
 
   const onLogout = async () => {
     await fetch('/api/v1/logout', { method: 'POST', credentials: 'same-origin' });
@@ -27,11 +27,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     getUserMe()
       .then((data) => setUser(data))
       .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+      .finally(() => setIsAuthenticating(false));
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, onLogout }}>
+    <AuthContext.Provider value={{ user, isAuthenticating, onLogout }}>
       {children}
     </AuthContext.Provider>
   );

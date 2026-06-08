@@ -14,21 +14,27 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     created_ts TEXT NOT NULL,
     updated_ts TEXT NOT NULL, 
     creator_id TEXT NOT NULL,
+
     patient_last_name TEXT NOT NULL,
     patient_first_name TEXT NOT NULL,
     patient_dob TEXT NOT NULL,
     patient_healthcard_number TEXT NOT NULL,
     patient_healthcard_version_code TEXT NOT NULL,
-    txt_customer_id TEXT,
-    int_customer_doc_id INTEGER,
-    referring_physician TEXT,
+    patient_phone_number TEXT,
+    patient_email TEXT,
+
+    
     consult_type TEXT CHECK(consult_type IN ('APP+LE','APP+UE','APP+SX','SX','OTHER')),
     consult_type_details TEXT, -- e.g. when patient has a preference
     triage_note TEXT,
-    urgency TEXT CHECK(urgency IN ('Elective', 'Urgent', 'ASAP')),
+    urgency TEXT CHECK(urgency IN ('ELECTIVE', 'URGENT', 'ASAP')),
     status TEXT NOT NULL DEFAULT 'READY_TO_BOOK' CHECK (status IN ('READY_TO_BOOK', '1ST_CALL_COMPLETE', '2ND_CALL_COMPLETE',
     '3RD_CALL_COMPLETE', 'BOOKED', 'UNABLE_TO_CONTACT', 'PATIENT_TO_CALL_BACK', 'DECLINED', 'SUSPENDED','CLOSED')),
     source TEXT CHECK(source IN ('REGULAR', 'FRACTURE_CLINIC', 'OTHER')),
+
+    emr_patient_id TEXT,
+    emr_referral_doc_id TEXT,
+    referring_physician TEXT,
     referral_date TEXT NOT NULL,
     FOREIGN KEY (creator_id) REFERENCES user(username) ON UPDATE CASCADE -- ON DELETE SET NULL?
 );
@@ -46,8 +52,7 @@ CREATE TABLE IF NOT EXISTS referral_log (
     FOREIGN KEY (user_id) REFERENCES user(username) ON UPDATE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(referral_id);
-CREATE INDEX IF NOT EXISTS idx_referral_healthcard ON referral_entry(patient_healthcard_number);
+
 
 CREATE TABLE IF NOT EXISTS referral_appointment (
     id TEXT PRIMARY KEY,
@@ -55,7 +60,7 @@ CREATE TABLE IF NOT EXISTS referral_appointment (
     complaint_target TEXT NOT NULL,
     appt_date_and_time TEXT,
     practitioner TEXT,
-    juvonno_appt_id TEXT,
+    emr_appt_id TEXT,
     created_ts TEXT NOT NULL,
     creator_id TEXT,
     FOREIGN KEY (referral_id) REFERENCES referral_entry(id) ON DELETE CASCADE
@@ -89,3 +94,21 @@ CREATE TABLE IF NOT EXISTS referral_tag (
 );
 
 CREATE INDEX IF NOT EXISTS idx_referral_tag_ref ON referral_tag(referral_id);
+
+CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(referral_id);
+CREATE INDEX IF NOT EXISTS idx_referral_healthcard ON referral_entry(patient_healthcard_number);
+
+CREATE INDEX IF NOT EXISTS idx_referral_patient_search
+ON referral_entry(patient_last_name, patient_first_name, patient_dob);
+
+CREATE INDEX IF NOT EXISTS idx_referral_complaint_lookup
+ON referral_complaint(body_part, referral_id);
+
+CREATE INDEX IF NOT EXISTS idx_referral_tag_lookup 
+ON referral_tag(tag_name, referral_id);
+
+CREATE INDEX IF NOT EXISTS idx_referral_pipeline 
+ON referral_entry(status, urgency, created_ts DESC);
+
+CREATE INDEX IF NOT EXISTS idx_referral_consult_pipeline 
+ON referral_entry(consult_type, status, created_ts DESC);

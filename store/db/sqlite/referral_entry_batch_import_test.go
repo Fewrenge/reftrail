@@ -40,7 +40,7 @@ func TestBatchCreateReferralEntriesHandler_Success(t *testing.T) {
 	}
 
 	// 4. Prepare your raw TSV template document spreadsheet content lines
-	tsvTemplateDraft := "LAST NAME\tFIRST NAME\tHEALTHCARD\tCELL\tEMAIL\tREFERRING PHYSICIAN\tREFERRAL DATE\tCOMPLAINT\tCOMPLAINT SIDE\tCONSULT TYPE\tURGENCY\tTAG\tJUVONNO PATIENT ID\n" +
+	tsvTemplateDraft := "LAST NAME\tFIRST NAME\tHEALTHCARD\tCELL\tEMAIL\tREFERRING PHYSICIAN\tREFERRAL DATE\tCOMPLAINT\tCOMPLAINT SIDE\tCONSULT TYPE\tURGENCY\tTAG\tEMR PATIENT ID\n" +
 		"Test\tPatient\t1234567890AB\t(111) 222-3333\ttest.patient@email.com\tTest Test\t2026-01-01\tShoulder;Elbow\tBILATERAL;LEFT\tAPP+UE\tElective\tSAN\t12506\n" +
 		"Second\tTest Patient\t9876543210XY\t(444) 555-6666\t\tTest Test\t2026-02-01\tAnkle\tBILATERAL\tAPP+LE\tASAP\tDAN\t16637"
 

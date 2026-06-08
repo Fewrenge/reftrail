@@ -6,6 +6,12 @@ type ReferralUrgency string
 type ReferralSource string
 
 const (
+	UrgencyElective ReferralUrgency = "ELECTIVE"
+	UrgencyUrgent   ReferralUrgency = "URGENT"
+	UrgencyAsap     ReferralUrgency = "ASAP"
+)
+
+const (
 	StatusReadyToBook     ReferralStatus = "READY_TO_BOOK"
 	Status1stCallComplete ReferralStatus = "1ST_CALL_COMPLETE"
 	Status2ndCallComplete ReferralStatus = "2ND_CALL_COMPLETE"
@@ -51,6 +57,27 @@ var statusRules = map[ReferralStatus]TransitionRule{
 	StatusClosed:   {AllowedTo: []ReferralStatus{}},
 }
 
+var ImportDocumentHeaderSchema = map[string]bool{
+	"last name":           true,
+	"first name":          true,
+	"complaint":           true,
+	"complaint side":      true,
+	"urgency":             true,
+	"referral date":       true,
+	"health card":         false,
+	"date of birth":       false,
+	"phone number":        false,
+	"email":               false,
+	"referring physician": false,
+	"source":              false,
+	"complaint details":   false,
+	"consult type":        false,
+	"triage note":         false,
+	"tag":                 false,
+	"emr patient id":      false,
+	"emr referral doc id": false,
+}
+
 func CanTransition(old, next ReferralStatus, role UserRole) bool {
 	// 1. GOD MODE: Admins bypass all matrix rules
 	if role == RoleReftrailAdmin {
@@ -72,4 +99,16 @@ func CanTransition(old, next ReferralStatus, role UserRole) bool {
 	}
 
 	return false
+}
+
+func ValidateCSVHeaders(headerMap map[string]int) []string {
+	var missingFields []string
+	for fieldName, isRequired := range ImportDocumentHeaderSchema {
+		if isRequired {
+			if _, exists := headerMap[fieldName]; !exists {
+				missingFields = append(missingFields, fieldName)
+			}
+		}
+	}
+	return missingFields
 }

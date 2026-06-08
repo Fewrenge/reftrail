@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { UserIcon, LogInIcon, UsersIcon, TagIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { ROLES } from "../helpers/constants";
+import { UserRole } from "../types/users";
 
 
 import ProfileSection from "../components/Settings/ProfileSection";
@@ -33,10 +33,10 @@ const SECTION_COMPONENT_MAP: Record<SettingSection, React.ComponentType> = {
 
 const Setting = () => {
   const location = useLocation();
-  const { user, loading } = useAuth();
+  const { user, isAuthenticating } = useAuth();
   const [selectedSection, setSelectedSection] = useState<SettingSection>("profile");
 
-  const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
+  const isAdmin = user?.role === UserRole.REFTRAIL_ADMIN;
 
   const settingsSectionList = useMemo(() => {
     return isAdmin ? [...BASIC_SECTIONS, ...ADMIN_SECTIONS] : BASIC_SECTIONS;
@@ -48,7 +48,7 @@ const Setting = () => {
     setSelectedSection(nextSection);
   }, [location.hash, settingsSectionList]);
 
-  if (loading) return <div className="p-10 text-muted-foreground">Loading...</div>;
+  if (isAuthenticating) return <div className="p-10 text-muted-foreground">Loading...</div>;
 
   const ActiveSection = SECTION_COMPONENT_MAP[selectedSection];
 

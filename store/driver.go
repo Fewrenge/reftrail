@@ -18,6 +18,7 @@ type Driver interface {
 	ListAllComplaints(ctx context.Context) ([]*ReferralComplaint, error)
 	CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error)
 	ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error)
+	GetReferralEntriesCount(ctx context.Context, find *FindReferralEntry) (int, error)
 	UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error
 	DeleteReferralEntry(ctx context.Context, delete *DeleteReferralEntry) error
 	GetReferralEntryStatusByID(ctx context.Context, id domain.ReferralID) (domain.ReferralStatus, error)

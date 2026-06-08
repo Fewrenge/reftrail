@@ -30,7 +30,7 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [source, setSource] = useState('REGULAR');
-  const [urgency, setUrgency] = useState('Elective');
+  const [urgency, setUrgency] = useState('ELECTIVE');
   const [complaints, setComplaints] = useState<Complaint[]>([
     //{ bodyPart: 'KNEE', side: 'LEFT', details: '' }
   ]);
@@ -217,8 +217,8 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Urgency</label>
               <select className="border rounded-md p-2 bg-white text-sm" value={urgency} onChange={e => setUrgency(e.target.value)}>
-                <option value="Elective">Elective</option>
-                <option value="Urgent">Urgent</option>
+                <option value="ELECTIVE">Elective</option>
+                <option value="URGENT">Urgent</option>
                 <option value="ASAP">ASAP</option>
               </select>
             </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { PlusIcon, Loader2Icon } from "lucide-react";
-import { ROLES } from "@/helpers/constants";
+import { UserRole } from "@/types/users";
 import { Button } from "@/components/ui/button";
 import SettingSection from "./SettingSection";
 import SettingTable from "./SettingTable";
@@ -35,7 +35,7 @@ const MemberSection = () => {
     userLastName: string;
   }>({
     username: "",
-    role: ROLES.BOOKING_TEAM,
+    role: UserRole.BOOKING_TEAM,
     password: '',
     userFirstName: '',
     userLastName: '',
@@ -65,7 +65,7 @@ const MemberSection = () => {
         setMembers((prev) => [...prev, newUser]);
         // Close the dialog and reset form
         setIsCreateUserDialogOpen(false);
-        setFormData({ username: "", role: ROLES.BOOKING_TEAM, userFirstName: '', userLastName: '', password: '' });
+        setFormData({ username: "", role: UserRole.BOOKING_TEAM, userFirstName: '', userLastName: '', password: '' });
       } else {
         console.error("Failed to create user");
       }
@@ -159,7 +159,7 @@ const MemberSection = () => {
       render: (val: any) => {
         const roleStr = typeof val === 'object' ? val?.name : val;
         const cleanRole = roleStr || "USER";
-        const isAdmin = cleanRole === ROLES.SYSTEM_ADMIN;
+        const isAdmin = cleanRole === UserRole .REFTRAIL_ADMIN;
         return (
           <span className={isAdmin ? "text-primary font-bold" : "text-muted-foreground"}>
             {cleanRole.replace(/_/g, ' ')}
@@ -172,13 +172,13 @@ const MemberSection = () => {
       header: "",
       className: "w-[10%] text-right",
       render: (_: any, row: any) => (
-        <div className="flex items-center justify-end gap-1">
+        <div className="flex items-center justify-end">
           {/* EDIT BUTTON */}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleOpenEditModal(row)} // <-- Ensure this reads your declared function!
-            className="text-slate-400 hover:text-blue-600 rounded-lg h-8 w-8 p-0"
+            className="text-slate-400 hover:text-blue-600 rounded-lg h-8"
           >
             <span className="text-xs font-bold">Edit</span>
           </Button>
@@ -188,11 +188,11 @@ const MemberSection = () => {
             variant="ghost"
             size="sm"
             onClick={() => handleArchiveUser(row.username)} // Points to our new archive handler
-            className="text-slate-400 hover:text-amber-600 rounded-lg h-8 w-8 p-0"
+            className="text-slate-400 hover:text-amber-600 rounded-lg h-8"
             // Prevent system admins from archiving themselves or the core system admin row
             disabled={row.username === "admin"}
           >
-            <span className="text-xs font-bold text-amber-600">Arch</span>
+            <span className="text-xs font-bold text-amber-600">Archive</span>
           </Button>
 
           {/* DELETE BUTTON */}
@@ -200,7 +200,7 @@ const MemberSection = () => {
             variant="ghost"
             size="sm"
             onClick={() => handleDeleteUser(row.username)} // Triggers our new delete function
-            className="text-slate-400 hover:text-red-600 rounded-lg h-8 w-8 p-0"
+            className="text-slate-400 hover:text-red-600 rounded-lg h-8"
             // Prevents self-deletion if currentUser state exists later
             disabled={row.username === "admin"}
           >
@@ -218,7 +218,7 @@ const MemberSection = () => {
   return (
     <>
       <SettingSection
-        title="Member list"
+        title="Member List"
         className="p-1"
         actions={
           <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
@@ -291,8 +291,8 @@ const MemberSection = () => {
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   >
-                    <option value={ROLES.BOOKING_TEAM}>{ROLES.BOOKING_TEAM}</option>
-                    <option value={ROLES.SYSTEM_ADMIN}>{ROLES.SYSTEM_ADMIN}</option>
+                    <option value={UserRole.BOOKING_TEAM}>{UserRole.BOOKING_TEAM}</option>
+                    <option value={UserRole.REFTRAIL_ADMIN}>{UserRole.REFTRAIL_ADMIN}</option>
                   </select>
                 </div>
               </div>

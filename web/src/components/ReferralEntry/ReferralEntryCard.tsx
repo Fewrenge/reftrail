@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { ROLES, ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
+import { UserRole } from "@/types/users";
+import { ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
 import { useAuth } from "@/contexts/AuthContext";
-import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, XCircleIcon } from "lucide-react";
+import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, ExternalLinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,12 +33,20 @@ export interface ReferralEntry {
   patientLastName: string;
   patientFirstName: string;
   patientDob: string;
+  patientHealthcardNumber: string;
+  patientHealthcardVersionCode: string;
+  patientCell: string;   // Added
+  patientEmail: string;  // Added
   urgency: 'ASAP' | 'Urgent' | 'Elective';
   status: string;
   referringPhysician: string;
+  referralDate: string;
+  source: string;
   complaints: Complaint[];
   triageNote: string;
   tags: string[];
+  emrPatientId?: string;
+  emrReferralDocId?: string;
 }
 
 export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Props) {
@@ -49,7 +58,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
   const [isLoading, setIsLoading] = useState(false);
   const [allGlobalTags, setAllGlobalTags] = useState<any[]>([]);
   const { user } = useAuth();
-  const isAdmin = user?.role === ROLES.SYSTEM_ADMIN;
+  const isAdmin = user?.role === UserRole.REFTRAIL_ADMIN;
 
   const navigate = useNavigate();
 
@@ -64,8 +73,13 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
   const urgencyStyles = {
     ASAP: "bg-red-50 text-red-700 border-red-100",
-    Urgent: "bg-amber-50 text-amber-700 border-amber-100",
-    Elective: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    URGENT: "bg-amber-50 text-amber-700 border-amber-100",
+    ELECTIVE: "bg-emerald-50 text-emerald-700 border-emerald-100",
+  };
+
+  const sourceStyles = {
+    FRACTURE_CLINIC: "bg-amber-50 text-amber-800 border-amber-200/60 font-bold",
+    REGULAR: "bg-slate-100 text-slate-600 border-slate-200 font-medium"
   };
 
   // Logic to send the update to your Go backend
@@ -177,24 +191,41 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
         {/* 1. TOP SECTION: Name on left, Badges & Menu on right */}
         <div className="flex justify-between items-start mb-6">
-          <div>
-            {/* Wrap the patient name text in a clickable button element */}
-            {isClickable ? (
-              <button
-                onClick={() => navigate(`/referrals/${entry.id}`)}
-                className="text-left font-bold text-xl text-slate-900 hover:text-blue-600 cursor-pointer transition-colors focus:outline-none"
-              >
-                {entry.patientLastName}{", "}{entry.patientFirstName}
-              </button>
-            ) : (
-              <h3 className="font-bold text-xl text-slate-900">
-                {entry.patientLastName}{", "}{entry.patientFirstName}
-              </h3>
-            )}
 
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-              DOB: {entry.patientDob || 'N/A'}
-            </p>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              {isClickable ? (
+                <button
+                  onClick={() => navigate(`/referrals/${entry.id}`)}
+                  className="text-left font-bold text-xl text-slate-900 hover:text-blue-600 cursor-pointer transition-colors focus:outline-none"
+                >
+                  {entry.patientLastName}{", "}{entry.patientFirstName}
+                </button>
+              ) : (
+                <h3 className="font-bold text-xl text-slate-900">
+                  {entry.patientLastName}{", "}{entry.patientFirstName}
+                </h3>
+              )}
+
+              {/* External Link */}
+              <a
+                href={
+                  `${import.meta.env?.VITE_EXTERNAL_PATIENT_URL}${entry.emrPatientId || ''}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-400 hover:text-blue-600 transition-colors focus:outline-none p-1 rounded-md hover:bg-slate-100 shrink-0 self-center"
+                aria-label="Open external link"
+              >
+                <ExternalLinkIcon size={20} />
+              </a>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                DOB: {entry.patientDob || 'N/A'}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -257,14 +288,16 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                   <span>Add a Note</span>
                 </DropdownMenuItem>
 
+                {isAdmin && (
+                  <DropdownMenuItem
+                    onSelect={() => { handleDelete(); }}
+                    className="text-red-600 hover:bg-red-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
+                  >
+                    <Trash2Icon size={16} strokeWidth={2.5} />
+                    <span>Delete Entry</span>
+                  </DropdownMenuItem>
+                )}
 
-                <DropdownMenuItem
-                  onSelect={() => { handleDelete(); }}
-                  className="text-red-600 hover:bg-red-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
-                >
-                  <Trash2Icon size={16} strokeWidth={2.5} />
-                  <span>Delete Entry</span>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -272,12 +305,13 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
 
           </div>
+
         </div>
 
         {/* 2. MIDDLE SECTION: Details Grid */}
         <div className="grid grid-cols-2 gap-8 mb-4">
           <div>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Physician</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Referring Physician</p>
             <p className="text-sm font-medium text-slate-700">{entry.referringPhysician || 'Unassigned'}</p>
           </div>
           <div>
@@ -290,7 +324,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
                   return (
                     <p key={compositeKey} className="text-sm font-medium text-slate-700 capitalize">
-                      {`${c.side?.toLowerCase() || ''} ${c.bodyPart?.toLowerCase() || ''}`}
+                      {` ${c.bodyPart?.toLowerCase() || ''} ${'-'} ${c.side?.toLowerCase() || ''}`}
                       {c.details && <span className="text-xs text-slate-400 block font-normal">{c.details}</span>}
                     </p>
                   );
@@ -300,6 +334,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               )}
             </div>
           </div>
+
+
         </div>
 
 
@@ -329,10 +365,10 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                   <button
                     type="button"
                     onClick={() => handleRemoveTag(tagNameStr)}
-                    className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer rounded-full outline-none"
+                    className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer rounded-full outline-none"
                     disabled={isLoading}
                   >
-                    <XCircleIcon size={12} fill="currentColor" className="text-white" />
+                    <XIcon size={14} strokeWidth={2.5} />
                   </button>
                 )}
               </span>
@@ -390,6 +426,23 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             {entry.triageNote ? `"${entry.triageNote}"` : "No triage notes recorded."}
           </p>
         </div>
+
+        {/* 3. CARD LOWER FOOTER: Soft Timeline Bar */}
+        <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
+          <div className="flex items-center gap-2">
+            <span>Source:</span>
+            <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase border tracking-wider ${sourceStyles[entry.source as keyof typeof sourceStyles] || sourceStyles.REGULAR
+              }`}>
+              {entry.source ? entry.source.replace(/_/g, ' ') : 'REGULAR'}
+            </span>
+          </div>
+
+          <div>
+            <span>Referral Received: </span>
+            <span className="font-bold text-slate-600">{entry.referralDate}</span>
+          </div>
+        </div>
+
 
 
 

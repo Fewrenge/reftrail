@@ -4,7 +4,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const res = await fetch('/api/v1/login', {
       method: 'POST',
@@ -25,7 +25,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
         
         {/* Header Section */}
         <div className="w-full flex flex-row justify-center items-center mb-6">
-          <p className="ml-2 text-5xl text-foreground opacity-80 font-tight">Referral System</p>
+          <p className="ml-2 text-5xl text-foreground opacity-80 font-tight">RefTrail</p>
         </div>
 
         {/* Form Section */}

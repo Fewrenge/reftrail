@@ -8,7 +8,9 @@ import (
 	"reftrail/internal/domain"
 	"reftrail/store"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	echo "github.com/labstack/echo/v5"
 )
@@ -17,20 +19,77 @@ import (
 // GET /api/v1/referrals
 func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
+	find := &store.FindReferralEntry{}
 
-	list, err := s.Store.ListReferralEntries(ctx, &store.FindReferralEntry{})
+	// Let Echo automatically extract all query strings and arrays into the find struct
+	if err := c.Bind(find); err != nil {
+		slog.Warn("Failed parsing list query parameters", "error", err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid query filter parameters"})
+	}
+
+	// FIX: Explicitly pull repeated query slices that c.Bind skips natively by hardcoding the expected query keys
+	// TODO: make this more dynamic and reusable
+	if nameSearch := c.QueryParam("patient_name_search"); nameSearch != "" {
+		trimmed := strings.TrimSpace(nameSearch)
+		find.PatientLastName = &trimmed
+		find.PatientFirstName = &trimmed
+	}
+
+	// Validate and clean Date Range URL Parameters
+	if find.ReferralDateFrom != nil && *find.ReferralDateFrom != "" {
+		trimmedFrom := strings.TrimSpace(*find.ReferralDateFrom)
+		if _, err := time.Parse("2006-01-02", trimmedFrom); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "referralDateFrom must be in YYYY-MM-DD format"})
+		}
+		find.ReferralDateFrom = &trimmedFrom
+	} else {
+		find.ReferralDateFrom = nil // Ensure empty strings don't pass down as pointers
+	}
+
+	if find.ReferralDateTo != nil && *find.ReferralDateTo != "" {
+		trimmedTo := strings.TrimSpace(*find.ReferralDateTo)
+		if _, err := time.Parse("2006-01-02", trimmedTo); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "referralDateTo must be in YYYY-MM-DD format"})
+		}
+		find.ReferralDateTo = &trimmedTo
+	} else {
+		find.ReferralDateTo = nil // Ensure empty strings don't pass down as pointers
+	}
+
+	if limitQuery := c.QueryParam("limit"); limitQuery != "" {
+		if val, err := strconv.Atoi(limitQuery); err == nil {
+			find.Limit = &val
+		}
+	}
+	if offsetQuery := c.QueryParam("offset"); offsetQuery != "" {
+		if val, err := strconv.Atoi(offsetQuery); err == nil {
+			find.Offset = &val
+		}
+	}
+
+	// Apply business defaults if the frontend didn't pass pagination bounds
+	if find.Limit == nil {
+		defaultLimit := 10
+		find.Limit = &defaultLimit
+	}
+	if find.Offset == nil {
+		defaultOffset := 0
+		find.Offset = &defaultOffset
+	}
+
+	// Fetch the paginated dataset
+	paginated, err := s.Store.ListReferralEntries(ctx, find)
 	if err != nil {
 		slog.Error("failed to get referral entries list", "error", err.Error())
-
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "failed to retrieve referral records",
-		})
-	}
-	if list == nil {
-		list = []*store.ReferralEntry{}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve records"})
 	}
 
-	return c.JSON(http.StatusOK, list)
+	// 4. Ensure arrays inside the JSON object return as [] instead of null
+	if paginated.ReferralEntries == nil {
+		paginated.ReferralEntries = []*store.ReferralEntry{}
+	}
+
+	return c.JSON(http.StatusOK, paginated)
 }
 
 // GetReferralEntryHandler handles GET /api/v1/referrals/:id
@@ -84,6 +143,7 @@ func (s *APIV1Service) CreateReferralEntryHandler(c *echo.Context) error {
 
 	entry, err := s.Store.CreateReferralEntry(ctx, create)
 	if err != nil {
+		slog.Warn("Failed to create referral entry in database", "error", err.Error())
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create referral"})
 	}
 	return c.JSON(http.StatusOK, entry)
@@ -135,21 +195,32 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Failed to read file spreadsheet headers"})
 	}
 
+	//  PASTE THIS INSTEAD:
+	cleanRegex := regexp.MustCompile(`[\s\t\_\-]+`)
+
+	// Getting the header map for flexible column order
 	headerMap := make(map[string]int)
 	for idx, name := range headers {
-		cleanHeader := strings.TrimSpace(strings.ToLower(name))
-
-		// Fix hidden character issue: Remove UTF-8 Byte Order Marks (BOM) if exported from Excel
+		cleanHeader := strings.ToLower(name)
 		cleanHeader = strings.TrimPrefix(cleanHeader, "\xef\xbb\xbf")
+		cleanHeader = cleanRegex.ReplaceAllString(cleanHeader, " ")
+		cleanHeader = strings.TrimSpace(cleanHeader)
 
 		headerMap[cleanHeader] = idx
 	}
 
-	// Fail-fast verification check for required schema columns
-	requiredFields := []string{"last name", "first name", "complaint", "complaint side", "urgency", "referral date"}
-	for _, field := range requiredFields {
-		if _, exists := headerMap[field]; !exists {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid file format: missing column header '" + field + "'"})
+	// Invoke the centralized domain schema validator
+	if missingFields := domain.ValidateCSVHeaders(headerMap); len(missingFields) > 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Invalid file format: missing absolutely required column headers: " + strings.Join(missingFields, ", "),
+		})
+	}
+
+	// Track which fields from the domain schema are actually present in this session
+	presentFields := make(map[string]bool)
+	for fieldName := range domain.ImportDocumentHeaderSchema {
+		if _, exists := headerMap[fieldName]; exists {
+			presentFields[fieldName] = true
 		}
 	}
 
@@ -197,7 +268,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			}
 
 			// Core zip pattern: resolve matching sides index, fallback to BILATERAL if data length mismatches
-			sideVal := "BILATERAL"
+			sideVal := "OTHER"
 			if i < len(rawSides) && strings.TrimSpace(rawSides[i]) != "" {
 				sideVal = strings.TrimSpace(strings.ToUpper(rawSides[i]))
 			}
@@ -209,19 +280,32 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			})
 		}
 
+		var emrPatientID string
+		if idx, exists := headerMap["emr patient id"]; exists {
+			emrPatientID = strings.TrimSpace(row[idx])
+		}
+
+		var emrReferralDocID string
+		if idx, exists := headerMap["emr referral doc id"]; exists {
+			emrReferralDocID = strings.TrimSpace(row[idx])
+		}
+
 		// Parse semicolon-separated optional Tags column
 		var tags []string
 		if tagIdx, exists := headerMap["tag"]; exists {
 
+			// NOTE: strings.SplitSeq handles streaming tokens lazily without upfront allocations.
+			// It returns an iter.Seq[string], which strictly allows ONLY ONE loop variable (t).
 			rawTags := strings.SplitSeq(row[tagIdx], ";")
 			for t := range rawTags {
-				cleanTag := strings.TrimSpace(strings.ToUpper(t))
+				// FIX: 't' points directly to the mutable CSV reader memory buffer.
+				// Modifying 't' or appending it raw causes a memory escape loop that breaks the file reader.
+				// That truncates row execution and dropping subsequent fields (like referral date).
+				// strings.Clone(t) safely decouples the string data before any transformations.
+				cleanTag := strings.TrimSpace(strings.ToUpper(strings.Clone(t)))
 				if cleanTag != "" {
-					// Uncomment below to enforce snake_case naming standard
-					// cleanTag = strings.ReplaceAll(cleanTag, " ", "_")
-
 					// Build the structure type matching store's expectations
-					tags = append(tags, strings.TrimSpace(cleanTag))
+					tags = append(tags, cleanTag)
 				}
 			}
 		} else {
@@ -233,15 +317,21 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		entry := store.CreateReferralEntry{
 			PatientLastName:              strings.TrimSpace(row[headerMap["last name"]]),
 			PatientFirstName:             strings.TrimSpace(row[headerMap["first name"]]),
-			PatientDOB:                   "1990-01-01", // Default placeholder since template column is missing // TODO: Add DOB column
+			PatientDOB:                   strings.TrimSpace(row[headerMap["dob"]]),
 			PatientHealthcardNumber:      healthCardNum,
 			PatientHealthcardVersionCode: versionCode,
+			PatientPhoneNumber:           strings.TrimSpace(row[headerMap["phone number"]]),
+			PatientEmail:                 strings.TrimSpace(row[headerMap["email"]]),
 			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
+			ReferralDate:                 strings.TrimSpace(row[headerMap["referral date"]]),
 			Urgency:                      domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),
 			Status:                       domain.ReferralStatus("READY_TO_BOOK"), // Workflow entry state default
 			Source:                       domain.ReferralSource("REGULAR"),
 			Complaints:                   complaints,
 			Tags:                         tags,
+			TriageNote:                   strings.TrimSpace(row[headerMap["triage note"]]),
+			EMRPatientID:                 emrPatientID,
+			EMRReferralDocID:             emrReferralDocID,
 		}
 
 		// Run validator on this entry
