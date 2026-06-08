@@ -447,8 +447,6 @@ export default function Referrals() {
           )}
         </div>
 
-        {/* TODO: implement search by date function with calendar UI */}
-
         {/* 1. PRIORITIES ROW (HIGH VISIBILITY SEMANTIC COLOR-CODED PILLS) */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-20">Urgency:</span>
@@ -492,9 +490,14 @@ export default function Referrals() {
                     key={tagName}
                     type="button"
                     onClick={() => {
-                      setSelectedTags(prev =>
-                        prev.includes(tagName) ? prev.filter(t => t !== tagName) : [...prev, tagName]
-                      );
+                      setSelectedTags(prev => {
+                        // If the clicked tag is already active, clear the array entirely to deselect it
+                        if (prev.includes(tagName)) {
+                          return [];
+                        }
+                        // Otherwise, kick out all other tags and keep only this newly selected tag
+                        return [tagName];
+                      });
                     }}
                     className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
                       ? 'bg-purple-50 text-purple-700 border-purple-200 ring-2 ring-purple-500/10 font-semibold shadow-sm'

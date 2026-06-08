@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import {UserRole} from "@/types/users";
+import { UserRole } from "@/types/users";
 import { ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, ExternalLinkIcon } from "lucide-react";
@@ -33,13 +33,15 @@ export interface ReferralEntry {
   patientLastName: string;
   patientFirstName: string;
   patientDob: string;
-    patientHealthcardNumber: string;
+  patientHealthcardNumber: string;
   patientHealthcardVersionCode: string;
   patientCell: string;   // Added
   patientEmail: string;  // Added
   urgency: 'ASAP' | 'Urgent' | 'Elective';
   status: string;
   referringPhysician: string;
+  referralDate: string;
+  source: string;
   complaints: Complaint[];
   triageNote: string;
   tags: string[];
@@ -73,6 +75,11 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
     ASAP: "bg-red-50 text-red-700 border-red-100",
     URGENT: "bg-amber-50 text-amber-700 border-amber-100",
     ELECTIVE: "bg-emerald-50 text-emerald-700 border-emerald-100",
+  };
+
+  const sourceStyles = {
+    FRACTURE_CLINIC: "bg-amber-50 text-amber-800 border-amber-200/60 font-bold",
+    REGULAR: "bg-slate-100 text-slate-600 border-slate-200 font-medium"
   };
 
   // Logic to send the update to your Go backend
@@ -281,14 +288,16 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                   <span>Add a Note</span>
                 </DropdownMenuItem>
 
+                {isAdmin && (
+                  <DropdownMenuItem
+                    onSelect={() => { handleDelete(); }}
+                    className="text-red-600 hover:bg-red-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
+                  >
+                    <Trash2Icon size={16} strokeWidth={2.5} />
+                    <span>Delete Entry</span>
+                  </DropdownMenuItem>
+                )}
 
-                <DropdownMenuItem
-                  onSelect={() => { handleDelete(); }}
-                  className="text-red-600 hover:bg-red-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
-                >
-                  <Trash2Icon size={16} strokeWidth={2.5} />
-                  <span>Delete Entry</span>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -296,6 +305,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
 
           </div>
+
         </div>
 
         {/* 2. MIDDLE SECTION: Details Grid */}
@@ -324,6 +334,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               )}
             </div>
           </div>
+
+
         </div>
 
 
@@ -414,6 +426,23 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             {entry.triageNote ? `"${entry.triageNote}"` : "No triage notes recorded."}
           </p>
         </div>
+
+        {/* 3. CARD LOWER FOOTER: Soft Timeline Bar */}
+        <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
+          <div className="flex items-center gap-2">
+            <span>Source:</span>
+            <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase border tracking-wider ${sourceStyles[entry.source as keyof typeof sourceStyles] || sourceStyles.REGULAR
+              }`}>
+              {entry.source ? entry.source.replace(/_/g, ' ') : 'REGULAR'}
+            </span>
+          </div>
+
+          <div>
+            <span>Referral Received: </span>
+            <span className="font-bold text-slate-600">{entry.referralDate}</span>
+          </div>
+        </div>
+
 
 
 
