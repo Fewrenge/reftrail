@@ -327,12 +327,15 @@ export default function Referrals() {
                 <div className="flex items-center gap-2 truncate">
                   <FilterIcon size={16} className="text-slate-400 shrink-0" />
                   <span className="truncate">
-                    {selectedStatuses.length === 0 || selectedStatuses.length === AVAILABLE_STATUSES.length
-                      ? "All Statuses Selected"
-                      : selectedStatuses.length === 1
-                        ? AVAILABLE_STATUSES.find((s) => s.id === selectedStatuses[0])?.label || "0 Status Selected"
-                        : `Statuses (${selectedStatuses.length} Active)`}
+                    {selectedStatuses.length === 0
+                      ? "No Statuses Selected" // Alert user that queries will yield no results
+                      : selectedStatuses.length === AVAILABLE_STATUSES.length
+                        ? "All Statuses Selected"
+                        : selectedStatuses.length === 1
+                          ? AVAILABLE_STATUSES.find((s) => s.id === selectedStatuses[0])?.label || "1 Status Selected"
+                          : `Statuses (${selectedStatuses.length} Active)`}
                   </span>
+
                 </div>
                 <ChevronRightIcon size={16} className="text-slate-400 rotate-90 shrink-0 transition-transform duration-200" />
               </button>
@@ -348,18 +351,19 @@ export default function Referrals() {
                 onSelect={(e) => e.preventDefault()} // Prevents dropdown from closing when clicking the shortcut
                 onClick={() => {
                   setSelectedStatuses((prev) => {
-                    // If everything is already active/checked, deselecting all clears the array entirely.
-                    // We initialize it with an explicit invalid string or mock state to show all unchecked without triggering the default fallback.
-                    const isEverythingChecked = prev.length === 0 || prev.length === AVAILABLE_STATUSES.length;
+                    // Everything is considered active if the length matches or if it's completely empty
+                    const isEverythingChecked = prev.length === AVAILABLE_STATUSES.length || prev.length === 0;
+
                     if (isEverythingChecked) {
-                      // If you want "Deselect All" to show zero items, pass an item that won't match any queue ID
-                      return ["__NONE__"];
-                    } else {
-                      // Select All: Clears back to empty array to switch on all checkboxes natively
+                      // Deselect All: Make the filter completely empty
                       return [];
+                    } else {
+                      // Select All: Populate the array explicitly with every single ID
+                      return AVAILABLE_STATUSES.map(s => s.id);
                     }
                   });
                 }}
+
                 className="text-xs font-medium text-slate-500 hover:text-slate-800 focus:bg-slate-50 rounded-lg py-1.5 px-2.5 mb-1 cursor-pointer transition-colors flex justify-between items-center"
               >
                 <span>Toggle Selection:</span>
@@ -371,9 +375,7 @@ export default function Referrals() {
               <DropdownMenuSeparator className="bg-slate-100 my-1" />
 
               {AVAILABLE_STATUSES.map((status) => {
-                // FIXED VISUAL LOGIC: Box is checked if explicitly selected OR if the system is in "All Active" mode
-                const isAllActiveMode = selectedStatuses.length === 0;
-                const isChecked = isAllActiveMode || selectedStatuses.includes(status.id);
+                const isChecked = selectedStatuses.includes(status.id);
 
                 return (
                   <DropdownMenuCheckboxItem
@@ -382,24 +384,20 @@ export default function Referrals() {
                     onSelect={(e) => e.preventDefault()}
                     onCheckedChange={() => {
                       setSelectedStatuses((prev) => {
-                        // Scenario A: Transitioning from "All Active" to single item exclusion mode
-                        if (prev.length === 0) {
-                          return AVAILABLE_STATUSES.map(s => s.id).filter(id => id !== status.id);
+                        let updated: string[];
+
+                        // If it's already selected, remove it from the array
+                        if (prev.includes(status.id)) {
+                          updated = prev.filter((id) => id !== status.id);
+                        } else {
+                          // Otherwise, add it to the array
+                          updated = [...prev, status.id];
                         }
 
-                        // Scenario B: Standard multi-select toggle
-                        const updated = prev.includes(status.id)
-                          ? prev.filter((id) => id !== status.id)
-                          : [...prev, status.id];
-
-                        // Performance Optimization: If the user explicitly checks everything, 
-                        // clean the memory back to [] to let the backend run optimized base queries
-                        if (updated.length === AVAILABLE_STATUSES.length) {
-                          return [];
-                        }
                         return updated;
                       });
                     }}
+
                     className="rounded-lg pr-2.5 py-2 text-sm text-slate-600 focus:bg-slate-50 focus:text-slate-900 data-[state=checked]:text-blue-700 data-[state=checked]:bg-blue-50/50 data-[state=checked]:font-semibold transition-all duration-150 cursor-pointer mb-0.5"
                   >
                     {status.label}

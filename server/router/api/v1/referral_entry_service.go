@@ -29,32 +29,10 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 
 	// FIX: Explicitly pull repeated query slices that c.Bind skips natively by hardcoding the expected query keys
 	// TODO: make this more dynamic and reusable
-	rawQueryParams := c.QueryParams()
-
-	if rawStatuses, exists := rawQueryParams["statuses"]; exists && len(rawStatuses) > 0 {
-		find.Statuses = []domain.ReferralStatus{} // Reset slice to ensure clean allocation
-		for _, s := range rawStatuses {
-			if s != "" {
-				find.Statuses = append(find.Statuses, domain.ReferralStatus(s))
-			}
-		}
-	}
-
-	if rawUrgencies, exists := rawQueryParams["urgencies"]; exists && len(rawUrgencies) > 0 {
-		find.Urgencies = []domain.ReferralUrgency{}
-		for _, u := range rawUrgencies {
-			if u != "" {
-				find.Urgencies = append(find.Urgencies, domain.ReferralUrgency(u))
-			}
-		}
-	}
-	if rawTags, exists := rawQueryParams["tagNames"]; exists && len(rawTags) > 0 {
-		find.TagNames = []string{}
-		for _, t := range rawTags {
-			if t != "" {
-				find.TagNames = append(find.TagNames, t)
-			}
-		}
+	if nameSearch := c.QueryParam("patient_name_search"); nameSearch != "" {
+		trimmed := strings.TrimSpace(nameSearch)
+		find.PatientLastName = &trimmed
+		find.PatientFirstName = &trimmed
 	}
 
 	// Validate and clean Date Range URL Parameters
@@ -76,13 +54,6 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 		find.ReferralDateTo = &trimmedTo
 	} else {
 		find.ReferralDateTo = nil // Ensure empty strings don't pass down as pointers
-	}
-
-	// Bind the new unified name query token safely
-	if nameSearch := c.QueryParam("patient_name_search"); nameSearch != "" {
-		trimmed := strings.TrimSpace(nameSearch)
-		find.PatientLastName = &trimmed
-		find.PatientFirstName = &trimmed
 	}
 
 	if limitQuery := c.QueryParam("limit"); limitQuery != "" {
