@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	echo "github.com/labstack/echo/v5"
 )
@@ -54,6 +55,27 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 				find.TagNames = append(find.TagNames, t)
 			}
 		}
+	}
+
+	// Validate and clean Date Range URL Parameters
+	if find.ReferralDateFrom != nil && *find.ReferralDateFrom != "" {
+		trimmedFrom := strings.TrimSpace(*find.ReferralDateFrom)
+		if _, err := time.Parse("2006-01-02", trimmedFrom); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "referralDateFrom must be in YYYY-MM-DD format"})
+		}
+		find.ReferralDateFrom = &trimmedFrom
+	} else {
+		find.ReferralDateFrom = nil // Ensure empty strings don't pass down as pointers
+	}
+
+	if find.ReferralDateTo != nil && *find.ReferralDateTo != "" {
+		trimmedTo := strings.TrimSpace(*find.ReferralDateTo)
+		if _, err := time.Parse("2006-01-02", trimmedTo); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "referralDateTo must be in YYYY-MM-DD format"})
+		}
+		find.ReferralDateTo = &trimmedTo
+	} else {
+		find.ReferralDateTo = nil // Ensure empty strings don't pass down as pointers
 	}
 
 	// Bind the new unified name query token safely

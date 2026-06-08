@@ -39,6 +39,25 @@ export default function Referrals() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [availableTags, setAvailableTags] = useState<string[]>([]);
 
+  // Date Filter States (Defaults to empty string for no filter active)
+  const [referralDateFrom, setReferralDateFrom] = useState<string>(() => {
+    return localStorage.getItem("reftrail_date_from") || "";
+  });
+
+  const [referralDateTo, setReferralDateTo] = useState<string>(() => {
+    return localStorage.getItem("reftrail_date_to") || "";
+  });
+
+  // Sync date alterations to browser local disk
+  useEffect(() => {
+    localStorage.setItem("reftrail_date_from", referralDateFrom);
+  }, [referralDateFrom]);
+
+  useEffect(() => {
+    localStorage.setItem("reftrail_date_to", referralDateTo);
+  }, [referralDateTo]);
+
+
   useEffect(() => {
     const fetchTags = async () => {
       try {
@@ -157,6 +176,16 @@ export default function Referrals() {
         selectedTags.forEach(tag => params.append("tagNames", tag));
       }
 
+      // Append Date Bounds if they have active text values
+      if (referralDateFrom !== "") {
+        params.append("referralDateFrom", referralDateFrom);
+      }
+
+      if (referralDateTo !== "") {
+        params.append("referralDateTo", referralDateTo);
+      }
+
+
 
       // Passes a single token to the backend
       const cleanSearch = debouncedSearch.trim();
@@ -189,12 +218,13 @@ export default function Referrals() {
   // Trigger page re-render sequences whenever pages or filters change
   useEffect(() => {
     refreshData();
-  }, [currentPage, debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(",")]);
+  }, [currentPage, debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(","),
+    referralDateFrom, referralDateTo]);
 
   // FIXED: Reset pagination index if search terms or filters shift
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(",")]);
+  }, [debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(","), referralDateFrom, referralDateTo]);
 
   // Handler to pipe the binary file stream to your new backend handler
   const handleBatchImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -453,7 +483,6 @@ export default function Referrals() {
         </div>
 
         {/* 2. TAGS ROW (NEUTRAL INTERACTION PILLS) */}
-        {/* 2. TAGS ROW (DYNAMICAL RESILIENT PILLS LOWER WRAPPER) */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-20">Tags:</span>
           <div className="flex flex-wrap gap-2">
@@ -483,6 +512,38 @@ export default function Referrals() {
             )}
           </div>
         </div>
+
+        <div className="flex items-center gap-4 my-4 p-3 bg-gray-50 rounded-md border border-gray-200">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">From Date</label>
+            <input
+              type="date"
+              value={referralDateFrom}
+              onChange={(e) => setReferralDateFrom(e.target.value)}
+              className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">To Date</label>
+            <input
+              type="date"
+              value={referralDateTo}
+              onChange={(e) => setReferralDateTo(e.target.value)}
+              className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+
+          {(referralDateFrom || referralDateTo) && (
+            <button
+              onClick={() => { setReferralDateFrom(""); setReferralDateTo(""); }}
+              className="mt-5 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors border border-red-200"
+            >
+              Clear Dates
+            </button>
+          )}
+        </div>
+
 
       </div>
 
