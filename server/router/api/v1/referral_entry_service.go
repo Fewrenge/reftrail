@@ -15,7 +15,7 @@ import (
 	echo "github.com/labstack/echo/v5"
 )
 
-// Get all referrals
+// Get all referrals that meet a set of criteria
 // GET /api/v1/referrals
 func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
@@ -27,10 +27,21 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid query filter parameters"})
 	}
 
-	if nameSearch := c.QueryParam("patient_name_search"); nameSearch != "" {
-		trimmed := strings.TrimSpace(nameSearch)
-		find.PatientLastName = &trimmed
-		find.PatientFirstName = &trimmed
+	if generalTerm := c.QueryParam("generalTerm"); generalTerm != "" {
+		trimmed := strings.TrimSpace(generalTerm)
+
+		// Regex patterns to check the characteristics of the universal input string
+		hasDigits := regexp.MustCompile(`\d`).MatchString(trimmed)
+		hasLetters := regexp.MustCompile(`[a-zA-Z]`).MatchString(trimmed)
+
+		if hasDigits && !hasLetters {
+			// Scenario A: Input contains ONLY numbers/hyphens (e.g., Health Card)
+			find.PatientHealthcardNumber = &trimmed
+		} else {
+			// Scenario B: Input contains letters (or mixed text like "John 123") -> Fallback to Names
+			find.PatientLastName = &trimmed
+			find.PatientFirstName = &trimmed
+		}
 	}
 
 	// Validate and clean Date Range URL Parameters

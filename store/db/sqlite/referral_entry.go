@@ -197,16 +197,24 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		}
 	}
 
-	if find.ReferringPhysician != nil && *find.ReferringPhysician != "" {
-		query += " AND referring_physician LIKE ?"
-		args = append(args, "%"+*find.ReferringPhysician+"%")
-	}
+	// Left Anchored
 	if find.PatientHealthcardNumber != nil && *find.PatientHealthcardNumber != "" {
 		query += " AND patient_healthcard_number LIKE ?"
 		args = append(args, *find.PatientHealthcardNumber+"%")
 	}
 
-	// 5. Date Bounds
+	if find.ReferringPhysician != nil && *find.ReferringPhysician != "" {
+		query += " AND referring_physician LIKE ?"
+		args = append(args, "%"+*find.ReferringPhysician+"%")
+	}
+
+	// Phone Number Search (Advanced Filter Component)
+	if find.PatientPhoneNumber != nil && *find.PatientPhoneNumber != "" {
+		query += " AND patient_phone_number LIKE ?"
+		args = append(args, "%"+*find.PatientPhoneNumber+"%")
+	}
+
+	// Date Bounds
 	if find.ReferralDateFrom != nil && *find.ReferralDateFrom != "" {
 		query += " AND referral_date >= ?"
 		args = append(args, *find.ReferralDateFrom)
@@ -420,22 +428,3 @@ func (d *Driver) DeleteReferralEntry(ctx context.Context, delete *store.DeleteRe
 	_, err := d.conn(ctx).ExecContext(ctx, query, delete.ID)
 	return err
 }
-
-/*
-func (d *Driver) DeleteReferralEntries(ctx context.Context, ids []int32) error {
-	if len(ids) == 0 {
-		return nil
-	}
-
-	// Create the (?, ?, ?) string based on how many IDs we have
-	placeholders := make([]string, len(ids))
-	args := make([]any, len(ids))
-	for i, id := range ids {
-		placeholders[i] = "?"
-		args[i] = id
-	}
-
-	query := "DELETE FROM referral_entry WHERE id IN (%s)"
-	return err
-}
-*/

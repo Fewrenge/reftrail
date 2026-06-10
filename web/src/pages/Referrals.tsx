@@ -69,8 +69,6 @@ export default function Referrals() {
         if (!response.ok) throw new Error("Failed to pull tag definitions");
         const data = await response.json();
 
-        // Assumes your API returns a flat array of strings like ["SAN", "DAN"] 
-        // or an array of objects like [{ name: "SAN" }]. Adjust mapping accordingly:
         if (Array.isArray(data)) {
           const tagNames = data.map((t: any) => typeof t === 'string' ? t : t.name);
           setAvailableTags(tagNames);
@@ -144,7 +142,7 @@ export default function Referrals() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-    }, 300);
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -190,7 +188,7 @@ export default function Referrals() {
       // Passes a single token to the backend
       const cleanSearch = debouncedSearch.trim();
       if (cleanSearch !== "") {
-        params.append("patient_name_search", cleanSearch);
+        params.append("generalTerm", cleanSearch);
       }
 
 
@@ -308,8 +306,7 @@ export default function Referrals() {
           </div>
           <input
             type="text"
-            // TODO: Search by healthcard number or other identifiers in addition to patient name
-            placeholder="Search by name..."
+            placeholder="Search for patient by name or health card number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-11 bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"

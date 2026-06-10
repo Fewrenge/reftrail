@@ -12,7 +12,7 @@ export default function TagSection() {
   const [tags, setTags] = useState<TagDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Form States
   const [tagName, setTagName] = useState("");
   const [tagDescription, setTagDescription] = useState("");
@@ -129,15 +129,15 @@ export default function TagSection() {
       header: "",
       className: "w-[15%] text-right",
       render: (_: any, row: TagDefinition) => (
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           onClick={() => handleDeleteTag(row.name)}
-          className="text-slate-400 hover:text-red-600 rounded-lg h-8 w-8 p-0"
+          className="flex items-center justify-center h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
         >
-          <Trash2Icon size={16} />
-        </Button>
+          <Trash2Icon size={18} />
+        </button>
       )
+
     }
   ];
 

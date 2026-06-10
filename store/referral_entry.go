@@ -97,8 +97,7 @@ type FindReferralEntry struct {
 	CreatorUsername *domain.Username   `json:"creatorUsername"`
 
 	// 2. Clinical Filters (Requirement #8 & #9)
-	// We use pointers (*) so we can tell the difference between
-	// "Filter by this" and "Don't filter at all" (nil).
+	// We use pointers (*) so we can tell the difference between "Filter by this" and "Don't filter at all" (nil).
 	Urgencies    []domain.ReferralUrgency `json:"urgencies" query:"urgencies"`
 	Statuses     []domain.ReferralStatus  `json:"statuses" query:"statuses"`
 	Sources      []domain.ReferralSource  `json:"sources" query:"sources"`
@@ -110,11 +109,13 @@ type FindReferralEntry struct {
 	ReferralDateTo   *string `json:"referralDateTo" query:"referralDateTo"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
-	PatientLastName         *string `json:"patientLastName"`
-	PatientFirstName        *string `json:"patientFirstName"`
-	PatientDOB              *string `json:"patientDob"`
-	ReferringPhysician      *string `json:"referringPhysician"`
-	PatientHealthcardNumber *string `json:"patientHealthcardNumber"`
+	GeneralTerm             *string `json:"generalTerm" query:"generalTerm"`
+	PatientLastName         *string `json:"patientLastName" query:"patientLastName"`
+	PatientFirstName        *string `json:"patientFirstName" query:"patientFirstName"`
+	PatientDOB              *string `json:"patientDob" query:"patientDob"`
+	ReferringPhysician      *string `json:"referringPhysician" query:"referringPhysician"`
+	PatientHealthcardNumber *string `json:"patientHealthcardNumber" query:"patientHealthcardNumber"`
+	PatientPhoneNumber      *string `json:"patientPhoneNumber" query:"patientPhoneNumber"`
 
 	// 4. Pagination (For when your list gets huge)
 	Limit  *int `json:"limit"`

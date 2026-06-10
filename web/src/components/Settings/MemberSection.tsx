@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PlusIcon, Loader2Icon } from "lucide-react";
+import { PlusIcon, Loader2Icon, ArchiveIcon, Trash2Icon, EditIcon } from "lucide-react";
 import { UserRole } from "@/types/users";
 import { Button } from "@/components/ui/button";
 import SettingSection from "./SettingSection";
@@ -159,7 +159,7 @@ const MemberSection = () => {
       render: (val: any) => {
         const roleStr = typeof val === 'object' ? val?.name : val;
         const cleanRole = roleStr || "USER";
-        const isAdmin = cleanRole === UserRole .REFTRAIL_ADMIN;
+        const isAdmin = cleanRole === UserRole.REFTRAIL_ADMIN;
         return (
           <span className={isAdmin ? "text-primary font-bold" : "text-muted-foreground"}>
             {cleanRole.replace(/_/g, ' ')}
@@ -172,43 +172,44 @@ const MemberSection = () => {
       header: "",
       className: "w-[10%] text-right",
       render: (_: any, row: any) => (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-1">
           {/* EDIT BUTTON */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleOpenEditModal(row)} // <-- Ensure this reads your declared function!
-            className="text-slate-400 hover:text-blue-600 rounded-lg h-8"
+          <button
+            type="button"
+            onClick={() => handleOpenEditModal(row)}
+            className="flex items-center justify-center h-8 w-8 text-slate-400 hover:text-blue-600
+             hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            title="Edit"
           >
-            <span className="text-xs font-bold">Edit</span>
-          </Button>
+            <EditIcon size={18} />
+          </button>
 
           {/* ARCHIVE BUTTON */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleArchiveUser(row.username)} // Points to our new archive handler
-            className="text-slate-400 hover:text-amber-600 rounded-lg h-8"
-            // Prevent system admins from archiving themselves or the core system admin row
+          <button
+            type="button"
+            onClick={() => handleArchiveUser(row.username)}
             disabled={row.username === "admin"}
+            className="flex items-center justify-center h-8 w-8 text-amber-600 hover:text-amber-700
+             hover:bg-amber-50 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
+            title="Archive"
           >
-            <span className="text-xs font-bold text-amber-600">Archive</span>
-          </Button>
+            <ArchiveIcon size={18} />
+          </button>
 
           {/* DELETE BUTTON */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDeleteUser(row.username)} // Triggers our new delete function
-            className="text-slate-400 hover:text-red-600 rounded-lg h-8"
-            // Prevents self-deletion if currentUser state exists later
+          <button
+            type="button"
+            onClick={() => handleDeleteUser(row.username)}
             disabled={row.username === "admin"}
+            className="flex items-center justify-center h-8 w-8 text-red-500 hover:text-red-600
+             hover:bg-red-50 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
+            title="Delete"
           >
-            {/* If Trash2Icon isn't imported from lucide-react, you can use text or import it */}
-            <span className="text-xs font-bold text-red-500">Delete</span>
-          </Button>
+            <Trash2Icon size={18} />
+          </button>
         </div>
-      ),
+      )
+
     },
 
   ];
