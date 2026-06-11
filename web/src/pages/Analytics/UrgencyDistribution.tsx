@@ -92,7 +92,7 @@ export default function UrgencyDistribution() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
       {/* NAVIGATION AND TIMELINE CHANGER SUB BAR */}
       <div className="flex items-center justify-between">
         <button 
@@ -148,7 +148,7 @@ export default function UrgencyDistribution() {
         {/* GRAPH CORE WRAPPER SCREEN */}
         <div className="h-95 w-full min-h-0 min-w-0 mt-4 relative">
           {loading && (
-            <div className="h-full flex items-center justify-center text-slate-400 text-xs animate-pulse">
+            <div className="h-full flex items-center justify-center text-slate-400 text-xs">
               Calculating database metrics...
             </div>
           )}

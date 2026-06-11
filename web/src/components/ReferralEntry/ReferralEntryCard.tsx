@@ -35,7 +35,7 @@ export interface ReferralEntry {
   patientDob: string;
   patientHealthcardNumber: string;
   patientHealthcardVersionCode: string;
-  patientCell: string;   // Added
+  patientPhoneNumber: string;   // Added
   patientEmail: string;  // Added
   urgency: 'ASAP' | 'Urgent' | 'Elective';
   status: string;
@@ -227,6 +227,22 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                 DOB: {entry.patientDob || 'N/A'}
               </p>
             </div>
+
+
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                HCN: {entry.patientHealthcardNumber || 'N/A'} {entry.patientHealthcardVersionCode || ''}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Phone: {entry.patientPhoneNumber || 'N/A'}
+              </p>
+            </div>
+
+
+            <div/>
           </div>
 
           <div className="flex items-center gap-3">
