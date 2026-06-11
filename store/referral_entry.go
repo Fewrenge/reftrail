@@ -127,20 +127,33 @@ type PaginatedReferralEntries struct {
 	TotalCount      int              `json:"totalCount"`
 }
 
-// Admin use only, for arbiturary updates (e.g., correcting a typo, changing urgency, etc.)
-// TODO: Determine what can be updated
+// Admin use only, for arbitrary updates (e.g., correcting a typo, overriding workflow rules, sync corrections)
 type UpdateReferralEntry struct {
-	ID domain.ReferralID `json:"id"`
+	ID domain.ReferralID `json:"id" validate:"required"`
 
-	// Fields that change during the workflow
+	// --- 1. Workflow & Core Triage ---
 	Status     *domain.ReferralStatus  `json:"status"`
-	TriageNote *string                 `json:"triageNote"`
 	Urgency    *domain.ReferralUrgency `json:"urgency"`
+	Source     *domain.ReferralSource  `json:"source"`
+	TriageNote *string                 `json:"triageNote"`
 
-	Note *string `json:"note"`
+	// --- 2. Clinical Data ---
+	ReferringPhysician *string                     `json:"referringPhysician"`
+	ConsultType        *domain.ReferralConsultType `json:"consultType"`
+	ReferralDate       *string                     `json:"referralDate"`
 
-	// Force flag
-	Force bool `json:"force"`
+	// --- 3. EMR Integration Links ---
+	EMRPatientID     *string `json:"emrPatientId"`
+	EMRReferralDocID *string `json:"emrReferralDocId"`
+	EMRApptID        *string `json:"emrApptId"`
+
+	// --- 4. Deep Structs (Add, Modify, Delete arrays) ---
+	// If these fields are present in the payload, they replace the existing list entirely.
+	// If they are nil, the existing database complaints and tags are left untouched.
+	Complaints *[]*ReferralComplaint `json:"complaints" validate:"omitempty,min=1,unique_complaints,dive"`
+
+	// --- 5. Force Overrides ---
+	Force bool `json:"force"` // Bypasses standard business logic validations if true
 }
 
 type UpdateReferralEntryStatus struct {
@@ -149,13 +162,14 @@ type UpdateReferralEntryStatus struct {
 	Note      string                `json:"note"`
 }
 
+/*
 // Only records initial appointment, not for rescheduling (which is the EMR's job)
 type UpdateReferralEntryAppointment struct {
 	// Appt details (Requirement #11)
 	ApptDateAndTime *string `json:"apptDateAndTime"`
 	Practitioner    *string `json:"practitioner"`
 	EMRApptID       *string `json:"emrApptId"`
-}
+}*/
 
 type DeleteReferralEntry struct {
 	ID domain.ReferralID `json:"id"`
@@ -358,28 +372,30 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 			return domain.ErrReferralEntryNotFound
 		}
 
-		// Grab UserID from the context "mailbox" (set by the Bouncer)
-		userCtx, ok := domain.GetUserContext(ctx)
+		// 2. Grab UserID from the context
+		_, ok := domain.GetUserContext(ctx)
 		if !ok {
 			return domain.ErrUnauthorized
 		}
 
-		// 2. Tell the Worker to write the history
-		logPayload := &ReferralLog{
-			ReferralID:      update.ID,
-			CreatorUsername: domain.Username(userCtx.Username),
-			OldStatus:       current.Status,
-			NewStatus:       *update.Status,
-			Note:            *update.Note,
-		}
-
-		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
-			return fmt.Errorf("failed to create referral history log during record update: %w", err)
-		}
-
 		// 3. Commit the changes to the primary referral entity record
 		if err := s.driver.UpdateReferralEntry(txCtx, update); err != nil {
-			return fmt.Errorf("failed to execute referral entry update: %w", err)
+			return domain.ErrFailedToUpdateReferralEntry
+		}
+
+		// 4. Complaints section, only runs if the update struct explicitly provided complaints
+		if update.Complaints != nil {
+			// Wipe out all existing complaints for this referral inside the transaction context
+			if err := s.driver.DeleteReferralComplaint(txCtx, update.ID); err != nil {
+				return domain.ErrFailedToUpdateReferralEntry
+			}
+
+			// Re-insert the fresh batch of complaints passed by the admin
+			for _, complaint := range *update.Complaints {
+				if err := s.driver.CreateReferralComplaint(txCtx, update.ID, complaint); err != nil {
+					return domain.ErrFailedToUpdateReferralEntry
+				}
+			}
 		}
 
 		return nil

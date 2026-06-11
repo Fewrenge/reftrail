@@ -13,16 +13,18 @@ type Driver interface {
 	Close() error
 
 	// 2. Referral Entry Methods
-	// Notice we use the "Form" structs we just created!
-	CreateReferralComplaint(ctx context.Context, referralID domain.ReferralID, c *ReferralComplaint) error
-	ListAllComplaints(ctx context.Context) ([]*ReferralComplaint, error)
 	CreateReferralEntry(ctx context.Context, create *CreateReferralEntry) (*ReferralEntry, error)
 	ListReferralEntries(ctx context.Context, find *FindReferralEntry) ([]*ReferralEntry, error)
 	GetReferralEntriesCount(ctx context.Context, find *FindReferralEntry) (int, error)
-	UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error
+	UpdateReferralEntry(ctx context.Context, update *UpdateReferralEntry) error // Admin use only
 	DeleteReferralEntry(ctx context.Context, delete *DeleteReferralEntry) error
+
 	GetReferralEntryStatusByID(ctx context.Context, id domain.ReferralID) (domain.ReferralStatus, error)
 	UpdateReferralEntryStatus(ctx context.Context, id domain.ReferralID, status domain.ReferralStatus) error
+
+	CreateReferralComplaint(ctx context.Context, referralID domain.ReferralID, c *ReferralComplaint) error
+	DeleteReferralComplaint(ctx context.Context, referralID domain.ReferralID) error // Only used for UpdateReferralEntry
+	ListAllComplaints(ctx context.Context) ([]*ReferralComplaint, error)
 
 	// 3. Accountability (Optional but recommended for your logs)
 	CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error)

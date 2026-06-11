@@ -93,22 +93,27 @@ CREATE TABLE IF NOT EXISTS referral_tag (
     FOREIGN KEY (tag_name) REFERENCES referral_tag_definition(name) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_referral_tag_ref ON referral_tag(referral_id);
+-- Foreign Key / Junction Table Optimizations
+CREATE INDEX IF NOT EXISTS idx_referral_tag_referral_id ON referral_tag(referral_id);
 
-CREATE INDEX IF NOT EXISTS idx_referral_log_entry_id ON referral_log(referral_id);
-CREATE INDEX IF NOT EXISTS idx_referral_healthcard ON referral_entry(patient_healthcard_number);
+CREATE INDEX IF NOT EXISTS idx_referral_log_referral_id ON referral_log(referral_id);
 
-CREATE INDEX IF NOT EXISTS idx_referral_patient_search
-ON referral_entry(patient_last_name, patient_first_name, patient_dob);
+-- Single-Column Lookups
+CREATE INDEX IF NOT EXISTS idx_referral_entry_patient_healthcard_number ON referral_entry(patient_healthcard_number);
 
-CREATE INDEX IF NOT EXISTS idx_referral_complaint_lookup
-ON referral_complaint(body_part, referral_id);
+-- Multi-Column (Composite) Search Optimizations
+CREATE INDEX IF NOT EXISTS idx_referral_entry_patient_last_first_dob ON referral_entry(patient_last_name, patient_first_name, patient_dob);
 
-CREATE INDEX IF NOT EXISTS idx_referral_tag_lookup 
-ON referral_tag(tag_name, referral_id);
+-- Analytics & Reporting Lookups
+CREATE INDEX IF NOT EXISTS idx_referral_complaint_body_part_referral_id 
+    ON referral_complaint(body_part, referral_id);
 
-CREATE INDEX IF NOT EXISTS idx_referral_pipeline 
-ON referral_entry(status, urgency, created_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_referral_tag_tag_name_referral_id 
+    ON referral_tag(tag_name, referral_id);
 
-CREATE INDEX IF NOT EXISTS idx_referral_consult_pipeline 
-ON referral_entry(consult_type, status, created_ts DESC);
+-- Operational Pipeline Queues
+CREATE INDEX IF NOT EXISTS idx_referral_entry_status_urgency_created_ts 
+    ON referral_entry(status, urgency, created_ts DESC);
+
+CREATE INDEX IF NOT EXISTS idx_referral_entry_consult_type_status_created_ts 
+    ON referral_entry(consult_type, status, created_ts DESC);

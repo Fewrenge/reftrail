@@ -17,6 +17,12 @@ func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID domain.
 	return err
 }
 
+func (d *Driver) DeleteReferralComplaint(ctx context.Context, referralID domain.ReferralID) error {
+	query := `DELETE FROM referral_complaint WHERE referral_id = ?`
+	_, err := d.conn(ctx).ExecContext(ctx, query, referralID)
+	return err
+}
+
 func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (*store.ReferralEntry, error) {
 	// Get the current time for our timestamps
 	newID, err := uuid.NewV7()
@@ -388,22 +394,65 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 	// 1. Build the "SET" part of our SQL dynamically
 	set, args := []string{}, []any{}
 
+	// --- Workflow & Core Triage ---
 	if v := update.Status; v != nil {
 		set = append(set, "status = ?")
+		args = append(args, *v)
+	}
+	if v := update.Urgency; v != nil {
+		set = append(set, "urgency = ?")
+		args = append(args, *v)
+	}
+	if v := update.Source; v != nil {
+		set = append(set, "source = ?")
 		args = append(args, *v)
 	}
 	if v := update.TriageNote; v != nil {
 		set = append(set, "triage_note = ?")
 		args = append(args, *v)
 	}
-	// Update the timestamp automatically
-	set = append(set, "updated_ts = ?")
-	args = append(args, time.Now().Format(time.RFC3339))
+
+	// --- Clinical Data ---
+	if v := update.ReferringPhysician; v != nil {
+		set = append(set, "referring_physician = ?")
+		args = append(args, *v)
+	}
+	if v := update.ConsultType; v != nil {
+		set = append(set, "consult_type = ?")
+		args = append(args, *v)
+	}
+	if v := update.ReferralDate; v != nil {
+		set = append(set, "referral_date = ?")
+		args = append(args, *v)
+	}
+
+	// --- EMR Integration Links ---
+	if v := update.EMRPatientID; v != nil {
+		set = append(set, "emr_patient_id = ?")
+		args = append(args, *v)
+	}
+	if v := update.EMRReferralDocID; v != nil {
+		set = append(set, "emr_referral_doc_id = ?")
+		args = append(args, *v)
+	}
+	if v := update.EMRApptID; v != nil {
+		set = append(set, "emr_appt_id = ?")
+		args = append(args, *v)
+	}
+
+	// Safety Guard: If no columns are targeted for updates, skip to avoid executing bad SQL syntax
+	if len(set) == 0 {
+		return nil
+	}
+
+	// Update the timestamp automatically every single time
+	// set = append(set, "updated_ts = ?")
+	// args = append(args, time.Now().Format(time.RFC3339))
 
 	// 2. Add the ID for the WHERE clause
-	args = append(args, update.ID)
+	// args = append(args, update.ID)
 
-	// 3. Execute: UPDATE referral_entry SET status = ?, updated_ts = ? WHERE id = ?
+	// 3. Execute query
 	query := `UPDATE referral_entry SET ` + strings.Join(set, ", ") + ` WHERE id = ?`
 	_, err := d.conn(ctx).ExecContext(ctx, query, args...)
 	return err

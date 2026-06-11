@@ -109,7 +109,8 @@ func (s *Server) registerReferralRoutes() {
 	// Delete a referral entry
 	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler)
 
-	// admin.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler) // Gotta change the URL?
+	// Update a referral entry (admin use only, for miscellaneous updates like correcting a typo, changing urgency, etc.)
+	admin.PATCH("/referrals/:id", v1Service.UpdateReferralEntryHandler)
 
 	// ------ TAG MANAGEMENT ------
 
