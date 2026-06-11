@@ -10,7 +10,7 @@ import (
 )
 
 // GetUrgencyAnalyticsHandler extracts filters and returns pie-chart metric data
-// GET /api/v1/analytics/urgencies-distribution
+// GET /api/v1/analytics/urgency-distribution
 func (s *APIV1Service) GetUrgencyAnalyticsHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 	find := &store.FindReferralEntry{}

@@ -9,7 +9,7 @@ import { AlertCircleIcon, LayoutDashboardIcon } from "lucide-react";
 import Referrals from './pages/Referrals';
 import ReferralDetails from './pages/ReferralDetails';
 import Analytics from './pages/Analytics';
-
+import UrgencyDistribution from './pages/Analytics/UrgencyDistribution';
 
 export default function App() {
   const { user, isAuthenticating } = useAuth();
@@ -51,6 +51,7 @@ export default function App() {
             <Route path="/referrals" element={<Referrals />} />
             <Route element={<ProtectedRoute allowedRoles={[UserRole.REFTRAIL_ADMIN]} />}>
               <Route path="/analytics" element={<Analytics />} />
+              <Route path="/analytics/urgency-distribution" element={<UrgencyDistribution />} />
             </Route>
 
             <Route path="/referrals/:referralId" element={<ReferralDetails />} />

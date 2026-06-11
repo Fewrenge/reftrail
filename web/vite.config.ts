@@ -4,6 +4,9 @@ import tailwindcss from '@tailwindcss/vite'
 import path from "path";
 
 export default defineConfig({
+  optimizeDeps: {
+    include: ['recharts', 'es-toolkit'],
+  },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
