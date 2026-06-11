@@ -379,17 +379,28 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 }
 
 func (s *APIV1Service) UpdateReferralEntryHandler(c *echo.Context) error {
-	// 1. Get the ID from the URL
-	idStr := c.Param("id")
-	refID := domain.ReferralID(idStr)
+	update := &store.UpdateReferralEntry{}
 
-	update := &store.UpdateReferralEntry{ID: refID}
 	if err := c.Bind(update); err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
 	}
 
+	idStr := c.Param("id")
+	update.ID = domain.ReferralID(idStr)
+
 	if err := s.Store.UpdateReferralEntry(c.Request().Context(), update); err != nil {
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		switch err {
+		case domain.ErrUnauthorized:
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Authentication required"})
+		case domain.ErrForbidden:
+			return c.JSON(http.StatusForbidden, map[string]string{"error": "Administrative privileges required"})
+		case domain.ErrReferralEntryNotFound:
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Referral entry not found"})
+		default:
+			//return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal server processing error when updating referral entry"})
+			//---DEBUG---
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
 	}
 
 	return c.JSON(http.StatusOK, true)

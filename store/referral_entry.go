@@ -145,7 +145,7 @@ type UpdateReferralEntry struct {
 	// --- 3. EMR Integration Links ---
 	EMRPatientID     *string `json:"emrPatientId"`
 	EMRReferralDocID *string `json:"emrReferralDocId"`
-	EMRApptID        *string `json:"emrApptId"`
+	//EMRApptID        *string `json:"emrApptId"`
 
 	// --- 4. Deep Structs (Add, Modify, Delete arrays) ---
 	// If these fields are present in the payload, they replace the existing list entirely.
@@ -153,7 +153,7 @@ type UpdateReferralEntry struct {
 	Complaints *[]*ReferralComplaint `json:"complaints" validate:"omitempty,min=1,unique_complaints,dive"`
 
 	// --- 5. Force Overrides ---
-	Force bool `json:"force"` // Bypasses standard business logic validations if true
+	// Force bool `json:"force"` // Bypasses standard business logic validations if true
 }
 
 type UpdateReferralEntryStatus struct {
@@ -378,22 +378,23 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 			return domain.ErrUnauthorized
 		}
 
-		// 3. Commit the changes to the primary referral entity record
+		// 3. Commit the changes to the primary referral entry
 		if err := s.driver.UpdateReferralEntry(txCtx, update); err != nil {
-			return domain.ErrFailedToUpdateReferralEntry
+
+			return fmt.Errorf("failed to update referral entry: %w", err)
 		}
 
 		// 4. Complaints section, only runs if the update struct explicitly provided complaints
 		if update.Complaints != nil {
 			// Wipe out all existing complaints for this referral inside the transaction context
 			if err := s.driver.DeleteReferralComplaint(txCtx, update.ID); err != nil {
-				return domain.ErrFailedToUpdateReferralEntry
+				return fmt.Errorf("failed to delete old referral complaints: %w", err)
 			}
 
 			// Re-insert the fresh batch of complaints passed by the admin
 			for _, complaint := range *update.Complaints {
 				if err := s.driver.CreateReferralComplaint(txCtx, update.ID, complaint); err != nil {
-					return domain.ErrFailedToUpdateReferralEntry
+					return fmt.Errorf("failed to delete old referral complaints: %w", err)
 				}
 			}
 		}

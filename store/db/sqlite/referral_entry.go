@@ -435,10 +435,6 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 		set = append(set, "emr_referral_doc_id = ?")
 		args = append(args, *v)
 	}
-	if v := update.EMRApptID; v != nil {
-		set = append(set, "emr_appt_id = ?")
-		args = append(args, *v)
-	}
 
 	// Safety Guard: If no columns are targeted for updates, skip to avoid executing bad SQL syntax
 	if len(set) == 0 {
@@ -449,10 +445,10 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 	// set = append(set, "updated_ts = ?")
 	// args = append(args, time.Now().Format(time.RFC3339))
 
-	// 2. Add the ID for the WHERE clause
-	// args = append(args, update.ID)
+	// Add the referral entry ID for the WHERE clause
+	args = append(args, update.ID)
 
-	// 3. Execute query
+	// Execute query
 	query := `UPDATE referral_entry SET ` + strings.Join(set, ", ") + ` WHERE id = ?`
 	_, err := d.conn(ctx).ExecContext(ctx, query, args...)
 	return err

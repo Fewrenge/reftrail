@@ -1,8 +1,14 @@
 import { useState, useMemo } from 'react';
 import { UserRole } from "@/types/users";
-import { ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
+import {
+  ALL_STATUSES, STATUS_RULES, 
+  type ReferralStatus,
+  type ReferralUrgency,
+  type ReferralSource,
+  type ReferralConsultType
+} from "@/types/referrals";
 import { useAuth } from "@/contexts/AuthContext";
-import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, ExternalLinkIcon } from "lucide-react";
+import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, ExternalLinkIcon, WrenchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,6 +19,7 @@ import {
   DropdownMenuLabel
 } from "@/components/ui/dropdown";
 import { useNavigate } from 'react-router-dom';
+import { UpdateReferralEntryDialog } from '../Dialog/UpdateReferralEntryDialog';
 
 interface Props {
   entry: ReferralEntry;
@@ -48,6 +55,7 @@ export interface ReferralEntry {
   consultType: string;
   emrPatientId?: string;
   emrReferralDocId?: string;
+  emrApptId?: string;
 }
 
 export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Props) {
@@ -60,6 +68,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
   const [allGlobalTags, setAllGlobalTags] = useState<any[]>([]);
   const { user } = useAuth();
   const isAdmin = user?.role === UserRole.REFTRAIL_ADMIN;
+  const [isUpdateReferralDialogOpen, setIsUpdateReferralDialogOpen] = useState(false);
+
 
   const navigate = useNavigate();
 
@@ -283,6 +293,18 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                   <LogsIcon size={16} strokeWidth={2.5} />
                   <span>Add a Note</span>
                 </DropdownMenuItem>
+
+                {isAdmin && (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setIsUpdateReferralDialogOpen(true);
+                    }}
+                    className="text-yellow-700 hover:bg-amber-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
+                  >
+                    <WrenchIcon size={16} strokeWidth={2.5} />
+                    <span>Admin Update</span>
+                  </DropdownMenuItem>
+                )}
 
                 {isAdmin && (
                   <DropdownMenuItem
@@ -530,6 +552,53 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
           </>
         )}
 
+        
+        <UpdateReferralEntryDialog
+          isOpen={isUpdateReferralDialogOpen}
+          onClose={() => setIsUpdateReferralDialogOpen(false)}
+          referralId={entry.id}
+          initialData={{
+            // --- FIXED: Explicitly cast fields to match union type expectations ---
+            status: entry.status as ReferralStatus,
+            urgency: entry.urgency as ReferralUrgency,
+            source: entry.source as ReferralSource,
+            consultType: entry.consultType as ReferralConsultType,
+
+            triageNote: entry.triageNote || "",
+            referringPhysician: entry.referringPhysician || "",
+            referralDate: entry.referralDate || "",
+            emrPatientId: entry.emrPatientId || "",
+            emrReferralDocID: entry.emrReferralDocId || "",
+            emrApptId: entry.emrApptId || "",
+            complaints: entry.complaints ? entry.complaints.map((c: any) => ({
+              bodyPart: c.bodyPart,
+              side: c.side,
+              details: c.details || ""
+            })) : []
+          }}
+          onSave={async (formData) => {
+            try {
+              const response = await fetch(`/api/v1/referrals/${entry.id}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+              });
+
+              if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to apply updates');
+              }
+
+              console.log("Transaction committed successfully.");
+            } catch (err) {
+              console.error("API error during administrative override:", err);
+              alert(err instanceof Error ? err.message : "Internal system mutation error occurred");
+              throw err;
+            }
+          }}
+        />
 
 
       </div>
