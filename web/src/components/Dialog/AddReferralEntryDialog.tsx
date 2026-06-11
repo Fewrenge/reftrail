@@ -1,4 +1,4 @@
-// TODO: move to Dialog folder?
+// TODO: add more fields
 
 import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { SearchIcon, PlusIcon, UploadIcon, ChevronLeftIcon, ChevronRightIcon, FilterIcon } from "lucide-react";
 import ReferralEntryCard from '../components/ReferralEntry/ReferralEntryCard';
-import AddReferralEntryDialog from '../components/ReferralEntry/AddReferralEntryDialog';
-import type { ReferralEntry } from '../components/ReferralEntry/ReferralEntryCard';
+import AddReferralEntryDialog from '@/components/Dialog/AddReferralEntryDialog';
+import type { ReferralEntry } from '@/components/ReferralEntry/ReferralEntryCard';
 import { Button } from "@/components/ui";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem } from "@/components/ui/dropdown";
 import { useAuth } from '@/contexts/AuthContext';
