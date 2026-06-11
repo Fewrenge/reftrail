@@ -222,27 +222,6 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               </a>
             </div>
 
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                DOB: {entry.patientDob || 'N/A'}
-              </p>
-            </div>
-
-
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                HCN: {entry.patientHealthcardNumber || 'N/A'} {entry.patientHealthcardVersionCode || ''}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                Phone: {entry.patientPhoneNumber || 'N/A'}
-              </p>
-            </div>
-
-
-            <div/>
           </div>
 
           <div className="flex items-center gap-3">
@@ -325,14 +304,38 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
         </div>
 
-        {/* 2. MIDDLE SECTION: Details Grid */}
-        <div className="grid grid-cols-2 gap-8 mb-4">
+        {/* 2. MIDDLE SECTION: Patient Info & Contact Details */}
+        <div className="grid grid-cols-3 gap-4 mb-5 pb-4 border-b border-slate-100">
+          {/* Patient DOB */}
           <div>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Referring Physician</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">DOB</p>
+            <p className="text-sm font-medium text-slate-700">{entry.patientDob || 'N/A'}</p>
+          </div>
+
+          {/* Health Card Number */}
+          <div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">HCN</p>
+            <p className="text-sm font-medium text-slate-700">{entry.patientHealthcardNumber || 'N/A'}{entry.patientHealthcardVersionCode}</p>
+          </div>
+
+          {/* Phone */}
+          <div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Phone</p>
+            <p className="text-sm font-medium text-slate-700">{entry.patientPhoneNumber || 'N/A'}</p>
+          </div>
+        </div>
+
+        {/* 3. REFERRING PHYSICIAN & COMPLAINTS */}
+        <div className="grid grid-cols-2 gap-6 mb-4">
+          {/* Referring Physician */}
+          <div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-2">Referring Physician</p>
             <p className="text-sm font-medium text-slate-700">{entry.referringPhysician || 'Unassigned'}</p>
           </div>
+
+          {/* Complaints */}
           <div>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Complaints</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-2">Complaints</p>
             <div className="space-y-1">
               {entry.complaints && entry.complaints.length > 0 ? (
                 entry.complaints.map((c, index) => {
@@ -351,8 +354,6 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               )}
             </div>
           </div>
-
-
         </div>
 
 
