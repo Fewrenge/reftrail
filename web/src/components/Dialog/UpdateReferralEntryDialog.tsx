@@ -255,7 +255,7 @@ export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initial
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Source Pipeline</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Source</label>
               <select
                 className="w-full text-sm border rounded-md p-2 bg-white text-slate-900"
                 value={source}

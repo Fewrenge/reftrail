@@ -15,26 +15,27 @@ type ReferralEntry struct {
 	UpdatedTs       string            `json:"updatedTs"`
 
 	// 2. Patient Info
-	PatientLastName              string `json:"patientLastName"`
-	PatientFirstName             string `json:"patientFirstName"`
-	PatientDOB                   string `json:"patientDob"`
-	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
-	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
-	PatientPhoneNumber           string `json:"patientPhoneNumber"`
-	PatientEmail                 string `json:"patientEmail"`
+	PatientLastName              string  `json:"patientLastName"`
+	PatientFirstName             string  `json:"patientFirstName"`
+	PatientDOB                   string  `json:"patientDob"`
+	PatientHealthcardNumber      *string `json:"patientHealthcardNumber"`
+	PatientHealthcardVersionCode *string `json:"patientHealthcardVersionCode"`
+	PatientPhoneNumber           *string `json:"patientPhoneNumber"`
+	PatientEmail                 *string `json:"patientEmail"`
 
 	Complaints []*ReferralComplaint `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
 	Tags       []string             `json:"tags"`
 
 	// 3. EMR Integration
 	// Use string in case EMR updates their ID format in the future
-	EMRPatientID     string `json:"emrPatientId"`
-	EMRReferralDocID string `json:"emrReferralDocId"`
+	EMRPatientID     *string `json:"emrPatientId"`
+	EMRReferralDocID *string `json:"emrReferralDocId"`
 
 	// 4. Clinical Details
-	ReferringPhysician string                     `json:"referringPhysician"`
+	ReferringPhysician *string                    `json:"referringPhysician"`
 	TriageNote         string                     `json:"triageNote"`
 	ConsultType        domain.ReferralConsultType `json:"consultType"`
+	ConsultTypeDetail  *string                    `json:"consultTypeDetail"`
 
 	// 5. Workflow & Urgency
 	Urgency      domain.ReferralUrgency `json:"urgency"` // Elective, Urgent, ASAP
@@ -43,9 +44,9 @@ type ReferralEntry struct {
 	ReferralDate string                 `json:"referralDate"`
 
 	// Appointment Info (If status is "Booked")
-	ApptDateAndTime string `json:"apptDateAndTime"`
-	Practitioner    string `json:"practitioner"`
-	EMRApptID       string `json:"emrApptId"` // e.g., #18752
+	ApptDateAndTime *string `json:"apptDateAndTime,omitempty"`
+	Practitioner    *string `json:"practitioner,omitempty"`
+	EMRApptID       *string `json:"emrApptId,omitempty"` // e.g., #18752
 }
 
 type ReferralComplaint struct {
@@ -75,6 +76,7 @@ type CreateReferralEntry struct {
 	Tags               []string                   `json:"tags"` // Optional free-form tags that will be validated against the database on the store level
 	TriageNote         string                     `json:"triageNote"`
 	ConsultType        domain.ReferralConsultType `json:"consultType"`
+	ConsultTypeDetail  string                     `json:"consultTypeDetail"`
 
 	// Status
 	Urgency      domain.ReferralUrgency `json:"urgency"`

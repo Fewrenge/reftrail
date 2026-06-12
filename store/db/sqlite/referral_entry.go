@@ -36,8 +36,8 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		id, created_ts, updated_ts, creator_id, 
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code, patient_phone_number, patient_email,
 		emr_patient_id, emr_referral_doc_id,
-		referring_physician, triage_note, urgency, status, source, referral_date, consult_type
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		referring_physician, triage_note, urgency, status, source, referral_date, consult_type, consult_type_detail
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// Execute the command
 	_, err = d.conn(ctx).ExecContext(ctx, query,
@@ -46,32 +46,47 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		create.PatientHealthcardNumber, create.PatientHealthcardVersionCode,
 		create.PatientPhoneNumber, create.PatientEmail,
 		create.EMRPatientID, create.EMRReferralDocID,
-		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source, create.ReferralDate, create.ConsultType,
+		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source, create.ReferralDate, create.ConsultType, create.ConsultTypeDetail,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert referral entry for patient %s, %s (creator_username: %s): %w",
 			create.PatientLastName, create.PatientFirstName, create.CreatorUsername, err)
 	}
+	// Move strings into addressable local targets so Go allows taking memory pointers via '&'
+	patientHealthcardNumberTarget := create.PatientHealthcardNumber
+	patientHealthcardVersionCodeTarget := create.PatientHealthcardVersionCode
+	patientPhoneNumberTarget := create.PatientPhoneNumber
+	patientEmailTarget := create.PatientEmail
+	emrPatientIDTarget := create.EMRPatientID
+	emrReferralDocIDTarget := create.EMRReferralDocID
+	referringPhysicianTarget := create.ReferringPhysician
+	consultTypeDetailTarget := create.ConsultTypeDetail
+
 	return &store.ReferralEntry{
-		ID:                           domain.ReferralID(idStr), // Cast to custom type
-		CreatedTs:                    ts,
-		UpdatedTs:                    ts,
-		CreatorUsername:              create.CreatorUsername,
-		PatientLastName:              create.PatientLastName,
-		PatientFirstName:             create.PatientFirstName,
-		PatientDOB:                   create.PatientDOB,
-		PatientHealthcardNumber:      create.PatientHealthcardNumber,
-		PatientHealthcardVersionCode: create.PatientHealthcardVersionCode,
-		PatientPhoneNumber:           create.PatientPhoneNumber,
-		PatientEmail:                 create.PatientEmail,
-		EMRPatientID:                 create.EMRPatientID,
-		EMRReferralDocID:             create.EMRReferralDocID,
-		ReferringPhysician:           create.ReferringPhysician,
-		TriageNote:                   create.TriageNote,
-		Urgency:                      create.Urgency,
-		Status:                       create.Status,
-		Source:                       create.Source,
-		ReferralDate:                 create.ReferralDate,
+		ID:               domain.ReferralID(idStr),
+		CreatedTs:        ts,
+		UpdatedTs:        ts,
+		CreatorUsername:  create.CreatorUsername,
+		PatientLastName:  create.PatientLastName,
+		PatientFirstName: create.PatientFirstName,
+		PatientDOB:       create.PatientDOB,
+
+		PatientHealthcardNumber:      &patientHealthcardNumberTarget,
+		PatientHealthcardVersionCode: &patientHealthcardVersionCodeTarget,
+		PatientPhoneNumber:           &patientPhoneNumberTarget,
+		PatientEmail:                 &patientEmailTarget,
+
+		TriageNote:        create.TriageNote,
+		Urgency:           create.Urgency,
+		Status:            create.Status,
+		Source:            create.Source,
+		ReferralDate:      create.ReferralDate,
+		ConsultType:       create.ConsultType,
+		ConsultTypeDetail: &consultTypeDetailTarget,
+
+		EMRPatientID:       &emrPatientIDTarget,
+		EMRReferralDocID:   &emrReferralDocIDTarget,
+		ReferringPhysician: &referringPhysicianTarget,
 	}, nil
 }
 
@@ -100,7 +115,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		id, creator_id, created_ts, updated_ts, 
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code, patient_phone_number, patient_email,
 		emr_patient_id, emr_referral_doc_id,
-		referring_physician, triage_note, urgency, status, source, referral_date, consult_type
+		referring_physician, triage_note, urgency, status, source, referral_date, consult_type, consult_type_detail
 	FROM referral_entry WHERE 1 = 1`
 
 	var args []any
@@ -258,7 +273,8 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 			&entry.PatientHealthcardNumber, &entry.PatientHealthcardVersionCode,
 			&entry.PatientPhoneNumber, &entry.PatientEmail,
 			&entry.EMRPatientID, &entry.EMRReferralDocID,
-			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source, &entry.ReferralDate, &entry.ConsultType,
+			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source, &entry.ReferralDate,
+			&entry.ConsultType, &entry.ConsultTypeDetail,
 		)
 		if err != nil {
 			return nil, err

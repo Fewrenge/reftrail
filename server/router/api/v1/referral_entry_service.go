@@ -339,9 +339,10 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			Source:     domain.ReferralSource("REGULAR"),
 			Complaints: complaints,
 
-			Tags:        tags,
-			TriageNote:  strings.TrimSpace(row[headerMap["triage note"]]),
-			ConsultType: domain.ReferralConsultType(strings.TrimSpace(row[headerMap["consult type"]])),
+			Tags:              tags,
+			TriageNote:        strings.TrimSpace(row[headerMap["triage note"]]),
+			ConsultType:       domain.ReferralConsultType(strings.TrimSpace(row[headerMap["consult type"]])),
+			ConsultTypeDetail: strings.TrimSpace(row[headerMap["consult type detail"]]),
 
 			EMRPatientID:     emrPatientID,
 			EMRReferralDocID: emrReferralDocID,

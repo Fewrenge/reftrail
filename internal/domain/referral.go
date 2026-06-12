@@ -30,6 +30,7 @@ const (
 	ConsultTypeAppUpperExtremity ReferralConsultType = "APP+UE"
 	ConsultTypeAppAnySurgeon     ReferralConsultType = "APP+SX"
 	ConsultTypeSurgeon           ReferralConsultType = "APP+SX"
+	ConsultTypeOther             ReferralConsultType = "OTHER"
 )
 
 // TransitionRule now only needs to track what the standard user can do
