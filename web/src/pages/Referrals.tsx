@@ -536,10 +536,15 @@ const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
                   key={consult.id}
                   type="button"
                   onClick={() => {
-                    setSelectedConsultTypes(prev =>
-                      prev.includes(consult.id) ? prev.filter(id => id !== consult.id) : [...prev, consult.id]
-                    );
-                  }}
+                      setSelectedConsultTypes(prev => {
+                        // If the clicked tag is already active, clear the array entirely to deselect it
+                        if (prev.includes(consult.id)) {
+                          return [];
+                        }
+                        // Otherwise, kick out all other tags and keep only this newly selected tag
+                        return [consult.id];
+                      });
+                    }}
                   className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
                     ? consult.activeStyle
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
