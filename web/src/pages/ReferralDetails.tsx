@@ -81,6 +81,7 @@ export default function ReferralDetails() {
   // Helper 2: Formats cleanly readable message structures based on event tracking types
   const renderTimelineContent = (oldStatus: string, newStatus: string) => {
     // Case A: System Creation Event
+    // TODO: oldStatus should be set NULL
     if (oldStatus === "") {
       return (
         <div className="space-y-1">

@@ -53,6 +53,7 @@ export interface ReferralEntry {
   triageNote: string;
   tags: string[];
   consultType: string;
+  consultTypeDetail?: string;
   emrPatientId?: string;
   emrReferralDocId?: string;
   emrApptId?: string;
@@ -480,6 +481,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
           <div>
             <span>Consult Type: </span>
             <span className="font-bold text-slate-600">{entry.consultType}</span>
+            
+            <span >{'    '}{entry.consultTypeDetail}</span>
           </div>
 
           <div>

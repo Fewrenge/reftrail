@@ -11,6 +11,14 @@ import (
 	uuid "github.com/google/uuid"
 )
 
+func nullString(s string) *string {
+	cleaned := strings.TrimSpace(s)
+	if cleaned == "" {
+		return nil
+	}
+	return &cleaned
+}
+
 func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID domain.ReferralID, complaint *store.ReferralComplaint) error {
 	query := `INSERT INTO referral_complaint (referral_id, body_part, side, details) VALUES (?, ?, ?, ?)`
 	_, err := d.conn(ctx).ExecContext(ctx, query, referralID, complaint.BodyPart, complaint.Side, complaint.Details)
@@ -249,22 +257,63 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		return nil, err
 	}
 	defer rows.Close()
-
 	var list []*store.ReferralEntry
 	for rows.Next() {
 		var entry store.ReferralEntry
+
+		// 1. Declare targets as 'any' so Go's SQL driver can natively accept both strings and NULLs
+		var patientHealthcardNumberTarget any
+		var patientHealthcardVersionCodeTarget any
+		var patientPhoneNumberTarget any
+		var patientEmailTarget any
+		var emrPatientIDTarget any
+		var emrReferralDocIDTarget any
+		var referringPhysicianTarget any
+		var triageNoteTarget any
+		var consultTypeDetailTarget any
+
+		// 2. Scan directly into the memory locations of our open target interfaces
 		err := rows.Scan(
 			&entry.ID, &entry.CreatorUsername, &entry.CreatedTs, &entry.UpdatedTs,
 			&entry.PatientLastName, &entry.PatientFirstName, &entry.PatientDOB,
-			&entry.PatientHealthcardNumber, &entry.PatientHealthcardVersionCode,
-			&entry.PatientPhoneNumber, &entry.PatientEmail,
-			&entry.EMRPatientID, &entry.EMRReferralDocID,
-			&entry.ReferringPhysician, &entry.TriageNote, &entry.Urgency, &entry.Status, &entry.Source, &entry.ReferralDate,
-			&entry.ConsultType, &entry.ConsultTypeDetail,
+			&patientHealthcardNumberTarget,
+			&patientHealthcardVersionCodeTarget,
+			&patientPhoneNumberTarget,
+			&patientEmailTarget,
+			&emrPatientIDTarget,
+			&emrReferralDocIDTarget,
+			&referringPhysicianTarget,
+			&triageNoteTarget,
+			&entry.Urgency, &entry.Status, &entry.Source, &entry.ReferralDate,
+			&entry.ConsultType,
+			&consultTypeDetailTarget,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		// 3. Inline type-assertion helper to extract the string value safely.
+		// If the database column was NULL, the target is nil, so this returns an empty string "".
+		getStringValue := func(val any) string {
+			if val == nil {
+				return ""
+			}
+			if str, ok := val.(string); ok {
+				return str
+			}
+			return ""
+		}
+
+		// 4. Process values through our type assertions and nullString helper
+		entry.PatientHealthcardNumber = nullString(getStringValue(patientHealthcardNumberTarget))
+		entry.PatientHealthcardVersionCode = nullString(getStringValue(patientHealthcardVersionCodeTarget))
+		entry.PatientPhoneNumber = nullString(getStringValue(patientPhoneNumberTarget))
+		entry.PatientEmail = nullString(getStringValue(patientEmailTarget))
+		entry.EMRPatientID = nullString(getStringValue(emrPatientIDTarget))
+		entry.EMRReferralDocID = nullString(getStringValue(emrReferralDocIDTarget))
+		entry.ReferringPhysician = nullString(getStringValue(referringPhysicianTarget))
+		entry.ConsultTypeDetail = nullString(getStringValue(consultTypeDetailTarget))
+		entry.TriageNote = getStringValue(triageNoteTarget)
 		list = append(list, &entry)
 	}
 
