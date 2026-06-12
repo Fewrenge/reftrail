@@ -116,6 +116,9 @@ export default function Referrals() {
     }
   });
 
+const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
+
+
 
 
   // Sync status queue alterations to browser local disk
@@ -174,6 +177,10 @@ export default function Referrals() {
         selectedTags.forEach(tag => params.append("tagNames", tag));
       }
 
+      if (selectedConsultTypes.length>0){
+        selectedConsultTypes.forEach(ct => params.append("consultTypes", ct));
+      }
+
       // Append Date Bounds if they have active text values
       if (referralDateFrom !== "") {
         params.append("referralDateFrom", referralDateFrom);
@@ -216,13 +223,14 @@ export default function Referrals() {
   // Trigger page re-render sequences whenever pages or filters change
   useEffect(() => {
     refreshData();
-  }, [currentPage, debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(","),
+  }, [currentPage, debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(","),selectedConsultTypes.join(","),
     referralDateFrom, referralDateTo]);
 
   // FIXED: Reset pagination index if search terms or filters shift
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(","), referralDateFrom, referralDateTo]);
+  }, [debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(","), selectedConsultTypes.join(","),
+    referralDateFrom, referralDateTo]);
 
   // Handler to pipe the binary file stream to your new backend handler
   const handleBatchImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -510,6 +518,42 @@ export default function Referrals() {
             )}
           </div>
         </div>
+
+{/* 3. Consult Types Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-24">Consult Type:</span>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: "APP+LE", label: "APP+LE", activeStyle: "bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-blue-500/10 font-semibold" },
+              { id: "APP+UE", label: "APP+UE", activeStyle: "bg-cyan-50 text-cyan-700 border-cyan-200 ring-2 ring-cyan-500/10 font-semibold" },
+              { id: "APP+SX", label: "APP+SX", activeStyle: "bg-indigo-50 text-indigo-700 border-indigo-200 ring-2 ring-indigo-500/10 font-semibold" },
+              { id: "SX", label: "SX", activeStyle: "bg-violet-50 text-violet-700 border-violet-200 ring-2 ring-violet-500/10 font-semibold" },
+              { id: "OTHER", label: "OTHER", activeStyle: "bg-slate-100 text-slate-700 border-slate-300 ring-2 ring-slate-500/10 font-semibold" }
+            ].map((consult) => {
+              const isSelected = selectedConsultTypes.includes(consult.id);
+              return (
+                <button
+                  key={consult.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedConsultTypes(prev =>
+                      prev.includes(consult.id) ? prev.filter(id => id !== consult.id) : [...prev, consult.id]
+                    );
+                  }}
+                  className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
+                    ? consult.activeStyle
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                    }`}
+                >
+                  {consult.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+
+
 
         <div className="flex items-center gap-4 my-4 p-3 bg-gray-50 rounded-md border border-gray-200">
           <div className="flex flex-col gap-1">

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { UserRole } from "@/types/users";
 import {
-  ALL_STATUSES, STATUS_RULES, 
+  ALL_STATUSES, STATUS_RULES,
   type ReferralStatus,
   type ReferralUrgency,
   type ReferralSource,
@@ -480,10 +480,11 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
           <div>
             <span>Consult Type: </span>
-            <span className="font-bold text-slate-600">{entry.consultType}</span>
-            
-            <span >{'    '}{entry.consultTypeDetail}</span>
+            <span className="font-bold text-slate-600">
+              {entry.consultTypeDetail ? `${entry.consultType} - ${entry.consultTypeDetail}` : entry.consultType}
+            </span>
           </div>
+
 
           <div>
             <span>Referral Received: </span>
@@ -555,7 +556,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
           </>
         )}
 
-        
+
         <UpdateReferralEntryDialog
           isOpen={isUpdateReferralDialogOpen}
           onClose={() => setIsUpdateReferralDialogOpen(false)}
