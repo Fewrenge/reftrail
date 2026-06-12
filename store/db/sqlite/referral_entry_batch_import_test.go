@@ -27,10 +27,10 @@ func TestBatchCreateReferralEntriesHandler_Success(t *testing.T) {
 	// 3. Optional/Pre-seed Step:
 	// If you want to confirm the store execution functions flawlessly before testing file streams:
 	_, err := s.CreateReferralEntry(ctx, &store.CreateReferralEntry{
-		PatientLastName:    "Preseed",
-		PatientFirstName:   "Check",
-		Urgency:            "Elective",
-		ReferringPhysician: "System Init",
+		PatientLastName:  "Preseed",
+		PatientFirstName: "Check",
+		Urgency:          "Elective",
+		//ReferringPhysician: "System Init",
 		Complaints: []store.ReferralComplaint{
 			{BodyPart: "KNEE", Side: "LEFT"},
 		},

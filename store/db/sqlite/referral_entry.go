@@ -24,7 +24,6 @@ func (d *Driver) DeleteReferralComplaint(ctx context.Context, referralID domain.
 }
 
 func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateReferralEntry) (*store.ReferralEntry, error) {
-	// Get the current time for our timestamps
 	newID, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
@@ -39,7 +38,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		referring_physician, triage_note, urgency, status, source, referral_date, consult_type, consult_type_detail
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	// Execute the command
+	// Direct injection: Go automatically converts nil pointers into real database NULL values
 	_, err = d.conn(ctx).ExecContext(ctx, query,
 		idStr, ts, ts, string(create.CreatorUsername),
 		create.PatientLastName, create.PatientFirstName, create.PatientDOB,
@@ -49,44 +48,31 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source, create.ReferralDate, create.ConsultType, create.ConsultTypeDetail,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to insert referral entry for patient %s, %s (creator_username: %s): %w",
-			create.PatientLastName, create.PatientFirstName, create.CreatorUsername, err)
+		return nil, fmt.Errorf("failed to insert referral entry: %w", err)
 	}
-	// Move strings into addressable local targets so Go allows taking memory pointers via '&'
-	patientHealthcardNumberTarget := create.PatientHealthcardNumber
-	patientHealthcardVersionCodeTarget := create.PatientHealthcardVersionCode
-	patientPhoneNumberTarget := create.PatientPhoneNumber
-	patientEmailTarget := create.PatientEmail
-	emrPatientIDTarget := create.EMRPatientID
-	emrReferralDocIDTarget := create.EMRReferralDocID
-	referringPhysicianTarget := create.ReferringPhysician
-	consultTypeDetailTarget := create.ConsultTypeDetail
 
 	return &store.ReferralEntry{
-		ID:               domain.ReferralID(idStr),
-		CreatedTs:        ts,
-		UpdatedTs:        ts,
-		CreatorUsername:  create.CreatorUsername,
-		PatientLastName:  create.PatientLastName,
-		PatientFirstName: create.PatientFirstName,
-		PatientDOB:       create.PatientDOB,
-
-		PatientHealthcardNumber:      &patientHealthcardNumberTarget,
-		PatientHealthcardVersionCode: &patientHealthcardVersionCodeTarget,
-		PatientPhoneNumber:           &patientPhoneNumberTarget,
-		PatientEmail:                 &patientEmailTarget,
-
-		TriageNote:        create.TriageNote,
-		Urgency:           create.Urgency,
-		Status:            create.Status,
-		Source:            create.Source,
-		ReferralDate:      create.ReferralDate,
-		ConsultType:       create.ConsultType,
-		ConsultTypeDetail: &consultTypeDetailTarget,
-
-		EMRPatientID:       &emrPatientIDTarget,
-		EMRReferralDocID:   &emrReferralDocIDTarget,
-		ReferringPhysician: &referringPhysicianTarget,
+		ID:                           domain.ReferralID(idStr),
+		CreatedTs:                    ts,
+		UpdatedTs:                    ts,
+		CreatorUsername:              create.CreatorUsername,
+		PatientLastName:              create.PatientLastName,
+		PatientFirstName:             create.PatientFirstName,
+		PatientDOB:                   create.PatientDOB,
+		PatientHealthcardNumber:      create.PatientHealthcardNumber,
+		PatientHealthcardVersionCode: create.PatientHealthcardVersionCode,
+		PatientPhoneNumber:           create.PatientPhoneNumber,
+		PatientEmail:                 create.PatientEmail,
+		EMRPatientID:                 create.EMRPatientID,
+		EMRReferralDocID:             create.EMRReferralDocID,
+		ReferringPhysician:           create.ReferringPhysician,
+		TriageNote:                   create.TriageNote,
+		Urgency:                      create.Urgency,
+		Status:                       create.Status,
+		Source:                       create.Source,
+		ReferralDate:                 create.ReferralDate,
+		ConsultType:                  create.ConsultType,
+		ConsultTypeDetail:            create.ConsultTypeDetail,
 	}, nil
 }
 

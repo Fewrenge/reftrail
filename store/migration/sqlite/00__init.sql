@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     patient_last_name TEXT NOT NULL,
     patient_first_name TEXT NOT NULL,
     patient_dob TEXT NOT NULL,
-    patient_healthcard_number TEXT NOT NULL,
-    patient_healthcard_version_code TEXT NOT NULL,
+    patient_healthcard_number TEXT,
+    patient_healthcard_version_code TEXT,
     patient_phone_number TEXT,
     patient_email TEXT,
 

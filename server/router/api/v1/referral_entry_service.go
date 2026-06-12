@@ -15,6 +15,14 @@ import (
 	echo "github.com/labstack/echo/v5"
 )
 
+func nullString(s string) *string {
+	cleaned := strings.TrimSpace(s)
+	if cleaned == "" {
+		return nil
+	}
+	return &cleaned
+}
+
 // Get all referrals that meet a set of criteria
 // GET /api/v1/referrals
 func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
@@ -323,29 +331,29 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 
 		// Map spreadsheet elements into your exact structural schema
 		entry := store.CreateReferralEntry{
-			PatientLastName:              strings.TrimSpace(row[headerMap["last name"]]),
-			PatientFirstName:             strings.TrimSpace(row[headerMap["first name"]]),
-			PatientDOB:                   strings.TrimSpace(row[headerMap["dob"]]),
-			PatientHealthcardNumber:      healthCardNum,
-			PatientHealthcardVersionCode: versionCode,
+			PatientLastName:  strings.TrimSpace(row[headerMap["last name"]]),
+			PatientFirstName: strings.TrimSpace(row[headerMap["first name"]]),
+			PatientDOB:       strings.TrimSpace(row[headerMap["dob"]]),
 
-			PatientPhoneNumber: strings.TrimSpace(row[headerMap["phone number"]]),
-			PatientEmail:       strings.TrimSpace(row[headerMap["email"]]),
-			ReferringPhysician: strings.TrimSpace(row[headerMap["referring physician"]]),
-			ReferralDate:       strings.TrimSpace(row[headerMap["referral date"]]),
+			// Optional Fields: Wrapped to cleanly handle empty spreadsheet columns
+			PatientHealthcardNumber:      nullString(healthCardNum),
+			PatientHealthcardVersionCode: nullString(versionCode),
+			PatientPhoneNumber:           nullString(row[headerMap["phone number"]]),
+			PatientEmail:                 nullString(row[headerMap["email"]]),
+			ReferringPhysician:           nullString(row[headerMap["referring physician"]]),
+			ConsultTypeDetail:            nullString(row[headerMap["consult type detail"]]),
+			EMRPatientID:                 nullString(emrPatientID),
+			EMRReferralDocID:             nullString(emrReferralDocID),
 
-			Urgency:    domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),
-			Status:     domain.ReferralStatus("READY_TO_BOOK"), // Workflow entry state default
-			Source:     domain.ReferralSource("REGULAR"),
-			Complaints: complaints,
-
-			Tags:              tags,
-			TriageNote:        strings.TrimSpace(row[headerMap["triage note"]]),
-			ConsultType:       domain.ReferralConsultType(strings.TrimSpace(row[headerMap["consult type"]])),
-			ConsultTypeDetail: strings.TrimSpace(row[headerMap["consult type detail"]]),
-
-			EMRPatientID:     emrPatientID,
-			EMRReferralDocID: emrReferralDocID,
+			// Required Workflow Structural Fields
+			ReferralDate: strings.TrimSpace(row[headerMap["referral date"]]),
+			Urgency:      domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),
+			Status:       domain.ReferralStatus("READY_TO_BOOK"),
+			Source:       domain.ReferralSource("REGULAR"),
+			Complaints:   complaints,
+			Tags:         tags,
+			TriageNote:   strings.TrimSpace(row[headerMap["triage note"]]),
+			ConsultType:  domain.ReferralConsultType(strings.TrimSpace(row[headerMap["consult type"]])),
 		}
 
 		// Run validator on this entry

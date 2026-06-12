@@ -60,23 +60,23 @@ type ReferralComplaint struct {
 // Creation payload
 type CreateReferralEntry struct {
 	// Patient Info
-	PatientLastName              string `json:"patientLastName" validate:"required"`
-	PatientFirstName             string `json:"patientFirstName" validate:"required"`
-	PatientDOB                   string `json:"patientDob"`
-	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
-	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
-	PatientPhoneNumber           string `json:"patientPhoneNumber"`
-	PatientEmail                 string `json:"patientEmail"`
-	EMRPatientID                 string `json:"emrPatientId"`
-	EMRReferralDocID             string `json:"emrReferralDocId"`
+	PatientLastName              string  `json:"patientLastName" validate:"required"`
+	PatientFirstName             string  `json:"patientFirstName" validate:"required"`
+	PatientDOB                   string  `json:"patientDob"`
+	PatientHealthcardNumber      *string `json:"patientHealthcardNumber"`
+	PatientHealthcardVersionCode *string `json:"patientHealthcardVersionCode"`
+	PatientPhoneNumber           *string `json:"patientPhoneNumber"`
+	PatientEmail                 *string `json:"patientEmail"`
+	EMRPatientID                 *string `json:"emrPatientId"`
+	EMRReferralDocID             *string `json:"emrReferralDocId"`
 
 	// Clinical Info
-	ReferringPhysician string                     `json:"referringPhysician"`
+	ReferringPhysician *string                    `json:"referringPhysician"`
 	Complaints         []ReferralComplaint        `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
 	Tags               []string                   `json:"tags"` // Optional free-form tags that will be validated against the database on the store level
 	TriageNote         string                     `json:"triageNote"`
 	ConsultType        domain.ReferralConsultType `json:"consultType"`
-	ConsultTypeDetail  string                     `json:"consultTypeDetail"`
+	ConsultTypeDetail  *string                    `json:"consultTypeDetail"`
 
 	// Status
 	Urgency      domain.ReferralUrgency `json:"urgency"`
