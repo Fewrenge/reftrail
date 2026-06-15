@@ -19,6 +19,7 @@ export default function TagSection() {
   const [error, setError] = useState<string | null>(null);
 
   const [editingTagName, setEditingTagName] = useState<string | null>(null);
+  const [editNameValue, setEditNameValue] = useState("");
   const [editDescriptionValue, setEditDescriptionValue] = useState<string>("");
   const [savingTagName, setSavingTagName] = useState<string | null>(null);
 
@@ -106,40 +107,68 @@ export default function TagSection() {
     }
   };
 
-  const handleSaveInlineDescription = async (name: string) => {
-    setSavingTagName(name);
+   const handleSaveInlineRow = async (oldName: string) => {
+    setSavingTagName(oldName);
     setError(null);
     try {
-      const response = await fetch(`/api/v1/tags/${encodeURIComponent(name)}`, {
+      const response = await fetch(`/api/v1/tags/${encodeURIComponent(oldName)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newDescription: editDescriptionValue.trim() }),
+        body: JSON.stringify({ 
+          newName: editNameValue.trim().toUpperCase(), // ✅ Forces uppercase inline
+          newDescription: editDescriptionValue.trim() 
+        }),
       });
 
-      if (!response.ok) throw new Error("Failed to update description");
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "Failed to update tag row");
+      }
+      
       const updatedTag = await response.json();
-      setTags(prev => prev.map(t => t.name === name ? updatedTag : t));
+      
+      // Update local state array with both the new name and description
+      setTags(prev => prev.map(t => t.name === oldName ? updatedTag : t));
       setEditingTagName(null);
     } catch (err: any) {
-      setError(err.message || "Failed to update description");
+      setError(err.message || "Failed to update tag row");
     } finally {
       setSavingTagName(null);
     }
   };
 
 
+
   // Table Column Schema Layout Blueprint Definitions
-  const columns = [
+    const columns = [
     {
       key: "name",
       header: "Tag Name",
       className: "w-[30%]",
-      render: (val: string) => (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200 uppercase tracking-wider">
-          <TagIcon size={12} className="text-slate-500" />
-          {val}
-        </span>
-      )
+      render: (val: string, row: any) => {
+        // ✅ If editing this row, turn the pill into an uppercase text input box!
+        if (editingTagName === row.name) {
+          return (
+            <input
+              type="text"
+              value={editNameValue}
+              onChange={e => setEditNameValue(e.target.value.toUpperCase())}
+              className="w-full border border-blue-500 rounded-xl px-2.5 py-1 text-xs font-bold uppercase outline-none"
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === "Enter") handleSaveInlineRow(row.name);
+                if (e.key === "Escape") setEditingTagName(null);
+              }}
+            />
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200 uppercase tracking-wider">
+            <TagIcon size={12} className="text-slate-500" />
+            {val}
+          </span>
+        );
+      }
     },
     {
       key: "description",
@@ -153,9 +182,8 @@ export default function TagSection() {
               value={editDescriptionValue}
               onChange={e => setEditDescriptionValue(e.target.value)}
               className="w-full border border-blue-500 rounded-xl px-2.5 py-1 text-sm bg-white text-slate-900 outline-none"
-              autoFocus
               onKeyDown={e => {
-                if (e.key === "Enter") handleSaveInlineDescription(row.name);
+                if (e.key === "Enter") handleSaveInlineRow(row.name);
                 if (e.key === "Escape") setEditingTagName(null);
               }}
             />
@@ -179,19 +207,25 @@ export default function TagSection() {
         if (editingTagName === row.name) {
           return (
             <div className="flex items-center justify-end gap-1">
-              <button type="button" onClick={() => handleSaveInlineDescription(row.name)} className="h-8 w-8 text-emerald-600 hover:bg-emerald-50
-               rounded-lg flex items-center justify-center cursor-pointer"><CheckIcon size={16} /></button>
-              <button type="button" onClick={() => setEditingTagName(null)} className="h-8 w-8 text-slate-400 hover:bg-slate-100 rounded-lg 
-              flex items-center justify-center cursor-pointer"><XIcon size={16} /></button>
+              <button type="button" onClick={() => handleSaveInlineRow(row.name)} className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 rounded-lg flex items-center justify-center cursor-pointer"><CheckIcon size={16} /></button>
+              <button type="button" onClick={() => setEditingTagName(null)} className="h-8 w-8 text-slate-400 hover:bg-slate-100 rounded-lg flex items-center justify-center cursor-pointer"><XIcon size={16} /></button>
             </div>
           );
         }
         return (
           <div className="flex items-center justify-end gap-1">
-            <button type="button" onClick={() => { setEditingTagName(row.name); setEditDescriptionValue(row.description || ""); }} className="h-8 w-8 text-slate-400 hover:text-blue-
-             hover:bg-slate-100 rounded-lg flex items-center justify-center cursor-pointer"><Edit2Icon size={16} /></button>
-            <button type="button" onClick={() => handleDeleteTag(row.name)} className="h-8 w-8 text-slate-400 hover:text-red-600
-             hover:bg-slate-100 rounded-lg flex items-center justify-center cursor-pointer"><Trash2Icon size={16} /></button>
+            <button 
+              type="button" 
+              onClick={() => { 
+                setEditingTagName(row.name); 
+                setEditNameValue(row.name); // ✅ Pre-populates the input with current name
+                setEditDescriptionValue(row.description || ""); 
+              }} 
+              className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg flex items-center justify-center cursor-pointer"
+            >
+              <Edit2Icon size={16} />
+            </button>
+            <button type="button" onClick={() => handleDeleteTag(row.name)} className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded-lg flex items-center justify-center cursor-pointer"><Trash2Icon size={16} /></button>
           </div>
         );
       }

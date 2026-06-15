@@ -4,7 +4,8 @@ import ReferralEntryCard from '../components/ReferralEntry/ReferralEntryCard';
 import AddReferralEntryDialog from '@/components/Dialog/AddReferralEntryDialog';
 import type { ReferralEntry } from '@/components/ReferralEntry/ReferralEntryCard';
 import { Button } from "@/components/ui";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem } from "@/components/ui/dropdown";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem } from "@/components/ui/dropdown";
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types/users';
 import { ALL_STATUSES, ALL_CONSULT_TYPES, ALL_URGENCIES, ALL_SOURCES } from '@/types/referrals';
@@ -21,9 +22,9 @@ export default function Referrals() {
   const CONSULT_STYLES: Record<ReferralConsultType, string> = {
     "APP+LE": "bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-blue-500/10 font-semibold",
     "APP+UE": "bg-cyan-50 text-cyan-700 border-cyan-200 ring-2 ring-cyan-500/10 font-semibold",
-    "APP+SX": "bg-indigo-700 border-indigo-200 ring-2 ring-indigo-500/10 font-semibold",
-    SX: "bg-violet-50 text-violet-700 border-violet-200 ring-2 ring-violet-500/10 font-semibold",
-    OTHER: "bg-slate-100 text-slate-700 border-slate-300 ring-2 ring-slate-500/10 font-semibold",
+    "APP+SX": "bg-indigo-50 text-indigo-700 border-indigo-200 ring-2 ring-indigo-500/10 font-semibold",
+    "SX": "bg-violet-50 text-violet-700 border-violet-200 ring-2 ring-violet-500/10 font-semibold",
+    "OTHER": "bg-slate-100 text-slate-700 border-slate-300 ring-2 ring-slate-500/10 font-semibold",
   };
 
   const SOURCE_STYLES: Record<ReferralSource, string> = {
@@ -335,7 +336,8 @@ export default function Referrals() {
             placeholder="Search for patient by name or health card number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-11 bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className="w-full h-11 bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2
+             focus:ring-blue-500/20 transition-all"
           />
         </div>
 
@@ -345,7 +347,8 @@ export default function Referrals() {
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="w-full h-full bg-white border border-slate-200 rounded-xl px-4 flex items-center justify-between text-sm text-slate-700 hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer shadow-sm font-medium"
+                className="w-full h-full bg-white border border-slate-200 rounded-xl px-4 flex items-center justify-between text-sm text-slate-700
+                 hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer shadow-sm font-medium"
               >
                 <div className="flex items-center gap-2 truncate">
                   <FilterIcon size={16} className="text-slate-400 shrink-0" />
@@ -387,7 +390,8 @@ export default function Referrals() {
                   });
                 }}
 
-                className="text-xs font-medium text-slate-500 hover:text-slate-800 focus:bg-slate-50 rounded-lg py-1.5 px-2.5 mb-1 cursor-pointer transition-colors flex justify-between items-center"
+                className="text-xs font-medium text-slate-500 hover:text-slate-800 focus:bg-slate-50 rounded-lg py-1.5 px-2.5 mb-1 cursor-pointer 
+                transition-colors flex justify-between items-center"
               >
                 <span>Toggle Selection:</span>
                 <span className="text-blue-600 font-semibold uppercase tracking-wide text-[10px]">
@@ -413,7 +417,8 @@ export default function Referrals() {
                         return [...prev, status.id];
                       });
                     }}
-                    className="rounded-lg pr-2.5 py-2 text-sm text-slate-600 focus:bg-slate-50 focus:text-slate-900 data-[state=checked]:text-blue-700 data-[state=checked]:bg-blue-50/50 data-[state=checked]:font-semibold transition-all duration-150 cursor-pointer mb-0.5"
+                    className="rounded-lg pr-2.5 py-2 text-sm text-slate-600 focus:bg-slate-50 focus:text-slate-900 data-[state=checked]:text-blue-700
+                     data-[state=checked]:bg-blue-50/50 data-[state=checked]:font-semibold transition-all duration-150 cursor-pointer mb-0.5"
                   >
                     {status.label}
                   </DropdownMenuCheckboxItem>
@@ -429,7 +434,8 @@ export default function Referrals() {
                       e.preventDefault(); // Prevents close lifecycle events during rapid workflow toggling
                       setSelectedStatuses([]);
                     }}
-                    className="text-xs text-center justify-center font-semibold text-blue-600 focus:bg-blue-50/80 focus:text-blue-700 rounded-lg py-1.5 mt-1 cursor-pointer transition-colors"
+                    className="text-xs text-center justify-center font-semibold text-blue-600 focus:bg-blue-50/80 focus:text-blue-700 rounded-lg
+                     py-1.5 mt-1 cursor-pointer transition-colors"
                   >
                     RESET TO ALL QUEUES
                   </DropdownMenuItem>

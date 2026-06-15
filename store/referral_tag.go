@@ -16,7 +16,8 @@ type CreateReferralTag struct {
 }
 
 type UpdateReferralTagDefinition struct {
-	Name           string `json:"name"`
+	OldName        string `json:"-"`
+	NewName        string `json:"newName"`
 	NewDescription string `json:"newDescription"`
 }
 
