@@ -54,7 +54,7 @@ type ReferralComplaint struct {
 	ReferralID domain.ReferralID `json:"-"`
 	BodyPart   string            `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
 	Side       string            `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL OTHER"`
-	Details    string            `json:"details"`
+	Details    *string           `json:"details"`
 }
 
 // Creation payload

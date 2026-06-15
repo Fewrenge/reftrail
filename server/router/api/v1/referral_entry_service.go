@@ -275,6 +275,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		// Parse semicolon-separated text values inside matching cells
 		rawComplaints := strings.Split(row[headerMap["complaint"]], ";")
 		rawSides := strings.Split(row[headerMap["complaint side"]], ";")
+		rawDetail := strings.Split(row[headerMap["complaint detail"]], ";")
 
 		var complaints []store.ReferralComplaint
 		for i, part := range rawComplaints {
@@ -289,10 +290,22 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 				sideVal = strings.TrimSpace(strings.ToUpper(rawSides[i]))
 			}
 
+			var detailsPtr *string = nil
+
+			if i < len(rawDetail) {
+				cleanDetail := strings.TrimSpace(rawDetail[i])
+				// Only allocate memory if the string actually contains text
+				if cleanDetail != "" {
+					// Save to a local variable first so we can take its memory address
+					detailStr := cleanDetail
+					detailsPtr = &detailStr
+				}
+			}
+
 			complaints = append(complaints, store.ReferralComplaint{
 				BodyPart: cleanPart,
 				Side:     sideVal,
-				Details:  "",
+				Details:  detailsPtr,
 			})
 		}
 
