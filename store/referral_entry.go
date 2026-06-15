@@ -243,7 +243,7 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		creationLog = &ReferralLog{
 			ReferralID:      referralEntry.ID,
 			CreatorUsername: user.Username,
-			OldStatus:       "",
+			OldStatus:       nil,
 			NewStatus:       referralEntry.Status,
 			Note:            "Referral entry created",
 		}
@@ -443,7 +443,7 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 		logPayload := &ReferralLog{
 			ReferralID:      update.ID,
 			CreatorUsername: domain.Username(user.Username),
-			OldStatus:       oldStatus,
+			OldStatus:       &oldStatus,
 			NewStatus:       newStatus,
 			Note:            update.Note,
 		}
