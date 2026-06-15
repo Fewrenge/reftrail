@@ -7,9 +7,32 @@ import { Button } from "@/components/ui";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem } from "@/components/ui/dropdown";
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types/users';
-import { ALL_STATUSES } from '@/types/referrals';
+import { ALL_STATUSES, ALL_CONSULT_TYPES, ALL_URGENCIES, ALL_SOURCES } from '@/types/referrals';
+import type { ReferralStatus, ReferralUrgency, ReferralConsultType, ReferralSource } from '@/types/referrals';
 
 export default function Referrals() {
+
+  const URGENCY_STYLES: Record<ReferralUrgency, string> = {
+    ASAP: "bg-red-50 text-red-700 border-red-200 ring-2 ring-red-500/10 font-semibold",
+    URGENT: "bg-amber-50 text-amber-700 border-amber-200 ring-2 ring-amber-500/10 font-semibold",
+    ELECTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200 ring-2 ring-emerald-500/10 font-semibold",
+  };
+
+  const CONSULT_STYLES: Record<ReferralConsultType, string> = {
+    "APP+LE": "bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-blue-500/10 font-semibold",
+    "APP+UE": "bg-cyan-50 text-cyan-700 border-cyan-200 ring-2 ring-cyan-500/10 font-semibold",
+    "APP+SX": "bg-indigo-700 border-indigo-200 ring-2 ring-indigo-500/10 font-semibold",
+    SX: "bg-violet-50 text-violet-700 border-violet-200 ring-2 ring-violet-500/10 font-semibold",
+    OTHER: "bg-slate-100 text-slate-700 border-slate-300 ring-2 ring-slate-500/10 font-semibold",
+  };
+
+  const SOURCE_STYLES: Record<ReferralSource, string> = {
+    REGULAR: "bg-teal-50 text-teal-700 border-teal-200 ring-2 ring-teal-500/10 font-semibold",
+    FRACTURE_CLINIC: "bg-orange-50 text-orange-700 border-orange-200 ring-2 ring-orange-500/10 font-semibold",
+    OTHER: "bg-slate-100 text-slate-700 border-slate-300 ring-2 ring-slate-500/10 font-semibold",
+  };
+
+
 
   const { user: authUser } = useAuth();
   const isAdmin = authUser?.role === UserRole.REFTRAIL_ADMIN;
@@ -72,7 +95,7 @@ export default function Referrals() {
 
 
   // Pipeline Queue Statuses (Defaults to READY_TO_BOOK if local storage is blank)
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(() => {
+  const [selectedStatuses, setSelectedStatuses] = useState<ReferralStatus[]>(() => {
     try {
       const saved = localStorage.getItem("reftrail_selected_statuses");
       return saved ? JSON.parse(saved) : ["READY_TO_BOOK"];
@@ -83,7 +106,7 @@ export default function Referrals() {
   });
 
   // Urgent / ASAP Priorities (Defaults to an empty array so all display initially)
-  const [selectedUrgencies, setSelectedUrgencies] = useState<string[]>(() => {
+  const [selectedUrgencies, setSelectedUrgencies] = useState<ReferralUrgency[]>(() => {
     try {
       const saved = localStorage.getItem("reftrail_selected_urgencies");
       return saved ? JSON.parse(saved) : [];
@@ -104,7 +127,8 @@ export default function Referrals() {
     }
   });
 
-const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
+  const [selectedConsultTypes, setSelectedConsultTypes] = useState<ReferralConsultType[]>([]);
+  const [selectedSources, setSelectedSources] = useState<ReferralSource[]>([]);
 
 
 
@@ -124,7 +148,9 @@ const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
     localStorage.setItem("reftrail_selected_tags", JSON.stringify(selectedTags));
   }, [selectedTags]);
 
-
+  useEffect(() => {
+    localStorage.setItem("reftrail_selected_sources", JSON.stringify(selectedSources));
+  }, [selectedSources]);
 
 
 
@@ -165,8 +191,12 @@ const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
         selectedTags.forEach(tag => params.append("tagNames", tag));
       }
 
-      if (selectedConsultTypes.length>0){
+      if (selectedConsultTypes.length > 0) {
         selectedConsultTypes.forEach(ct => params.append("consultTypes", ct));
+      }
+
+      if (selectedSources.length > 0) {
+        selectedSources.forEach(source => params.append("sources", source));
       }
 
       // Append Date Bounds if they have active text values
@@ -211,13 +241,13 @@ const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
   // Trigger page re-render sequences whenever pages or filters change
   useEffect(() => {
     refreshData();
-  }, [currentPage, debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(","),selectedConsultTypes.join(","),
+  }, [currentPage, debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(","), selectedConsultTypes.join(","), selectedSources.join(","),
     referralDateFrom, referralDateTo]);
 
   // FIXED: Reset pagination index if search terms or filters shift
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(","), selectedConsultTypes.join(","),
+  }, [debouncedSearch, selectedStatuses.join(","), selectedUrgencies.join(","), selectedTags.join(","), selectedConsultTypes.join(","), selectedSources.join(","),
     referralDateFrom, referralDateTo]);
 
   // Handler to pipe the binary file stream to your new backend handler
@@ -377,24 +407,17 @@ const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
                     onSelect={(e) => e.preventDefault()}
                     onCheckedChange={() => {
                       setSelectedStatuses((prev) => {
-                        let updated: string[];
-
-                        // If it's already selected, remove it from the array
                         if (prev.includes(status.id)) {
-                          updated = prev.filter((id) => id !== status.id);
-                        } else {
-                          // Otherwise, add it to the array
-                          updated = [...prev, status.id];
+                          return prev.filter((id) => id !== status.id);
                         }
-
-                        return updated;
+                        return [...prev, status.id];
                       });
                     }}
-
                     className="rounded-lg pr-2.5 py-2 text-sm text-slate-600 focus:bg-slate-50 focus:text-slate-900 data-[state=checked]:text-blue-700 data-[state=checked]:bg-blue-50/50 data-[state=checked]:font-semibold transition-all duration-150 cursor-pointer mb-0.5"
                   >
                     {status.label}
                   </DropdownMenuCheckboxItem>
+
                 );
               })}
 
@@ -444,32 +467,32 @@ const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-20">Urgency:</span>
           <div className="flex flex-wrap gap-2">
-            {[
-              { id: "ASAP", label: "ASAP", activeStyle: "bg-red-50 text-red-700 border-red-200 ring-2 ring-red-500/10 font-semibold" },
-              { id: "URGENT", label: "Urgent", activeStyle: "bg-amber-50 text-amber-700 border-amber-200 ring-2 ring-amber-500/10 font-semibold" },
-              { id: "ELECTIVE", label: "Elective", activeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200 ring-2 ring-emerald-500/10 font-semibold" }
-            ].map((urgency) => {
-              const isSelected = selectedUrgencies.includes(urgency.id);
+            {ALL_URGENCIES.map((urgencyId) => {
+              const isSelected = selectedUrgencies.includes(urgencyId);
+              // Make the label pretty (e.g., 'URGENT' -> 'Urgent', 'ASAP' remains 'ASAP')
+              const label = urgencyId === "ASAP" ? "ASAP" : urgencyId.charAt(0) + urgencyId.slice(1).toLowerCase();
+
               return (
                 <button
-                  key={urgency.id}
+                  key={urgencyId}
                   type="button"
                   onClick={() => {
                     setSelectedUrgencies(prev =>
-                      prev.includes(urgency.id) ? prev.filter(id => id !== urgency.id) : [...prev, urgency.id]
+                      prev.includes(urgencyId) ? prev.filter(id => id !== urgencyId) : [...prev, urgencyId]
                     );
                   }}
                   className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
-                    ? urgency.activeStyle
+                    ? URGENCY_STYLES[urgencyId]
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
                     }`}
                 >
-                  {urgency.label}
+                  {label}
                 </button>
               );
             })}
           </div>
         </div>
+
 
         {/* 2. TAGS ROW (NEUTRAL INTERACTION PILLS) */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
@@ -507,43 +530,74 @@ const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
           </div>
         </div>
 
-{/* 3. Consult Types Row */}
+        {/* 3. Consult Types Row */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-24">Consult Type:</span>
           <div className="flex flex-wrap gap-2">
-            {[
-              { id: "APP+LE", label: "APP+LE", activeStyle: "bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-blue-500/10 font-semibold" },
-              { id: "APP+UE", label: "APP+UE", activeStyle: "bg-cyan-50 text-cyan-700 border-cyan-200 ring-2 ring-cyan-500/10 font-semibold" },
-              { id: "APP+SX", label: "APP+SX", activeStyle: "bg-indigo-50 text-indigo-700 border-indigo-200 ring-2 ring-indigo-500/10 font-semibold" },
-              { id: "SX", label: "SX", activeStyle: "bg-violet-50 text-violet-700 border-violet-200 ring-2 ring-violet-500/10 font-semibold" },
-              { id: "OTHER", label: "OTHER", activeStyle: "bg-slate-100 text-slate-700 border-slate-300 ring-2 ring-slate-500/10 font-semibold" }
-            ].map((consult) => {
-              const isSelected = selectedConsultTypes.includes(consult.id);
+            {ALL_CONSULT_TYPES.map((consultId) => {
+              const isSelected = selectedConsultTypes.includes(consultId);
+
               return (
                 <button
-                  key={consult.id}
+                  key={consultId}
                   type="button"
                   onClick={() => {
-                      setSelectedConsultTypes(prev => {
-                        // If the clicked tag is already active, clear the array entirely to deselect it
-                        if (prev.includes(consult.id)) {
-                          return [];
-                        }
-                        // Otherwise, kick out all other tags and keep only this newly selected tag
-                        return [consult.id];
-                      });
-                    }}
+                    setSelectedConsultTypes(prev => {
+                      if (prev.includes(consultId)) {
+                        return [];
+                      }
+                      return [consultId];
+                    });
+                  }}
                   className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
-                    ? consult.activeStyle
+                    ? CONSULT_STYLES[consultId]
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
                     }`}
                 >
-                  {consult.label}
+                  {consultId}
                 </button>
               );
             })}
           </div>
         </div>
+
+        {/* 4. Referral Source Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-24">Source:</span>
+          <div className="flex flex-wrap gap-2">
+            {ALL_SOURCES.map((sourceId) => {
+              const isSelected = selectedSources.includes(sourceId);
+
+              // Clean up the text labels for the UI (e.g., "FRACTURE_CLINIC" -> "Fracture Clinic")
+              const label = sourceId
+                .replace(/_/g, " ")
+                .toLowerCase()
+                .replace(/\b\w/g, (char) => char.toUpperCase());
+
+              return (
+                <button
+                  key={sourceId}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSources(prev => {
+                      if (prev.includes(sourceId)) {
+                        return [];
+                      }
+                      return [sourceId];
+                    });
+                  }}
+                  className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
+                    ? SOURCE_STYLES[sourceId]
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                    }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
 
 
 

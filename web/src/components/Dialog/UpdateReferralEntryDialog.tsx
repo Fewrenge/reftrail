@@ -9,13 +9,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "@/components/ui/dialog" // Double-check this matches your relative directory path
+} from "@/components/ui/dialog"
 
-// --- Type Definitions matching Go Struct Backend Enums ---
-export type ReferralConsultType = 'APP+LE' | 'APP+UE' | 'APP+SX' | 'SX' | 'OTHER'
-export type ReferralUrgency = 'ELECTIVE' | 'URGENT' | 'ASAP'
-export type ReferralStatus = 'READY_TO_BOOK' | '1ST_CALL_COMPLETE' | '2ND_CALL_COMPLETE' | '3RD_CALL_COMPLETE' | 'BOOKED' | 'UNABLE_TO_CONTACT' | 'PATIENT_TO_CALL_BACK' | 'DECLINED' | 'SUSPENDED' | 'CLOSED'
-export type ReferralSource = 'REGULAR' | 'FRACTURE_CLINIC' | 'OTHER'
+import type { 
+  ReferralStatus, 
+  ReferralUrgency, 
+  ReferralConsultType, 
+  ReferralSource 
+} from "@/types/referrals" 
+
 
 export interface FrontEndComplaint {
   bodyPart: string
