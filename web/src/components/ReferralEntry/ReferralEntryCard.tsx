@@ -8,7 +8,7 @@ import {
   type ReferralConsultType
 } from "@/types/referrals";
 import { useAuth } from "@/contexts/AuthContext";
-import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, ExternalLinkIcon, WrenchIcon } from "lucide-react";
+import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, WrenchIcon, FileUserIcon, FileTextIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -77,10 +77,14 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
   const allowedStatuses = useMemo(() => {
     if (isAdmin) {
       // Admins can move to any status except the one they are currently in
-      return ALL_STATUSES.filter(s => s !== entry.status);
+      return ALL_STATUSES.filter(s => s.id !== entry.status);
     }
     // Booking team follows the matrix
-    return STATUS_RULES[entry.status] || [];
+
+    
+    const allowedStatusesForBookingTeam = STATUS_RULES[entry.status] || [];
+    return ALL_STATUSES.filter(s => allowedStatusesForBookingTeam.includes(s.id));
+    
   }, [isAdmin, entry.status]);
 
   const urgencyStyles = {
@@ -219,7 +223,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                 </h3>
               )}
 
-              {/* External Link */}
+              {/* Patient External Link */}
               <a
                 href={
                   `${import.meta.env?.VITE_EXTERNAL_PATIENT_URL}${entry.emrPatientId || ''}`
@@ -229,8 +233,22 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                 className="text-slate-400 hover:text-blue-600 transition-colors focus:outline-none p-1 rounded-md hover:bg-slate-100 shrink-0 self-center"
                 aria-label="Open external link"
               >
-                <ExternalLinkIcon size={20} />
+                <FileUserIcon size={20} />
               </a>
+
+              {/* Document External Link */}
+              <a
+                href={
+                  `${import.meta.env?.VITE_EXTERNAL_REFERRAL_DOC_URL}${entry.emrReferralDocId || ''}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-400 hover:text-blue-600 transition-colors focus:outline-none p-1 rounded-md hover:bg-slate-100 shrink-0 self-center"
+                aria-label="Open external link"
+              >
+                <FileTextIcon size={20} />
+              </a>
+
             </div>
 
           </div>
@@ -250,7 +268,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                     size="sm"
                     // Disable the button if the user has no allowed transitions
                     disabled={allowedStatuses.length === 0}
-                    className="h-6 px-2 text-[10px] font-black uppercase bg-blue-50 text-blue-700 border-blue-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-6 px-2 text-[10px] font-black uppercase bg-blue-50 text-blue-700 border-blue-100 rounded-md disabled:opacity-50
+                    disabled:cursor-not-allowed"
                   >
                     {entry.status.replace(/_/g, ' ')}
                   </Button>
@@ -263,11 +282,11 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                   <DropdownMenuSeparator />
                   {allowedStatuses.map((s) => (
                     <DropdownMenuItem
-                      key={s}
-                      onSelect={() => setSelectedStatus(s)}
+                      key={s.id}
+                      onSelect={() => setSelectedStatus(s.id)}
                       className="text-[11px] font-medium"
                     >
-                      {s.replace(/_/g, ' ')}
+                      {s.label}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -300,7 +319,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                     onSelect={() => {
                       setIsUpdateReferralDialogOpen(true);
                     }}
-                    className="text-yellow-700 hover:bg-amber-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
+                    className="text-yellow-500 hover:bg-amber-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
                   >
                     <WrenchIcon size={16} strokeWidth={2.5} />
                     <span>Admin Update</span>

@@ -7,19 +7,7 @@ import { Button } from "@/components/ui";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem } from "@/components/ui/dropdown";
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types/users';
-
-const AVAILABLE_STATUSES = [
-  { id: 'READY_TO_BOOK', label: 'Ready to Book' },
-  { id: '1ST_CALL_COMPLETE', label: '1st Call Complete' },
-  { id: '2ND_CALL_COMPLETE', label: '2nd Call Complete' },
-  { id: '3RD_CALL_COMPLETE', label: '3rd Call Complete' },
-  { id: 'BOOKED', label: 'Booked' },
-  { id: 'UNABLE_TO_CONTACT', label: 'Unable to Contact' },
-  { id: 'PATIENT_TO_CALL_BACK', label: 'Patient to Call Back' },
-  { id: 'DECLINED', label: 'Declined' },
-  { id: 'SUSPENDED', label: 'Suspended' },
-  { id: 'CLOSED', label: 'Closed' }
-];
+import { ALL_STATUSES } from '@/types/referrals';
 
 export default function Referrals() {
 
@@ -334,10 +322,10 @@ const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
                   <span className="truncate">
                     {selectedStatuses.length === 0
                       ? "No Statuses Selected" // Alert user that queries will yield no results
-                      : selectedStatuses.length === AVAILABLE_STATUSES.length
+                      : selectedStatuses.length === ALL_STATUSES.length
                         ? "All Statuses Selected"
                         : selectedStatuses.length === 1
-                          ? AVAILABLE_STATUSES.find((s) => s.id === selectedStatuses[0])?.label || "1 Status Selected"
+                          ? ALL_STATUSES.find((s) => s.id === selectedStatuses[0])?.label || "1 Status Selected"
                           : `Statuses (${selectedStatuses.length} Active)`}
                   </span>
 
@@ -357,14 +345,14 @@ const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
                 onClick={() => {
                   setSelectedStatuses((prev) => {
                     // Everything is considered active if the length matches or if it's completely empty
-                    const isEverythingChecked = prev.length === AVAILABLE_STATUSES.length || prev.length === 0;
+                    const isEverythingChecked = prev.length === ALL_STATUSES.length || prev.length === 0;
 
                     if (isEverythingChecked) {
                       // Deselect All: Make the filter completely empty
                       return [];
                     } else {
                       // Select All: Populate the array explicitly with every single ID
-                      return AVAILABLE_STATUSES.map(s => s.id);
+                      return ALL_STATUSES.map(s => s.id);
                     }
                   });
                 }}
@@ -373,13 +361,13 @@ const [selectedConsultTypes, setSelectedConsultTypes] = useState<string[]>([]);
               >
                 <span>Toggle Selection:</span>
                 <span className="text-blue-600 font-semibold uppercase tracking-wide text-[10px]">
-                  {selectedStatuses.length === 0 || selectedStatuses.length === AVAILABLE_STATUSES.length ? "Deselect All" : "Select All"}
+                  {selectedStatuses.length === 0 || selectedStatuses.length === ALL_STATUSES.length ? "Deselect All" : "Select All"}
                 </span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator className="bg-slate-100 my-1" />
 
-              {AVAILABLE_STATUSES.map((status) => {
+              {ALL_STATUSES.map((status) => {
                 const isChecked = selectedStatuses.includes(status.id);
 
                 return (

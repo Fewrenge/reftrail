@@ -19,9 +19,8 @@ type User struct {
 }
 
 type UserPublicInfo struct {
-	Username      domain.Username `json:"username"`
-	UserFirstName string          `json:"userFirstName"`
-	UserLastName  string          `json:"userLastName"`
+	UserFirstName string `json:"userFirstName"`
+	UserLastName  string `json:"userLastName"`
 }
 
 // The "Form" for logging in
