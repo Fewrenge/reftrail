@@ -458,9 +458,11 @@ export default function Referrals() {
           {(selectedStatuses.length > 0 || selectedUrgencies.length > 0 || selectedTags.length > 0) && (
             <button
               onClick={() => {
-                setSelectedStatuses(["READY_TO_BOOK"]); // Resets back to team default baseline queue
+                setSelectedStatuses([]); // Resets back to team default baseline queue
                 setSelectedUrgencies([]);
                 setSelectedTags([]);
+                setSelectedConsultTypes([]);
+                setSelectedSources([]);
               }}
               className="text-blue-600 hover:text-blue-700 font-normal normal-case transition-colors cursor-pointer"
             >

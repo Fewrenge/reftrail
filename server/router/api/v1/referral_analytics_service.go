@@ -79,3 +79,38 @@ func (s *APIV1Service) GetReferralVolumeAnalyticsHandler(c *echo.Context) error 
 	// 4. Return the aggregated data structured exactly how Recharts expects it
 	return c.JSON(http.StatusOK, response)
 }
+
+// GetDirectBookingWaitingTimeHandler calculates the perfect-workflow average speed trend
+// GET /api/v1/analytics/direct-booking-waiting-time
+func (s *APIV1Service) GetDirectBookingWaitingTimeAnalyticsHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+	find := &store.FindReferralEntry{}
+
+	// 1. Automatically parse optional query date bounds
+	if err := c.Bind(find); err != nil {
+		slog.Warn("Failed parsing waiting times analytics parameters", "error", err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid query filter parameters"})
+	}
+
+	// 2. Format Validation
+	if find.ReferralDateFrom != nil && *find.ReferralDateFrom != "" {
+		if _, err := time.Parse("2006-01-02", *find.ReferralDateFrom); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid referralDateFrom format. Use YYYY-MM-DD"})
+		}
+	}
+	if find.ReferralDateTo != nil && *find.ReferralDateTo != "" {
+		if _, err := time.Parse("2006-01-02", *find.ReferralDateTo); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid referralDateTo format. Use YYYY-MM-DD"})
+		}
+	}
+
+	// 3. Fire the database layer query
+	response, err := s.Store.GetDirectBookingWaitingTime(ctx, find)
+	if err != nil {
+		slog.Error("Database execution error during waiting times calculation", "error", err.Error())
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to compile waiting time matrix"})
+	}
+
+	// 4. Return clean decimal float array data to Recharts
+	return c.JSON(http.StatusOK, response)
+}

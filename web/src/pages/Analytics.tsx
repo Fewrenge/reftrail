@@ -1,4 +1,4 @@
-import { ChartNoAxesCombinedIcon, TrendingUpIcon } from 'lucide-react';
+import { ChartNoAxesCombinedIcon, TrendingUpIcon, ClockIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // TODO: prettify this page
@@ -22,6 +22,14 @@ export default function AnalyticsPage() {
       icon: <TrendingUpIcon size={20} className="text-indigo-600" />,
       badge: "Line Chart"
     },
+    {
+    id: 'average-waiting-times',
+    title: 'Direct Processing Velocity',
+    description: 'Measure the clean baseline speed (in days) for referrals that pass directly from creation to booked without call obstacles.',
+    path: '/analytics/direct-booking-waiting-time',
+    icon: <ClockIcon size={20} className="text-emerald-600" />,
+    badge: "Line Chart"
+  },
   ];
 
 

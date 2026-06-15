@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reftrail/store"
 	"strings"
+	"time"
 )
 
 // GetUrgencyDistribution aggregates referral metrics for pie chart rendering
@@ -141,4 +142,77 @@ func (d *Driver) GetReferralVolume(ctx context.Context, find *store.FindReferral
 		Data:       data,
 		TotalCount: totalCount,
 	}, nil
+}
+
+func (d *Driver) GetDirectBookingWaitingTime(ctx context.Context, find *store.FindReferralEntry) (*store.WaitingTimeTrendResponse, error) {
+	// ✅ 1. Swapped r.created_ts for r.referral_date as your analytics starting point
+	query := `
+		SELECT 
+			strftime('%Y-%m', r.referral_date) as period,
+			r.referral_date,
+			l.created_ts as booked_ts
+		FROM referral_entry r
+		JOIN referral_log l ON r.id = l.referral_id
+		WHERE r.status = 'BOOKED' 
+		  AND l.new_status = 'BOOKED'
+		  AND r.referral_date IS NOT NULL AND r.referral_date != ''
+		  -- Ensures it went STRAIGHT to booked without middle call cycles
+		  AND r.id NOT IN (
+			  SELECT referral_id FROM referral_log 
+			  WHERE new_status IN ('1ST_CALL_COMPLETE', '2ND_CALL_COMPLETE', '3RD_CALL_COMPLETE', 'SUSPENDED', 'PATIENT_TO_CALL_BACK')
+		  )
+		ORDER BY period ASC`
+
+	rows, err := d.conn(ctx).QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type totalTracker struct {
+		TotalDays float64
+		Count     int
+	}
+	aggregates := make(map[string]*totalTracker)
+
+	for rows.Next() {
+		var period, referralDateStr, bookedStr string
+		if err := rows.Scan(&period, &referralDateStr, &bookedStr); err != nil {
+			return nil, err
+		}
+
+		// ✅ 2. FIX: Parse referral_date using standard YYYY-MM-DD layout string syntax
+		referralTime, errRef := time.Parse("2006-01-02", referralDateStr)
+		bookedTime, errBook := time.Parse(time.RFC3339, bookedStr) // Keeps full datetime precision for completion
+
+		// Skip rows safely if database date strings are corrupted or unparseable
+		if errRef != nil || errBook != nil {
+			continue
+		}
+
+		// Calculate total days elapsed from the clinical letter date to booking execution
+		daysElapsed := bookedTime.Sub(referralTime).Hours() / 24.0
+
+		if aggregates[period] == nil {
+			aggregates[period] = &totalTracker{}
+		}
+		aggregates[period].TotalDays += daysElapsed
+		aggregates[period].Count++
+	}
+
+	var trendData []store.WaitingTimeTrendMetric
+	for period, tracker := range aggregates {
+		avgDays := 0.0
+		if tracker.Count > 0 {
+			avgDays = tracker.TotalDays / float64(tracker.Count)
+		}
+
+		trendData = append(trendData, store.WaitingTimeTrendMetric{
+			Period: period,
+			// Clean rounding block to 1 decimal place signature output
+			AverageDays: float64(int(avgDays*10+0.5)) / 10.0,
+		})
+	}
+
+	return &store.WaitingTimeTrendResponse{Data: trendData}, nil
 }

@@ -57,4 +57,5 @@ type Driver interface {
 	// 7. Analytics methods
 	GetUrgencyDistribution(ctx context.Context, find *FindReferralEntry) (*UrgencyDistributionResponse, error)
 	GetReferralVolume(ctx context.Context, find *FindReferralEntry) (*ReferralVolumeResponse, error)
+	GetDirectBookingWaitingTime(ctx context.Context, find *FindReferralEntry) (*WaitingTimeTrendResponse, error)
 }

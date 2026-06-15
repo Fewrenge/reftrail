@@ -51,3 +51,23 @@ func (s *Store) GetReferralVolume(ctx context.Context, find *FindReferralEntry) 
 	}
 	return s.driver.GetReferralVolume(ctx, find)
 }
+
+type WaitingTimeTrendMetric struct {
+	Period      string  `json:"period"`      // "2026-01", "2026-02" (X-Axis)
+	AverageDays float64 `json:"averageDays"` // The calculated active working time (Y-Axis)
+}
+
+type WaitingTimeTrendResponse struct {
+	Data []WaitingTimeTrendMetric `json:"data"`
+}
+
+func (s *Store) GetDirectBookingWaitingTime(ctx context.Context, find *FindReferralEntry) (*WaitingTimeTrendResponse, error) {
+	// 1. Accountability Guard: Check if the user is authorized to read analytics data
+	_, ok := domain.GetUserContext(ctx)
+	if !ok {
+		return nil, domain.ErrUnauthorized
+	}
+
+	// 2. Delegate the raw execution call straight down to your SQLite Driver layer
+	return s.driver.GetDirectBookingWaitingTime(ctx, find)
+}

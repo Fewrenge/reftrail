@@ -130,4 +130,6 @@ func (s *Server) registerReferralRoutes() {
 	admin.GET("/analytics/urgency-distribution", v1Service.GetUrgencyDistributionAnalyticsHandler)
 
 	admin.GET("/analytics/referral-trend", v1Service.GetReferralVolumeAnalyticsHandler)
+
+	admin.GET("/analytics/direct-booking-waiting-time", v1Service.GetDirectBookingWaitingTimeAnalyticsHandler)
 }
