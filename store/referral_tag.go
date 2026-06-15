@@ -15,6 +15,11 @@ type CreateReferralTag struct {
 	Description string `json:"description"`
 }
 
+type UpdateReferralTagDefinition struct {
+	Name           string `json:"name"`
+	NewDescription string `json:"newDescription"`
+}
+
 type DeleteReferralTag struct {
 	Name string `json:"name"`
 }
@@ -30,6 +35,14 @@ func (s *Store) CreateReferralTag(ctx context.Context, create *CreateReferralTag
 		return nil, domain.ErrForbidden
 	}
 	return s.driver.CreateReferralTag(ctx, create)
+}
+
+func (s *Store) UpdateReferralTagDefinition(ctx context.Context, update *UpdateReferralTagDefinition) (*ReferralTag, error) {
+	user, ok := domain.GetUserContext(ctx)
+	if !ok || user.Role != "REFTRAIL_ADMIN" {
+		return nil, domain.ErrForbidden
+	}
+	return s.driver.UpdateReferralTagDefinition(ctx, update)
 }
 
 func (s *Store) ListReferralTags(ctx context.Context) ([]*ReferralTag, error) {

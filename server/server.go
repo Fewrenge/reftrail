@@ -116,6 +116,8 @@ func (s *Server) registerReferralRoutes() {
 
 	admin.POST("/tags", v1Service.CreateReferralTagHandler) // Add a tag to the database
 
+	admin.PATCH("/tags/:id", v1Service.UpdateReferralTagDefinitionHandler)
+
 	admin.DELETE("/tags/:id", v1Service.DeleteReferralTagHandler) // Delete a tag from the database
 
 	admin.POST("/referrals/:id/tags/:tagName", v1Service.AssignTagHandler) // Assign a tag to a referral
@@ -126,5 +128,6 @@ func (s *Server) registerReferralRoutes() {
 
 	// Get urgency distribution for pie chart
 	admin.GET("/analytics/urgency-distribution", v1Service.GetUrgencyDistributionAnalyticsHandler)
+
 	admin.GET("/analytics/referral-trend", v1Service.GetReferralVolumeAnalyticsHandler)
 }

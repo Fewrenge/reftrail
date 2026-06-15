@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"reftrail/internal/domain"
@@ -22,6 +24,36 @@ func (s *APIV1Service) CreateReferralTagHandler(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, tag)
+}
+
+// UpdateReferralTagDefinitionHandler handles the tag configuration update request
+// PATCH /api/v1/admin/tags/:id
+func (s *APIV1Service) UpdateReferralTagDefinitionHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	var update store.UpdateReferralTagDefinition
+
+	if err := c.Bind(&update); err != nil {
+		slog.Warn("Failed parsing tag modification payload", "error", err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body format"})
+	}
+
+	update.Name = c.Param("id")
+	if update.Name == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing tag name parameter in URL path"})
+	}
+
+	updatedTag, err := s.Store.UpdateReferralTagDefinition(ctx, &update)
+	if err != nil {
+		if errors.Is(err, domain.ErrForbidden) {
+			return c.JSON(http.StatusForbidden, map[string]string{"error": "Access denied: Requires administrator credentials"})
+		}
+
+		slog.Error("Database execution error during tag configuration adjustment", "error", err.Error(), "tag", update.Name)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update target tag context"})
+	}
+
+	return c.JSON(http.StatusOK, updatedTag)
 }
 
 func (s *APIV1Service) ListReferralTagsHandler(c *echo.Context) error {

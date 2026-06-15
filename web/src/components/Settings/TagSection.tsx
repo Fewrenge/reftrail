@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { AlertCircleIcon, Loader2Icon, TagIcon, Trash2Icon } from "lucide-react";
+import { AlertCircleIcon, Loader2Icon, TagIcon, Trash2Icon, CheckIcon, Edit2Icon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SettingTable from "@/components/Settings/SettingTable"; // Ensure path matches your project structure
 
@@ -18,6 +18,11 @@ export default function TagSection() {
   const [tagDescription, setTagDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const [editingTagName, setEditingTagName] = useState<string | null>(null);
+  const [editDescriptionValue, setEditDescriptionValue] = useState<string>("");
+  const [savingTagName, setSavingTagName] = useState<string | null>(null);
+
+  
   // Fetch tag definitions from your Go backend
   const fetchTags = async () => {
     setLoading(true);
@@ -101,6 +106,28 @@ export default function TagSection() {
     }
   };
 
+  const handleSaveInlineDescription = async (name: string) => {
+    setSavingTagName(name);
+    setError(null);
+    try {
+      const response = await fetch(`/api/v1/tags/${encodeURIComponent(name)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newDescription: editDescriptionValue.trim() }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update description");
+      const updatedTag = await response.json();
+      setTags(prev => prev.map(t => t.name === name ? updatedTag : t));
+      setEditingTagName(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to update description");
+    } finally {
+      setSavingTagName(null);
+    }
+  };
+
+
   // Table Column Schema Layout Blueprint Definitions
   const columns = [
     {
@@ -117,29 +144,60 @@ export default function TagSection() {
     {
       key: "description",
       header: "Description",
-      className: "w-[55%]",
-      render: (val: string) => (
-        <span className="text-slate-600 text-sm font-medium">
-          {val || <span className="text-slate-400 italic font-normal">No description provided</span>}
-        </span>
-      )
+      className: "w-[50%]",
+      render: (val: string, row: any) => {
+        if (editingTagName === row.name) {
+          return (
+            <input
+              type="text"
+              value={editDescriptionValue}
+              onChange={e => setEditDescriptionValue(e.target.value)}
+              className="w-full border border-blue-500 rounded-xl px-2.5 py-1 text-sm bg-white text-slate-900 outline-none"
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === "Enter") handleSaveInlineDescription(row.name);
+                if (e.key === "Escape") setEditingTagName(null);
+              }}
+            />
+          );
+        }
+        return (
+          <span className="text-slate-600 text-sm font-medium">
+            {val || <span className="text-slate-400 italic font-normal">No description provided</span>}
+          </span>
+        );
+      }
     },
     {
       key: "actions",
       header: "",
-      className: "w-[15%] text-right",
-      render: (_: any, row: TagDefinition) => (
-        <button
-          type="button"
-          onClick={() => handleDeleteTag(row.name)}
-          className="flex items-center justify-center h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-        >
-          <Trash2Icon size={18} />
-        </button>
-      )
-
+      className: "w-[20%] text-right",
+      render: (_: any, row: any) => {
+        if (savingTagName === row.name) {
+          return <div className="flex justify-end pr-3"><Loader2Icon className="h-4 w-4 animate-spin text-blue-500" /></div>;
+        }
+        if (editingTagName === row.name) {
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button type="button" onClick={() => handleSaveInlineDescription(row.name)} className="h-8 w-8 text-emerald-600 hover:bg-emerald-50
+               rounded-lg flex items-center justify-center cursor-pointer"><CheckIcon size={16} /></button>
+              <button type="button" onClick={() => setEditingTagName(null)} className="h-8 w-8 text-slate-400 hover:bg-slate-100 rounded-lg 
+              flex items-center justify-center cursor-pointer"><XIcon size={16} /></button>
+            </div>
+          );
+        }
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <button type="button" onClick={() => { setEditingTagName(row.name); setEditDescriptionValue(row.description || ""); }} className="h-8 w-8 text-slate-400 hover:text-blue-
+             hover:bg-slate-100 rounded-lg flex items-center justify-center cursor-pointer"><Edit2Icon size={16} /></button>
+            <button type="button" onClick={() => handleDeleteTag(row.name)} className="h-8 w-8 text-slate-400 hover:text-red-600
+             hover:bg-slate-100 rounded-lg flex items-center justify-center cursor-pointer"><Trash2Icon size={16} /></button>
+          </div>
+        );
+      }
     }
   ];
+
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -173,7 +231,7 @@ export default function TagSection() {
               onChange={e => {
                 setError(null);
                 //setTagName(e.target.value.replace(/\s+/g, "_")); // Keep format snake_case easily
-                setTagName(e.target.value);
+                setTagName(e.target.value.toUpperCase());
               }}
               className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-blue-500/20"
             />
