@@ -1,7 +1,7 @@
 import { ChartNoAxesCombinedIcon, TrendingUpIcon, ClockIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// TODO: prettify this page
+// TODO: prettify this page, add source constraint
 
 export default function AnalyticsPage() {
     const navigate = useNavigate();

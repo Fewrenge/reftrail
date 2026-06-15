@@ -156,8 +156,7 @@ func (d *Driver) GetDirectBookingWaitingTime(ctx context.Context, find *store.Fi
 		WHERE r.status = 'BOOKED' 
 		  AND l.new_status = 'BOOKED'
 		  AND r.referral_date IS NOT NULL AND r.referral_date != ''
-		  -- Ensures it went STRAIGHT to booked without middle call cycles
-		  AND r.id NOT IN (
+		   AND r.id NOT IN (
 			  SELECT referral_id FROM referral_log 
 			  WHERE new_status IN ('1ST_CALL_COMPLETE', '2ND_CALL_COMPLETE', '3RD_CALL_COMPLETE', 'SUSPENDED', 'PATIENT_TO_CALL_BACK')
 		  )
@@ -181,7 +180,7 @@ func (d *Driver) GetDirectBookingWaitingTime(ctx context.Context, find *store.Fi
 			return nil, err
 		}
 
-		// ✅ 2. FIX: Parse referral_date using standard YYYY-MM-DD layout string syntax
+		// FIX: Parse referral_date using standard YYYY-MM-DD layout string syntax
 		referralTime, errRef := time.Parse("2006-01-02", referralDateStr)
 		bookedTime, errBook := time.Parse(time.RFC3339, bookedStr) // Keeps full datetime precision for completion
 

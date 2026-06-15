@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+// TODO: fix date range based filtering
 interface WaitingTimeMetric {
   period: string; // "YYYY-MM"
   averageDays: number;
@@ -92,14 +93,15 @@ export default function DirectBookingWaitingTime() {
             <ClockIcon size={22} strokeWidth={2.5} />
             <h1 className="text-2xl font-bold text-slate-900">Direct Processing Velocity</h1>
           </div>
-          <p className="text-sm text-slate-500">Average days elapsed from file generation straight to booking completion.</p>
+          <p className="text-sm text-slate-500">Average days elapsed from file generation straight to booking completion.
+            Only calculates referrals that go straight from ready to book to booked.
+          </p>
         </div>
 
         {/* DATE RANGE CONTROLS */}
         <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200/60">
           <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold px-1">
             <CalendarIcon size={14} />
-            Window:
           </div>
           <input
             type="date"
@@ -129,7 +131,7 @@ export default function DirectBookingWaitingTime() {
       {/* COMPRESSED VALUE OVERVIEW BLOCK */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-5 border border-slate-200/80 rounded-2xl shadow-sm">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Perfect-Workflow Average</span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Perfect Workflow Average</span>
           <h2 className="text-3xl font-black text-slate-800 mt-1">{averageSystemSpeed} <span className="text-xs font-normal text-slate-400">days</span></h2>
         </div>
       </div>

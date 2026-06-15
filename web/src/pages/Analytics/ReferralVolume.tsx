@@ -95,7 +95,6 @@ export default function ReferralVolume() {
         <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200/60">
           <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold px-1">
             <CalendarIcon size={14} />
-            Range:
           </div>
           <input
             type="date"
