@@ -29,7 +29,7 @@ const (
 	ConsultTypeAppLowerExtremity ReferralConsultType = "APP+LE"
 	ConsultTypeAppUpperExtremity ReferralConsultType = "APP+UE"
 	ConsultTypeAppAnySurgeon     ReferralConsultType = "APP+SX"
-	ConsultTypeSurgeon           ReferralConsultType = "APP+SX"
+	ConsultTypeSurgeon           ReferralConsultType = "SX"
 	ConsultTypeOther             ReferralConsultType = "OTHER"
 )
 
@@ -41,23 +41,23 @@ type TransitionRule struct {
 // statusRules defines the standard workflow for the Booking Team
 var statusRules = map[ReferralStatus]TransitionRule{
 	StatusReadyToBook: {
-		AllowedTo: []ReferralStatus{Status1stCallComplete, StatusUnableToContact, StatusDeclined, StatusBooked},
+		AllowedTo: []ReferralStatus{Status1stCallComplete, StatusUnableToContact, StatusDeclined, StatusBooked, StatusSuspended, StatusClosed},
 	},
 	Status1stCallComplete: {
-		AllowedTo: []ReferralStatus{Status2ndCallComplete, StatusUnableToContact, StatusDeclined, StatusBooked},
+		AllowedTo: []ReferralStatus{Status2ndCallComplete, StatusUnableToContact, StatusDeclined, StatusBooked, StatusSuspended, StatusClosed},
 	},
 	Status2ndCallComplete: {
-		AllowedTo: []ReferralStatus{Status3rdCallComplete, StatusUnableToContact, StatusDeclined, StatusBooked},
+		AllowedTo: []ReferralStatus{Status3rdCallComplete, StatusUnableToContact, StatusDeclined, StatusBooked, StatusSuspended, StatusClosed},
 	},
 	Status3rdCallComplete: {
-		AllowedTo: []ReferralStatus{StatusUnableToContact, StatusDeclined, StatusBooked},
+		AllowedTo: []ReferralStatus{StatusUnableToContact, StatusDeclined, StatusBooked, StatusSuspended, StatusClosed},
 	},
 	StatusPatientCallback: {
 		// From a callback, they can basically re-enter the call cycle or book
-		AllowedTo: []ReferralStatus{Status1stCallComplete, StatusBooked, StatusDeclined},
+		AllowedTo: []ReferralStatus{StatusReadyToBook, Status1stCallComplete, StatusBooked, StatusDeclined, StatusSuspended, StatusClosed},
 	},
 	StatusUnableToContact: {
-		AllowedTo: []ReferralStatus{StatusReadyToBook}, // Allow them to try again
+		AllowedTo: []ReferralStatus{StatusReadyToBook, StatusSuspended, StatusClosed}, // Allow them to try again
 	},
 	// StatusBooked and StatusDeclined are intentionally empty:
 	// The Booking Team cannot move them once they are in these final statuses.

@@ -32,7 +32,7 @@ export interface FrontEndComplaint {
 
 // FIX: Added [key: string] index signature fallback so loose strings can index it safely
 export const STATUS_RULES: Record<ReferralStatus, ReferralStatus[]> & { [key: string]: ReferralStatus[] | undefined } = {
-  READY_TO_BOOK: ['1ST_CALL_COMPLETE', 'UNABLE_TO_CONTACT', 'DECLINED', 'BOOKED'],
+  READY_TO_BOOK: ['1ST_CALL_COMPLETE', 'UNABLE_TO_CONTACT', 'DECLINED', 'BOOKED', 'SUSPENDED'],
   '1ST_CALL_COMPLETE': ['2ND_CALL_COMPLETE', 'UNABLE_TO_CONTACT', 'DECLINED', 'BOOKED'],
   '2ND_CALL_COMPLETE': ['3RD_CALL_COMPLETE', 'UNABLE_TO_CONTACT', 'DECLINED', 'BOOKED'],
   '3RD_CALL_COMPLETE': ['UNABLE_TO_CONTACT', 'DECLINED', 'BOOKED'],
