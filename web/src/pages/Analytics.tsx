@@ -1,4 +1,4 @@
-import { ChartNoAxesCombinedIcon, } from 'lucide-react';
+import { ChartNoAxesCombinedIcon, TrendingUpIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // TODO: prettify this page
@@ -14,13 +14,14 @@ export default function AnalyticsPage() {
       description: 'Breakdown percentages of Elective, Urgent, and ASAP referral entries.',
       path: '/analytics/urgency-distribution',
     },
-/*
-    {
+     {
       id: 'volume-over-time',
       title: 'Referral Volume Trends',
-      description: 'Track incoming referral velocity trajectories over daily or monthly timelines.',
-      path: '/analytics/volume-over-time',
-    },*/
+      description: 'Track incoming referral velocity trajectories over monthly timelines using chronological line charts.',
+      path: '/analytics/referral-trend',
+      icon: <TrendingUpIcon size={20} className="text-indigo-600" />,
+      badge: "Line Chart"
+    },
   ];
 
 

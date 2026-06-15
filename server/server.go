@@ -125,5 +125,6 @@ func (s *Server) registerReferralRoutes() {
 	// ------ ANALYTICS ------
 
 	// Get urgency distribution for pie chart
-	admin.GET("/analytics/urgency-distribution", v1Service.GetUrgencyAnalyticsHandler)
+	admin.GET("/analytics/urgency-distribution", v1Service.GetUrgencyDistributionAnalyticsHandler)
+	admin.GET("/analytics/referral-trend", v1Service.GetReferralTrendAnalyticsHandler)
 }

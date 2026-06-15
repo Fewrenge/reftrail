@@ -9,9 +9,9 @@ import (
 	echo "github.com/labstack/echo/v5"
 )
 
-// GetUrgencyAnalyticsHandler extracts filters and returns pie-chart metric data
+// GetUrgencyDistributionAnalyticsHandler extracts filters and returns pie-chart metric data
 // GET /api/v1/analytics/urgency-distribution
-func (s *APIV1Service) GetUrgencyAnalyticsHandler(c *echo.Context) error {
+func (s *APIV1Service) GetUrgencyDistributionAnalyticsHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 	find := &store.FindReferralEntry{}
 
@@ -42,5 +42,40 @@ func (s *APIV1Service) GetUrgencyAnalyticsHandler(c *echo.Context) error {
 	}
 
 	// 4. Return the aggregated data to the frontend chart component
+	return c.JSON(http.StatusOK, response)
+}
+
+// GetReferralTrendAnalyticsHandler extracts filters and returns chronological line-chart data
+// GET /api/v1/analytics/referral-trend
+func (s *APIV1Service) GetReferralTrendAnalyticsHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+	find := &store.FindReferralEntry{}
+
+	// 1. Automatically parse query strings into the filter struct
+	if err := c.Bind(find); err != nil {
+		slog.Warn("Failed parsing trend analytics query parameters", "error", err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid query filter parameters"})
+	}
+
+	// 2. Format Validation: Ensure date formats are valid if supplied
+	if find.ReferralDateFrom != nil && *find.ReferralDateFrom != "" {
+		if _, err := time.Parse("2006-01-02", *find.ReferralDateFrom); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid referralDateFrom format. Use YYYY-MM-DD"})
+		}
+	}
+	if find.ReferralDateTo != nil && *find.ReferralDateTo != "" {
+		if _, err := time.Parse("2006-01-02", *find.ReferralDateTo); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid referralDateTo format. Use YYYY-MM-DD"})
+		}
+	}
+
+	// 3. Call your SQLite driver layer execution function
+	response, err := s.Store.GetReferralTrend(ctx, find)
+	if err != nil {
+		slog.Error("Database execution error during trend analytics calculation", "error", err.Error())
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to compile trend metric calculations"})
+	}
+
+	// 4. Return the aggregated data structured exactly how Recharts expects it
 	return c.JSON(http.StatusOK, response)
 }

@@ -55,4 +55,5 @@ type Driver interface {
 
 	// 7. Analytics methods
 	GetUrgencyDistribution(ctx context.Context, find *FindReferralEntry) (*UrgencyDistributionResponse, error)
+	GetReferralTrend(ctx context.Context, find *FindReferralEntry) (*ReferralTrendResponse, error)
 }

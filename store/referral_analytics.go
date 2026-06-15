@@ -17,7 +17,7 @@ import (
 type UrgencyMetric struct {
 	Urgency    domain.ReferralUrgency `json:"urgency"`    // "Elective", "Urgent", "ASAP"
 	Count      int                    `json:"count"`      // Raw total rows
-	Percentage float64                `json:"percentage"` // Calculated percentage for your boss
+	Percentage float64                `json:"percentage"` // Calculated percentage
 }
 
 // The final payload returned to the frontend
@@ -32,4 +32,22 @@ func (s *Store) GetUrgencyDistribution(ctx context.Context, find *FindReferralEn
 		return nil, domain.ErrUnauthorized
 	}
 	return s.driver.GetUrgencyDistribution(ctx, find)
+}
+
+type TrendMetric struct {
+	Period string `json:"period"`
+	Count  int    `json:"count"`
+}
+
+type ReferralTrendResponse struct {
+	Data       []TrendMetric `json:"data"`
+	TotalCount int           `json:"totalCount"`
+}
+
+func (s *Store) GetReferralTrend(ctx context.Context, find *FindReferralEntry) (*ReferralTrendResponse, error) {
+	_, ok := domain.GetUserContext(ctx)
+	if !ok {
+		return nil, domain.ErrUnauthorized
+	}
+	return s.driver.GetReferralTrend(ctx, find)
 }

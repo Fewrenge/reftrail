@@ -607,6 +607,7 @@ export default function Referrals() {
             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">From Date</label>
             <input
               type="date"
+              max="9999-12-31"
               value={referralDateFrom}
               onChange={(e) => setReferralDateFrom(e.target.value)}
               className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -617,6 +618,7 @@ export default function Referrals() {
             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">To Date</label>
             <input
               type="date"
+              max="9999-12-31"
               value={referralDateTo}
               onChange={(e) => setReferralDateTo(e.target.value)}
               className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"

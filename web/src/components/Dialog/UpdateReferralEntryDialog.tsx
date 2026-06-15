@@ -11,12 +11,12 @@ import {
   DialogTitle
 } from "@/components/ui/dialog"
 
-import type { 
-  ReferralStatus, 
-  ReferralUrgency, 
-  ReferralConsultType, 
-  ReferralSource 
-} from "@/types/referrals" 
+import type {
+  ReferralStatus,
+  ReferralUrgency,
+  ReferralConsultType,
+  ReferralSource
+} from "@/types/referrals"
 
 
 export interface FrontEndComplaint {
@@ -227,6 +227,7 @@ export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initial
               <label className="block text-xs font-medium text-slate-700 mb-1">Referral Date</label>
               <input
                 type="date"
+                max="9999-12-31"
                 className="w-full text-sm border rounded-md p-2 bg-white"
                 value={referralDate}
                 onChange={e => setReferralDate(e.target.value)}

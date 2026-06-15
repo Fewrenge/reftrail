@@ -10,6 +10,7 @@ import Referrals from './pages/Referrals';
 import ReferralDetails from './pages/ReferralDetails';
 import Analytics from './pages/Analytics';
 import UrgencyDistribution from './pages/Analytics/UrgencyDistribution';
+import ReferralTrend from './pages/Analytics/ReferralTrend'
 
 export default function App() {
   const { user, isAuthenticating } = useAuth();
@@ -52,6 +53,7 @@ export default function App() {
             <Route element={<ProtectedRoute allowedRoles={[UserRole.REFTRAIL_ADMIN]} />}>
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/analytics/urgency-distribution" element={<UrgencyDistribution />} />
+              <Route path="/analytics/referral-trend" element={<ReferralTrend />} />
             </Route>
 
             <Route path="/referrals/:referralId" element={<ReferralDetails />} />
