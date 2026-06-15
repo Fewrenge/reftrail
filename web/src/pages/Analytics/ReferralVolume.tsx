@@ -1,4 +1,4 @@
-import { useEffect, useState,  } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeftIcon, CalendarIcon, Loader2Icon, RefreshCwIcon, TrendingUpIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,40 +7,36 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   Legend,
+  LabelList,
   ResponsiveContainer,
 } from "recharts";
 
-// 1. Define matching TypeScript interface for Go TrendMetric struct
 interface TrendMetric {
   period: string; // "YYYY-MM"
   count: number;
 }
 
-interface ReferralTrendResponse {
+interface ReferralVolumeResponse {
   data: TrendMetric[] | null;
   totalCount: number;
 }
 
-export default function ReferralTrend() {
+export default function ReferralVolume() {
   const navigate = useNavigate();
-  
-  // Date filter states (Defaults to trailing 6 months from current 2026 date context)
+
   const [dateFrom, setDateFrom] = useState("2026-01-01");
   const [dateTo, setDateTo] = useState("2026-06-30");
-  
+
   const [trendData, setTrendData] = useState<TrendMetric[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 2. Data Fetching Execution
   const fetchTrends = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Constructs query string arguments exactly matching echo.Bind rules
       const params = new URLSearchParams();
       if (dateFrom) params.append("referralDateFrom", dateFrom);
       if (dateTo) params.append("referralDateTo", dateTo);
@@ -49,8 +45,8 @@ export default function ReferralTrend() {
       if (!response.ok) {
         throw new Error(`Server responded with status ${response.status}`);
       }
-      
-      const payload: ReferralTrendResponse = await response.json();
+
+      const payload: ReferralVolumeResponse = await response.json();
       setTrendData(payload.data || []);
       setTotalCount(payload.totalCount);
     } catch (err: any) {
@@ -65,13 +61,12 @@ export default function ReferralTrend() {
     fetchTrends();
   }, [dateFrom, dateTo]);
 
-  // 3. Custom Date Format Helper for Recharts X-Axis Labels (e.g. "2026-06" -> "Jun 26")
   const formatXAxis = (periodStr: string) => {
     if (!periodStr || periodStr === "Unknown") return periodStr;
     try {
       const [year, month] = periodStr.split("-");
       const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-      return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
     } catch {
       return periodStr;
     }
@@ -104,7 +99,7 @@ export default function ReferralTrend() {
           </div>
           <input
             type="date"
-            max="9999-12-31" // Implements your 4-digit input enforcement rule!
+            max="9999-12-31"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             className="p-1.5 border bg-white rounded-lg text-xs font-medium text-slate-700 border-slate-200 focus:outline-blue-500"
@@ -131,7 +126,7 @@ export default function ReferralTrend() {
       {/* OVERVIEW STAT CARD */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-5 border border-slate-200/80 rounded-2xl shadow-sm">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Evaluated Traffic</span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Volume</span>
           <h2 className="text-3xl font-black text-slate-800 mt-1">{totalCount} <span className="text-xs font-normal text-slate-400">referrals</span></h2>
         </div>
       </div>
@@ -154,35 +149,40 @@ export default function ReferralTrend() {
         ) : (
           <div className="w-full h-87.5 pt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
+              {/* Added top and right margins to prevent numbers from overlapping with boundaries */}
+              <LineChart data={trendData} margin={{ top: 25, right: 35, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis 
-                  dataKey="period" 
+                <XAxis
+                  dataKey="period"
                   tickFormatter={formatXAxis}
                   tick={{ fill: '#64748b', fontSize: 11 }}
                   axisLine={{ stroke: '#cbd5e1' }}
                   tickLine={false}
+                  padding={{ left: 20, right: 25 }} // Pushes dots slightly inward so numbers stay fully on screen
                 />
-                <YAxis 
+                <YAxis
                   allowDecimals={false}
                   tick={{ fill: '#64748b', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                 />
-                <Tooltip 
-                  labelFormatter={(label) => `Timeline Block: ${formatXAxis(label)}`}
-                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
                 <Legend verticalAlign="top" height={36} iconType="circle" />
                 <Line
                   name="Incoming Referrals Volume"
-                  type="monotone"
+                  type="linear"
                   dataKey="count"
-                  stroke="#4f46e5" // Darker indigo color line
+                  stroke="#4f46e5"
                   strokeWidth={3}
                   dot={{ r: 4, stroke: '#4f46e5', strokeWidth: 2, fill: '#ffffff' }}
-                  activeDot={{ r: 7, strokeWidth: 0 }}
-                />
+                  activeDot={false}
+                >
+                  <LabelList
+                    dataKey="count"
+                    position="top"
+                    offset={10} 
+                    style={{ fill: '#4f46e5', fontSize: 12, fontWeight: 700 }}
+                  />
+                </Line>
               </LineChart>
             </ResponsiveContainer>
           </div>

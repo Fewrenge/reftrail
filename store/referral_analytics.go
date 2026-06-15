@@ -39,15 +39,15 @@ type TrendMetric struct {
 	Count  int    `json:"count"`
 }
 
-type ReferralTrendResponse struct {
+type ReferralVolumeResponse struct {
 	Data       []TrendMetric `json:"data"`
 	TotalCount int           `json:"totalCount"`
 }
 
-func (s *Store) GetReferralTrend(ctx context.Context, find *FindReferralEntry) (*ReferralTrendResponse, error) {
+func (s *Store) GetReferralVolume(ctx context.Context, find *FindReferralEntry) (*ReferralVolumeResponse, error) {
 	_, ok := domain.GetUserContext(ctx)
 	if !ok {
 		return nil, domain.ErrUnauthorized
 	}
-	return s.driver.GetReferralTrend(ctx, find)
+	return s.driver.GetReferralVolume(ctx, find)
 }

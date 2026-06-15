@@ -45,9 +45,9 @@ func (s *APIV1Service) GetUrgencyDistributionAnalyticsHandler(c *echo.Context) e
 	return c.JSON(http.StatusOK, response)
 }
 
-// GetReferralTrendAnalyticsHandler extracts filters and returns chronological line-chart data
+// GetReferralVolumeAnalyticsHandler extracts filters and returns chronological line-chart data
 // GET /api/v1/analytics/referral-trend
-func (s *APIV1Service) GetReferralTrendAnalyticsHandler(c *echo.Context) error {
+func (s *APIV1Service) GetReferralVolumeAnalyticsHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 	find := &store.FindReferralEntry{}
 
@@ -70,7 +70,7 @@ func (s *APIV1Service) GetReferralTrendAnalyticsHandler(c *echo.Context) error {
 	}
 
 	// 3. Call your SQLite driver layer execution function
-	response, err := s.Store.GetReferralTrend(ctx, find)
+	response, err := s.Store.GetReferralVolume(ctx, find)
 	if err != nil {
 		slog.Error("Database execution error during trend analytics calculation", "error", err.Error())
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to compile trend metric calculations"})

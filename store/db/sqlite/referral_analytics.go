@@ -74,7 +74,7 @@ func (d *Driver) GetUrgencyDistribution(ctx context.Context, find *store.FindRef
 	}, nil
 }
 
-func (d *Driver) GetReferralTrend(ctx context.Context, find *store.FindReferralEntry) (*store.ReferralTrendResponse, error) {
+func (d *Driver) GetReferralVolume(ctx context.Context, find *store.FindReferralEntry) (*store.ReferralVolumeResponse, error) {
 	// Base query formatting date string to 'YYYY-MM' for timeline continuity
 	baseQuery := `
 		SELECT 
@@ -137,7 +137,7 @@ func (d *Driver) GetReferralTrend(ctx context.Context, find *store.FindReferralE
 		return nil, err
 	}
 
-	return &store.ReferralTrendResponse{
+	return &store.ReferralVolumeResponse{
 		Data:       data,
 		TotalCount: totalCount,
 	}, nil
