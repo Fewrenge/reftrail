@@ -8,145 +8,122 @@ import (
 	"reftrail/internal/domain"
 )
 
-func TestListReferralEntries_Filtering(t *testing.T) {
-	// 1. REUSING YOUR EXACT EXISTENT ENGINE HELPER
+func TestListReferralEntries_Filtering_TableDriven(t *testing.T) {
+	// 1. Seed database once at the top
 	s := setupTestStore(t)
+	ctx := WithUserContext(context.Background(), &domain.UserContext{Username: "admin", Role: "REFTRAIL_ADMIN"})
 
-	mockUser := &domain.UserContext{Username: "admin", Role: "REFTRAIL_ADMIN"}
-	ctx := WithUserContext(context.Background(), mockUser)
-
-	// 2. Prepare mock referrals payload via your public Batch interface
 	seedData := &store.BatchCreateReferralEntries{
 		ReferralEntries: []store.CreateReferralEntry{
 			{
-				PatientFirstName: "Target",
-				PatientLastName:  "One",
-				Urgency:          "Urgent",
-				Status:           "READY_TO_BOOK",
-				ReferralDate:     "2026-04-15",
-				Complaints: []store.ReferralComplaint{
-					{BodyPart: "KNEE", Side: "LEFT"},
-					{BodyPart: "SHOULDER", Side: "RIGHT"},
-				},
+				PatientFirstName: "Target", PatientLastName: "One",
+				Urgency: "URGENT", Status: "READY_TO_BOOK", ReferralDate: "2026-04-15",
+				Source:          "REGULAR",
+				Complaints:      []store.ReferralComplaint{{BodyPart: "KNEE", Side: "LEFT"}, {BodyPart: "ANKLE", Side: "RIGHT"}},
+				ConsultType:     "APP+LE",
 				CreatorUsername: "admin",
 			},
 			{
-				PatientFirstName: "Target",
-				PatientLastName:  "Two",
-				Urgency:          "Urgent",
-				Status:           "READY_TO_BOOK",
-				ReferralDate:     "2026-04-20",
-				Complaints: []store.ReferralComplaint{
-					{BodyPart: "ANKLE", Side: "BILATERAL"},
-				},
+				PatientFirstName: "Target", PatientLastName: "Two",
+				Urgency: "URGENT", Status: "READY_TO_BOOK", ReferralDate: "2026-04-20",
+				Source:          "REGULAR",
+				Complaints:      []store.ReferralComplaint{{BodyPart: "ANKLE", Side: "BILATERAL"}},
+				ConsultType:     "APP+LE",
 				CreatorUsername: "admin",
 			},
 			{
-				PatientFirstName: "Excluded",
-				PatientLastName:  "WrongUrgency",
-				Urgency:          "Elective",
-				Status:           "READY_TO_BOOK",
-				ReferralDate:     "2026-04-22",
-				Complaints: []store.ReferralComplaint{
-					{BodyPart: "KNEE", Side: "RIGHT"},
-				},
+				PatientFirstName: "Excluded", PatientLastName: "WrongUrgency",
+				Urgency: "ELECTIVE", Status: "READY_TO_BOOK", ReferralDate: "2026-04-22",
+				Source:          "REGULAR",
+				Complaints:      []store.ReferralComplaint{{BodyPart: "KNEE", Side: "RIGHT"}},
+				ConsultType:     "APP+LE",
 				CreatorUsername: "admin",
 			},
 		},
 	}
 
-	// 3. Populate your isolated DB instance
 	if err := s.BatchCreateReferralEntries(ctx, seedData); err != nil {
 		t.Fatalf("failed setup seeding data: %v", err)
 	}
 
-	// ========================================================================
-	// TEST CASE 1: Multi-Select Filter (Knee OR Ankle) + Urgent
-	// ========================================================================
-	t.Run("Complex Multi-Filter Assertion", func(t *testing.T) {
-		filter := &store.FindReferralEntry{
-			Urgencies: []domain.ReferralUrgency{"Urgent"},
-			BodyParts: []string{"KNEE", "ANKLE"},
-		}
+	// 2. Setup reusable variables for reference types
+	dateFrom := "2026-04-01"
+	dateTo := "2026-04-18"
+	limitOne := 1
+	offsetZero := 0
 
-		// FIXED: paginated holds the *store.PaginatedReferralEntries container struct
-		paginated, err := s.ListReferralEntries(ctx, filter)
-		if err != nil {
-			t.Fatalf("Store query execution failed: %v", err)
-		}
+	// 3. Define the structural contract for a filtering scenario
+	type testCase struct {
+		name               string
+		filter             *store.FindReferralEntry
+		expectedPageLen    int
+		expectedTotalCount int
+		extraValidation    func(t *testing.T, res *store.PaginatedReferralEntries) // Optional custom hooks
+	}
 
-		// FIXED: Check the actual list length inside the container struct
-		if len(paginated.ReferralEntries) != 2 {
-			t.Errorf("Expected exactly 2 matched entries, but found %d", len(paginated.ReferralEntries))
-		}
+	// 4. Map out your filter matrices
+	tests := []testCase{
+		{
+			name: "Multi-Select Filter: (Knee OR Ankle) + URGENT",
+			filter: &store.FindReferralEntry{
+				Urgencies: []domain.ReferralUrgency{"URGENT"},
+				BodyParts: []string{"KNEE", "ANKLE"},
+			},
+			expectedPageLen:    2,
+			expectedTotalCount: 2,
+			extraValidation: func(t *testing.T, res *store.PaginatedReferralEntries) {
+				for _, entry := range res.ReferralEntries {
+					if entry.Urgency != "URGENT" {
+						t.Errorf("Expected Urgency to be Urgent, but got %s", entry.Urgency)
+					}
+					if entry.PatientLastName == "One" && len(entry.Complaints) != 2 {
+						t.Errorf("Stitching failure! Target One should have 2 complaints records, got %d", len(entry.Complaints))
+					}
+				}
+			},
+		},
+		{
+			name: "Date Range Boundary Constraints",
+			filter: &store.FindReferralEntry{
+				ReferralDateFrom: &dateFrom,
+				ReferralDateTo:   &dateTo,
+			},
+			expectedPageLen:    1,
+			expectedTotalCount: 1,
+		},
+		{
+			name: "Pagination Offset and Limit Controls",
+			filter: &store.FindReferralEntry{
+				Limit:  &limitOne,
+				Offset: &offsetZero,
+			},
+			expectedPageLen:    1, // Only 1 item returned on this slice page
+			expectedTotalCount: 3, // Global table rows count stays 3
+		},
+	}
 
-		// FIXED: Check that totalCount across pagination boundaries says exactly 2 records
-		if paginated.TotalCount != 2 {
-			t.Errorf("Expected TotalCount to evaluate to 2, received %d", paginated.TotalCount)
-		}
-
-		for _, entry := range paginated.ReferralEntries {
-			if entry.Urgency != "Urgent" {
-				t.Errorf("Expected Urgency to be Urgent, but got %s", entry.Urgency)
+	// 5. Run the suite loop dynamically
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			paginated, err := s.ListReferralEntries(ctx, tc.filter)
+			if err != nil {
+				t.Fatalf("Store query execution failed: %v", err)
 			}
 
-			if entry.PatientLastName == "One" && len(entry.Complaints) != 2 {
-				t.Errorf("Stitching failure! Target One should have 2 complaints records, got %d", len(entry.Complaints))
+			// Validate returned page slice size
+			if len(paginated.ReferralEntries) != tc.expectedPageLen {
+				t.Errorf("Slice length mismatch! Expected %d, found %d", tc.expectedPageLen, len(paginated.ReferralEntries))
 			}
-		}
-	})
 
-	// ========================================================================
-	// TEST CASE 2: Date Boundary Intersect Check
-	// ========================================================================
-	t.Run("Date Range Boundary Constraints", func(t *testing.T) {
-		dateFrom := "2026-04-01"
-		dateTo := "2026-04-18"
+			// Validate unpaged global metadata counters
+			if paginated.TotalCount != tc.expectedTotalCount {
+				t.Errorf("TotalCount metric mismatch! Expected %d, received %d", tc.expectedTotalCount, paginated.TotalCount)
+			}
 
-		filter := &store.FindReferralEntry{
-			ReferralDateFrom: &dateFrom,
-			ReferralDateTo:   &dateTo,
-		}
-
-		paginated, err := s.ListReferralEntries(ctx, filter)
-		if err != nil {
-			t.Fatalf("Store date query execution failed: %v", err)
-		}
-
-		if len(paginated.ReferralEntries) != 1 {
-			t.Errorf("Expected exactly 1 entry within range, but found %d", len(paginated.ReferralEntries))
-		}
-
-		if paginated.TotalCount != 1 {
-			t.Errorf("Expected total date intersection window size count of 1, got %d", paginated.TotalCount)
-		}
-	})
-
-	// ========================================================================
-	// TEST CASE 3: Chunk Pagination Check (Limit & Offset)
-	// ========================================================================
-	t.Run("Pagination Offset and Limit Controls", func(t *testing.T) {
-		limitValue := 1
-		offsetValue := 0
-
-		filter := &store.FindReferralEntry{
-			Limit:  &limitValue,
-			Offset: &offsetValue,
-		}
-
-		paginated, err := s.ListReferralEntries(ctx, filter)
-		if err != nil {
-			t.Fatalf("Store pagination query execution failed: %v", err)
-		}
-
-		// FIXED: The limit constraints ensure this SPECIFIC page returns exactly 1 item
-		if len(paginated.ReferralEntries) != 1 {
-			t.Errorf("Expected page size limit constraint of 1, received %d items", len(paginated.ReferralEntries))
-		}
-
-		// FIXED: But the TotalCount must still equal 3, because there are 3 total rows in the table!
-		if paginated.TotalCount != 3 {
-			t.Errorf("Expected global unpaged record counter matching 3, received %d", paginated.TotalCount)
-		}
-	})
+			// Trigger custom validator hooks if they were supplied for the test case
+			if tc.extraValidation != nil {
+				tc.extraValidation(t, paginated)
+			}
+		})
+	}
 }

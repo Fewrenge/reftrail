@@ -4,3 +4,4 @@
 api_test.http
 *scratch_test.go
 *.sql
+*.out
