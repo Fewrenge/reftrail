@@ -163,13 +163,12 @@ func (d *Driver) FindReferralPhysicians(ctx context.Context, find *store.FindRef
 		args = append(args, *find.EMRPhysicianID)
 	}
 
-	/*
-		// Dynamic multi-column fuzzy search group
-		if find.GeneralSearch != nil && *find.GeneralSearch != "" {
-			term := "%" + *find.GeneralSearch + "%"
-			query += " AND (first_name LIKE ? OR last_name LIKE ? OR cpso_number LIKE ?)"
-			args = append(args, term, term, term)
-		}*/
+	// Dynamic multi-column fuzzy search group
+	if find.GeneralSearch != nil && *find.GeneralSearch != "" {
+		term := "%" + *find.GeneralSearch + "%"
+		query += " AND (first_name LIKE ? OR last_name LIKE ? OR cpso_number LIKE ?)"
+		args = append(args, term, term, term)
+	}
 
 	rows, err := d.conn(ctx).QueryContext(ctx, query, args...)
 	if err != nil {

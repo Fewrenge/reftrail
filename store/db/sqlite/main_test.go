@@ -17,7 +17,7 @@ func setupTestStore(t *testing.T) *store.Store {
 	dbName := hex.EncodeToString(b)
 
 	// Use the unique name in the DSN
-	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared&_fk=1", dbName)
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared&_fk=1&busy_timeout=5000", dbName)
 	db, err := sql.Open("sqlite3", dsn)
 
 	t.Cleanup(func() {
@@ -29,6 +29,7 @@ func setupTestStore(t *testing.T) *store.Store {
 	}
 
 	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
 
 	// 3. Initialize real Driver and Store using this memory DB
 	driver := NewWithDB(db)

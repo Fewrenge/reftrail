@@ -70,6 +70,9 @@ func (s *Server) registerReferralRoutes() {
 	// List tags
 	protected.GET("/tags", v1Service.ListReferralTagsHandler)
 
+	protected.GET("/physicians", v1Service.FindReferralPhysiciansHandler)
+	protected.GET("/physicians/:id", v1Service.GetReferralPhysicianByIDHandler)
+
 	admin := protected.Group("")
 
 	admin.Use(auth.AdminOnlyMiddleware) // Add the extra gatekeeper
@@ -132,4 +135,9 @@ func (s *Server) registerReferralRoutes() {
 	admin.GET("/analytics/referral-trend", v1Service.GetReferralVolumeAnalyticsHandler)
 
 	admin.GET("/analytics/direct-booking-waiting-time", v1Service.GetDirectBookingWaitingTimeAnalyticsHandler)
+
+	// ------ PHYSICIANS -------
+	admin.POST("/physicians", v1Service.CreateReferralPhysicianHandler)
+	admin.PATCH("/physicians/:id", v1Service.UpdateReferralPhysicianHandler)
+	admin.DELETE("/physicians/:id", v1Service.DeleteReferralPhysicianHandler)
 }

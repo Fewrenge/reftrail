@@ -124,7 +124,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 	var args []any
 
 	if find.ID != nil {
-		query += " AND id = ?"
+		query += " AND re.id = ?"
 		args = append(args, *find.ID)
 	}
 	if find.CreatorUsername != nil {
@@ -181,7 +181,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 			args = append(args, bp)
 		}
 		query += fmt.Sprintf(
-			" AND id IN (SELECT referral_id FROM referral_complaint WHERE body_part IN (%s))",
+			" AND re.id IN (SELECT referral_id FROM referral_complaint WHERE body_part IN (%s))",
 			strings.Join(placeholders, ", "),
 		)
 	}
@@ -193,7 +193,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 			placeholders[i] = "?"
 			args = append(args, t)
 		}
-		query += fmt.Sprintf(` AND id IN (
+		query += fmt.Sprintf(` AND re.id IN (
 			SELECT referral_id FROM referral_tag 
 			WHERE tag_name IN (%s) 
 			GROUP BY referral_id 
@@ -373,7 +373,7 @@ func (d *Driver) GetReferralEntriesCount(ctx context.Context, find *store.FindRe
 
 	// Exact matches (High performance index hits)
 	if find.ID != nil {
-		query += " AND id = ?"
+		query += " AND re.id = ?"
 		args = append(args, *find.ID)
 	}
 	if find.CreatorUsername != nil {
@@ -430,7 +430,7 @@ func (d *Driver) GetReferralEntriesCount(ctx context.Context, find *store.FindRe
 			placeholders[i] = "?"
 			args = append(args, t)
 		}
-		query += fmt.Sprintf(` AND id IN (
+		query += fmt.Sprintf(` AND re.id IN (
 			SELECT referral_id FROM referral_tag 
 			WHERE tag_name IN (%s) 
 			GROUP BY referral_id 

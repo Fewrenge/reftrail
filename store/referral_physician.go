@@ -21,6 +21,7 @@ type FindReferralPhysician struct {
 	FirstName      *string `json:"firstName"`
 	LastName       *string `json:"lastName"`
 	EMRPhysicianID *string `json:"emrPhysicianId"`
+	GeneralSearch  *string `json:"generalSearch"`
 }
 
 type DeleteReferralPhysician struct {
