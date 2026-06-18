@@ -34,8 +34,9 @@ CREATE TABLE IF NOT EXISTS referral_entry (
 
     emr_patient_id TEXT,
     emr_referral_doc_id TEXT,
-    referring_physician TEXT,
+    referring_physician_id TEXT,
     referral_date TEXT NOT NULL,
+    FOREIGN KEY (referring_physician_id) REFERNCES physicians (id) ON UPDATE CASCADE ON DELETE SET NULL,
     FOREIGN KEY (creator_id) REFERENCES user(username) ON UPDATE CASCADE -- ON DELETE SET NULL?
 );
 
@@ -125,3 +126,5 @@ CREATE INDEX IF NOT EXISTS idx_referral_entry_status_urgency_created_ts
 
 CREATE INDEX IF NOT EXISTS idx_referral_entry_consult_type_status_created_ts 
     ON referral_entry(consult_type, status, created_ts DESC);
+
+CREATE INDEX IF NOT EXISTS idx_referral_entry_referring_physician_id ON referral_entry(referring_physician_id);

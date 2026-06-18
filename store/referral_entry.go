@@ -32,10 +32,11 @@ type ReferralEntry struct {
 	EMRReferralDocID *string `json:"emrReferralDocId"`
 
 	// 4. Clinical Details
-	ReferringPhysician *string                    `json:"referringPhysician"`
-	TriageNote         string                     `json:"triageNote"`
-	ConsultType        domain.ReferralConsultType `json:"consultType"`
-	ConsultTypeDetail  *string                    `json:"consultTypeDetail"`
+	ReferringPhysicianID *string                    `json:"referringPhysicianId"`
+	ReferringPhysician   *ReferralPhysician         `json:"referringPhysician,omitempty"`
+	TriageNote           string                     `json:"triageNote"`
+	ConsultType          domain.ReferralConsultType `json:"consultType"`
+	ConsultTypeDetail    *string                    `json:"consultTypeDetail"`
 
 	// 5. Workflow & Urgency
 	Urgency      domain.ReferralUrgency `json:"urgency"` // Elective, Urgent, ASAP
@@ -71,12 +72,12 @@ type CreateReferralEntry struct {
 	EMRReferralDocID             *string `json:"emrReferralDocId"`
 
 	// Clinical Info
-	ReferringPhysician *string                    `json:"referringPhysician"`
-	Complaints         []ReferralComplaint        `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
-	Tags               []string                   `json:"tags"` // Optional free-form tags that will be validated against the database on the store level
-	TriageNote         string                     `json:"triageNote"`
-	ConsultType        domain.ReferralConsultType `json:"consultType"`
-	ConsultTypeDetail  *string                    `json:"consultTypeDetail"`
+	ReferringPhysicianID *string                    `json:"referringPhysicianId"`
+	Complaints           []ReferralComplaint        `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
+	Tags                 []string                   `json:"tags"` // Optional free-form tags that will be validated against the database on the store level
+	TriageNote           string                     `json:"triageNote"`
+	ConsultType          domain.ReferralConsultType `json:"consultType"`
+	ConsultTypeDetail    *string                    `json:"consultTypeDetail"`
 
 	// Status
 	Urgency      domain.ReferralUrgency `json:"urgency"`
@@ -111,11 +112,13 @@ type FindReferralEntry struct {
 	ReferralDateTo   *string `json:"referralDateTo" query:"referralDateTo"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
-	GeneralTerm             *string `json:"generalTerm" query:"generalTerm"`
-	PatientLastName         *string `json:"patientLastName" query:"patientLastName"`
-	PatientFirstName        *string `json:"patientFirstName" query:"patientFirstName"`
-	PatientDOB              *string `json:"patientDob" query:"patientDob"`
-	ReferringPhysician      *string `json:"referringPhysician" query:"referringPhysician"`
+	GeneralTerm      *string `json:"generalTerm" query:"generalTerm"`
+	PatientLastName  *string `json:"patientLastName" query:"patientLastName"`
+	PatientFirstName *string `json:"patientFirstName" query:"patientFirstName"`
+	PatientDOB       *string `json:"patientDob" query:"patientDob"`
+
+	ReferringPhysicianID    *string `json:"referringPhysicianId" query:"referringPhysicianId"`
+	ReferringPhysicianName  *string `json:"referringPhysicianName" query:"referringPhysicianName"`
 	PatientHealthcardNumber *string `json:"patientHealthcardNumber" query:"patientHealthcardNumber"`
 	PatientPhoneNumber      *string `json:"patientPhoneNumber" query:"patientPhoneNumber"`
 
@@ -140,9 +143,9 @@ type UpdateReferralEntry struct {
 	TriageNote *string                 `json:"triageNote"`
 
 	// --- 2. Clinical Data ---
-	ReferringPhysician *string                     `json:"referringPhysician"`
-	ConsultType        *domain.ReferralConsultType `json:"consultType"`
-	ReferralDate       *string                     `json:"referralDate"`
+	ReferringPhysicianID *string                     `json:"referringPhysicianID"`
+	ConsultType          *domain.ReferralConsultType `json:"consultType"`
+	ReferralDate         *string                     `json:"referralDate"`
 
 	// --- 3. EMR Integration Links ---
 	EMRPatientID     *string `json:"emrPatientId"`

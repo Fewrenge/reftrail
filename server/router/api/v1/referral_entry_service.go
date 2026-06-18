@@ -243,6 +243,14 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 	var batch store.BatchCreateReferralEntries
 	var healthCardRegex = regexp.MustCompile(`^(\d{10})([A-Za-z]{2})?$`)
 
+	masterPhysicians, err := s.Store.FindReferralPhysicians(ctx, &store.FindReferralPhysician{})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to load master physician list"})
+	}
+
+	// Session cache to eliminate redundant similarity algorithm passes on duplicate strings
+	sessionPhysicianCache := make(map[string]string)
+
 	// 4. Stream rows sequentially (One row = One referral entry)
 	for {
 		row, err := reader.Read()
@@ -342,6 +350,62 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			slog.Warn("Skipping batch tokenization phase: Column lookup key 'tags' missing from spreadsheet template structure")
 		}
 
+		var finalizedPhysicianID *string = nil
+		rawPhysicianText := strings.TrimSpace(row[headerMap["referring physician"]])
+
+		if rawPhysicianText != "" {
+			normalizedKey := strings.ToLower(rawPhysicianText)
+
+			// Step A: Check local batch loop run cache first
+			if cachedID, exists := sessionPhysicianCache[normalizedKey]; exists {
+				if cachedID != "" {
+					finalizedPhysicianID = &cachedID
+				}
+			} else {
+				// Step B: Calculate Jaro-Winkler string closeness against preloaded system master array
+				matchedID := s.Store.ResolvePhysicianID(rawPhysicianText, masterPhysicians)
+
+				if matchedID != "" {
+					// Confident Match found: Apply it
+					finalizedPhysicianID = &matchedID
+					sessionPhysicianCache[normalizedKey] = matchedID
+				} else {
+					// No Match found: Implicitly create profile on the fly
+					var firstName, lastName string
+					cleanText := strings.ReplaceAll(rawPhysicianText, "Dr. ", "")
+					cleanText = strings.ReplaceAll(cleanText, "dr. ", "")
+
+					if strings.Contains(cleanText, ",") {
+						parts := strings.SplitN(cleanText, ",", 2)
+						lastName = strings.TrimSpace(parts[0])
+						firstName = strings.TrimSpace(parts[1])
+					} else {
+						parts := strings.SplitN(cleanText, " ", 2)
+						firstName = strings.TrimSpace(parts[0])
+						if len(parts) > 1 {
+							lastName = strings.TrimSpace(parts[1])
+						} else {
+							lastName = "Unknown"
+						}
+					}
+
+					newDoc, createErr := s.Store.CreateReferralPhysician(ctx, &store.ReferralPhysician{
+						FirstName: firstName,
+						LastName:  lastName,
+					})
+					if createErr == nil {
+						finalizedPhysicianID = &newDoc.ID
+						sessionPhysicianCache[normalizedKey] = newDoc.ID
+
+						// Append back to active pool so sub-sequent rows match instantly
+						masterPhysicians = append(masterPhysicians, newDoc)
+					} else {
+						slog.Error("Implicit physician creation failed during batch processing loop", "rawName", rawPhysicianText, "error", createErr)
+					}
+				}
+			}
+		}
+
 		// Map spreadsheet elements into your exact structural schema
 		entry := store.CreateReferralEntry{
 			PatientLastName:  strings.TrimSpace(row[headerMap["last name"]]),
@@ -353,10 +417,11 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			PatientHealthcardVersionCode: nullString(versionCode),
 			PatientPhoneNumber:           nullString(row[headerMap["phone number"]]),
 			PatientEmail:                 nullString(row[headerMap["email"]]),
-			ReferringPhysician:           nullString(row[headerMap["referring physician"]]),
 			ConsultTypeDetail:            nullString(row[headerMap["consult type detail"]]),
 			EMRPatientID:                 nullString(emrPatientID),
 			EMRReferralDocID:             nullString(emrReferralDocID),
+
+			ReferringPhysicianID: finalizedPhysicianID,
 
 			// Required Workflow Structural Fields
 			ReferralDate: strings.TrimSpace(row[headerMap["referral date"]]),

@@ -26,7 +26,7 @@ type Driver interface {
 	DeleteReferralComplaint(ctx context.Context, referralID domain.ReferralID) error // Only used for UpdateReferralEntry
 	ListAllComplaints(ctx context.Context) ([]*ReferralComplaint, error)
 
-	// 3. Accountability (Optional but recommended for your logs)
+	// 3. Accountability
 	CreateReferralLog(ctx context.Context, create *ReferralLog) (*ReferralLog, error)
 	ListReferralLogs(ctx context.Context, referralID domain.ReferralID) ([]*ReferralLogWithUser, error)
 
@@ -58,4 +58,11 @@ type Driver interface {
 	GetUrgencyDistribution(ctx context.Context, find *FindReferralEntry) (*UrgencyDistributionResponse, error)
 	GetReferralVolume(ctx context.Context, find *FindReferralEntry) (*ReferralVolumeResponse, error)
 	GetDirectBookingWaitingTime(ctx context.Context, find *FindReferralEntry) (*WaitingTimeTrendResponse, error)
+
+	// 8. Physicians methods
+	CreateReferralPhysician(ctx context.Context, p *ReferralPhysician) (*ReferralPhysician, error)
+	FindReferralPhysicians(ctx context.Context, find *FindReferralPhysician) ([]*ReferralPhysician, error)
+	GetReferralPhysicianByID(ctx context.Context, id string) (*ReferralPhysician, error)
+	UpdateReferralPhysician(ctx context.Context, p *ReferralPhysician) error
+	DeleteReferralPhysician(ctx context.Context, payload *DeleteReferralPhysician) error
 }

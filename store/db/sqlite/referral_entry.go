@@ -48,7 +48,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		id, created_ts, updated_ts, creator_id, 
 		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code, patient_phone_number, patient_email,
 		emr_patient_id, emr_referral_doc_id,
-		referring_physician, triage_note, urgency, status, source, referral_date, consult_type, consult_type_detail
+		referring_physician_id, triage_note, urgency, status, source, referral_date, consult_type, consult_type_detail
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// Direct injection: Go automatically converts nil pointers into real database NULL values
@@ -58,7 +58,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		create.PatientHealthcardNumber, create.PatientHealthcardVersionCode,
 		create.PatientPhoneNumber, create.PatientEmail,
 		create.EMRPatientID, create.EMRReferralDocID,
-		create.ReferringPhysician, create.TriageNote, create.Urgency, create.Status, create.Source, create.ReferralDate, create.ConsultType, create.ConsultTypeDetail,
+		create.ReferringPhysicianID, create.TriageNote, create.Urgency, create.Status, create.Source, create.ReferralDate, create.ConsultType, create.ConsultTypeDetail,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert referral entry: %w", err)
@@ -78,7 +78,7 @@ func (d *Driver) CreateReferralEntry(ctx context.Context, create *store.CreateRe
 		PatientEmail:                 create.PatientEmail,
 		EMRPatientID:                 create.EMRPatientID,
 		EMRReferralDocID:             create.EMRReferralDocID,
-		ReferringPhysician:           create.ReferringPhysician,
+		ReferringPhysician:           nil, // Hydrate it later
 		TriageNote:                   create.TriageNote,
 		Urgency:                      create.Urgency,
 		Status:                       create.Status,
@@ -111,12 +111,16 @@ func (d *Driver) ListAllComplaints(ctx context.Context) ([]*store.ReferralCompla
 func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferralEntry) ([]*store.ReferralEntry, error) {
 	// Base query targeting strictly singular top-level records
 	query := `SELECT 
-		id, creator_id, created_ts, updated_ts, 
-		patient_last_name, patient_first_name, patient_dob, patient_healthcard_number, patient_healthcard_version_code, patient_phone_number, patient_email,
-		emr_patient_id, emr_referral_doc_id,
-		referring_physician, triage_note, urgency, status, source, referral_date, consult_type, consult_type_detail
-	FROM referral_entry WHERE 1 = 1`
-
+		re.id, re.creator_id, re.created_ts, re.updated_ts, 
+		re.patient_last_name, re.patient_first_name, re.patient_dob, 
+		re.patient_healthcard_number, re.patient_healthcard_version_code, re.patient_phone_number, re.patient_email,
+		re.emr_patient_id, re.emr_referral_doc_id,
+		re.referring_physician_id, re.triage_note, re.urgency, re.status, re.source, re.referral_date, 
+		re.consult_type, re.consult_type_detail,
+		p.id, p.cpso_number, p.first_name, p.last_name, p.emr_physician_id
+	FROM referral_entry re
+	LEFT JOIN physicians p ON re.referring_physician_id = p.id
+	WHERE 1 = 1`
 	var args []any
 
 	if find.ID != nil {
@@ -223,9 +227,16 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		args = append(args, *find.PatientHealthcardNumber+"%")
 	}
 
-	if find.ReferringPhysician != nil && *find.ReferringPhysician != "" {
-		query += " AND referring_physician LIKE ?"
-		args = append(args, "%"+*find.ReferringPhysician+"%")
+	if find.ReferringPhysicianID != nil && *find.ReferringPhysicianID != "" {
+		query += " AND re.referring_physician_id = ?"
+		args = append(args, *find.ReferringPhysicianID)
+	}
+
+	// Fuzzy name matching (Checks across first name, last name, and CPSO number)
+	if find.ReferringPhysicianName != nil && *find.ReferringPhysicianName != "" {
+		term := "%" + *find.ReferringPhysicianName + "%"
+		query += " AND (p.first_name LIKE ? OR p.last_name LIKE ? OR p.cpso_number LIKE ?)"
+		args = append(args, term, term, term)
 	}
 
 	// Phone Number Search (Advanced Filter Component)
@@ -267,15 +278,23 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		var entry store.ReferralEntry
 
 		// 1. Declare targets as 'any' so Go's SQL driver can natively accept both strings and NULLs
-		var patientHealthcardNumberTarget any
-		var patientHealthcardVersionCodeTarget any
-		var patientPhoneNumberTarget any
-		var patientEmailTarget any
-		var emrPatientIDTarget any
-		var emrReferralDocIDTarget any
-		var referringPhysicianTarget any
-		var triageNoteTarget any
-		var consultTypeDetailTarget any
+		var (
+			patientHealthcardNumberTarget      any
+			patientHealthcardVersionCodeTarget any
+			patientPhoneNumberTarget           any
+			patientEmailTarget                 any
+			emrPatientIDTarget                 any
+			emrReferralDocIDTarget             any
+			referringPhysicianIDTarget         any
+			triageNoteTarget                   any
+			consultTypeDetailTarget            any
+
+			physicianIDTarget         any
+			physicianCPSONumberTarget any
+			physicianFirstNameTarget  any
+			physicianLastNameTarget   any
+			physicianEMRIDTarget      any
+		)
 
 		// 2. Scan directly into the memory locations of our open target interfaces
 		err := rows.Scan(
@@ -287,11 +306,17 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 			&patientEmailTarget,
 			&emrPatientIDTarget,
 			&emrReferralDocIDTarget,
-			&referringPhysicianTarget,
+			&referringPhysicianIDTarget,
 			&triageNoteTarget,
 			&entry.Urgency, &entry.Status, &entry.Source, &entry.ReferralDate,
 			&entry.ConsultType,
 			&consultTypeDetailTarget,
+
+			&physicianIDTarget,
+			&physicianCPSONumberTarget,
+			&physicianFirstNameTarget,
+			&physicianLastNameTarget,
+			&physicianEMRIDTarget,
 		)
 		if err != nil {
 			return nil, err
@@ -316,9 +341,22 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		entry.PatientEmail = nullString(getStringValue(patientEmailTarget))
 		entry.EMRPatientID = nullString(getStringValue(emrPatientIDTarget))
 		entry.EMRReferralDocID = nullString(getStringValue(emrReferralDocIDTarget))
-		entry.ReferringPhysician = nullString(getStringValue(referringPhysicianTarget))
+		entry.ReferringPhysicianID = nullString(getStringValue(referringPhysicianIDTarget))
 		entry.ConsultTypeDetail = nullString(getStringValue(consultTypeDetailTarget))
 		entry.TriageNote = getStringValue(triageNoteTarget)
+
+		// 5. Populate structured nested Physician object if a relation ID was matched
+		physicianID := getStringValue(physicianIDTarget)
+		if physicianID != "" {
+			entry.ReferringPhysician = &store.ReferralPhysician{
+				ID:             physicianID,
+				CPSONumber:     nullString(getStringValue(physicianCPSONumberTarget)),
+				FirstName:      getStringValue(physicianFirstNameTarget),
+				LastName:       getStringValue(physicianLastNameTarget),
+				EMRPhysicianID: nullString(getStringValue(physicianEMRIDTarget)),
+			}
+		}
+
 		list = append(list, &entry)
 	}
 
@@ -327,7 +365,10 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 
 func (d *Driver) GetReferralEntriesCount(ctx context.Context, find *store.FindReferralEntry) (int, error) {
 	// 1. Target the base rows using a COUNT query
-	query := `SELECT COUNT(1) FROM referral_entry WHERE 1 = 1`
+	query := `SELECT COUNT(1) 
+	          FROM referral_entry re
+	          LEFT JOIN physicians p ON re.referring_physician_id = p.id 
+	          WHERE 1 = 1`
 	var args []any
 
 	// Exact matches (High performance index hits)
@@ -416,10 +457,18 @@ func (d *Driver) GetReferralEntriesCount(ctx context.Context, find *store.FindRe
 		}
 	}
 
-	if find.ReferringPhysician != nil && *find.ReferringPhysician != "" {
-		query += " AND referring_physician LIKE ?"
-		args = append(args, "%"+*find.ReferringPhysician+"%")
+	if find.ReferringPhysicianID != nil && *find.ReferringPhysicianID != "" {
+		query += " AND re.referring_physician_id = ?"
+		args = append(args, *find.ReferringPhysicianID)
 	}
+
+	// Fuzzy match criteria against relational physician first name, last name, or CPSO
+	if find.ReferringPhysicianName != nil && *find.ReferringPhysicianName != "" {
+		term := "%" + *find.ReferringPhysicianName + "%"
+		query += " AND (p.first_name LIKE ? OR p.last_name LIKE ? OR p.cpso_number LIKE ?)"
+		args = append(args, term, term, term)
+	}
+
 	if find.PatientHealthcardNumber != nil && *find.PatientHealthcardNumber != "" {
 		query += " AND patient_healthcard_number LIKE ?"
 		args = append(args, *find.PatientHealthcardNumber+"%")
@@ -469,10 +518,11 @@ func (d *Driver) UpdateReferralEntry(ctx context.Context, update *store.UpdateRe
 	}
 
 	// --- Clinical Data ---
-	if v := update.ReferringPhysician; v != nil {
-		set = append(set, "referring_physician = ?")
+	if v := update.ReferringPhysicianID; v != nil {
+		set = append(set, "referring_physician_id = ?")
 		args = append(args, *v)
 	}
+
 	if v := update.ConsultType; v != nil {
 		set = append(set, "consult_type = ?")
 		args = append(args, *v)
