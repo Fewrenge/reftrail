@@ -1,4 +1,4 @@
--- 1. User Table (Needed for your Login/Accountability)
+-- 1. User Table
 CREATE TABLE IF NOT EXISTS user (
     username TEXT NOT NULL UNIQUE PRIMARY KEY,
     password_hash TEXT NOT NULL,
@@ -39,6 +39,14 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     FOREIGN KEY (creator_id) REFERENCES user(username) ON UPDATE CASCADE -- ON DELETE SET NULL?
 );
 
+CREATE TABLE IF NOT EXISTS physicians (
+    id TEXT PRIMARY KEY NOT NULL,
+    cpso_number TEXT UNIQUE,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    emr_physician_id TEXT
+);
+
 -- 3. Audit Log (Requirement #9 - Tracking who changed the status)
 CREATE TABLE IF NOT EXISTS referral_log (
     id TEXT PRIMARY KEY,
@@ -56,7 +64,7 @@ CREATE TABLE IF NOT EXISTS referral_log (
 
 CREATE TABLE IF NOT EXISTS referral_appointment (
     id TEXT PRIMARY KEY,
-    referral_id TEXT NOT NULL,
+    referral_id TEXT NOT NULL UNIQUE,
     complaint_target TEXT NOT NULL,
     appt_date_and_time TEXT,
     practitioner TEXT,
@@ -68,7 +76,7 @@ CREATE TABLE IF NOT EXISTS referral_appointment (
 
 -- This table stores the actual body parts for each referral
 CREATE TABLE IF NOT EXISTS referral_complaint (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     referral_id TEXT NOT NULL,
     body_part TEXT NOT NULL CHECK(body_part IN ('SHOULDER', 'KNEE', 'HIP', 'ELBOW', 'WRIST', 'ANKLE', 'FOOT', 'OTHER')),
     side TEXT NOT NULL CHECK(side IN ('LEFT', 'RIGHT', 'BILATERAL', 'OTHER')), -- OTHER is for cases where side is not applicable (e.g., "LOW BACK")

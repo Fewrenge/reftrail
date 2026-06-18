@@ -20,8 +20,13 @@ func nullString(s string) *string {
 }
 
 func (d *Driver) CreateReferralComplaint(ctx context.Context, referralID domain.ReferralID, complaint *store.ReferralComplaint) error {
-	query := `INSERT INTO referral_complaint (referral_id, body_part, side, details) VALUES (?, ?, ?, ?)`
-	_, err := d.conn(ctx).ExecContext(ctx, query, referralID, complaint.BodyPart, complaint.Side, complaint.Details)
+	newID, err := uuid.NewV7()
+	if err != nil {
+		return err
+	}
+	idStr := newID.String()
+	query := `INSERT INTO referral_complaint (id, referral_id, body_part, side, details) VALUES (?, ?, ?, ?, ?)`
+	_, err = d.conn(ctx).ExecContext(ctx, query, idStr, referralID, complaint.BodyPart, complaint.Side, complaint.Details)
 	return err
 }
 
