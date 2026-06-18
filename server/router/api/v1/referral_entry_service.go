@@ -350,6 +350,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			slog.Warn("Skipping batch tokenization phase: Column lookup key 'tags' missing from spreadsheet template structure")
 		}
 
+		// TODO: parse the physician name with comma
 		var finalizedPhysicianID *string = nil
 		rawPhysicianText := strings.TrimSpace(row[headerMap["referring physician"]])
 

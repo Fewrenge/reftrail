@@ -34,6 +34,14 @@ export interface Complaint {
   details: string;
 }
 
+export interface ReferringPhysician {
+  id: string;
+  cpsoNumber: string | null;
+  firstName: string;
+  lastName: string;
+  emrPhysicianId: string | null;
+}
+
 // This is the "Blueprint" for what data one entry needs
 export interface ReferralEntry {
   id: string; // UUID
@@ -46,7 +54,8 @@ export interface ReferralEntry {
   patientEmail: string;  // Added
   urgency: 'ASAP' | 'Urgent' | 'Elective';
   status: string;
-  referringPhysician: string;
+  referringPhysicianId: string;
+  referringPhysician: ReferringPhysician;
   referralDate: string;
   source: string;
   complaints: Complaint[];
@@ -372,7 +381,11 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
           {/* Referring Physician */}
           <div>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-2">Referring Physician</p>
-            <p className="text-sm font-medium text-slate-700">{entry.referringPhysician || 'Unassigned'}</p>
+            <p className="text-sm font-medium text-slate-700">
+    {entry.referringPhysician?.firstName 
+      ? `${entry.referringPhysician.firstName} ${entry.referringPhysician.lastName}` 
+      : 'Unassigned'}
+  </p>
           </div>
 
           {/* Complaints */}
@@ -588,7 +601,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             consultType: entry.consultType as ReferralConsultType,
 
             triageNote: entry.triageNote || "",
-            referringPhysician: entry.referringPhysician || "",
+            referringPhysicianID: entry.referringPhysician?.id || "",
             referralDate: entry.referralDate || "",
             emrPatientId: entry.emrPatientId || "",
             emrReferralDocID: entry.emrReferralDocId || "",
