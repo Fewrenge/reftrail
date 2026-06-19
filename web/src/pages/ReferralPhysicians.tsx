@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { ReferralPhysicianCard } from '@/components/ReferralPhysician/ReferralPhysicianCard';
 import type { ReferralPhysician } from '@/components/ReferralPhysician/ReferralPhysicianCard';
-import { SearchIcon } from 'lucide-react'
-// import { useAuth } from '../contexts/AuthContext'; 
+
+import AddReferralPhysicianDialog from '@/components/Dialog/AddReferralPhysicianDialog';
+import { SearchIcon, PlusIcon } from 'lucide-react'
+import { Button } from "@/components/ui";
+import { useAuth } from '../contexts/AuthContext';
 
 export const ReferralPhysicians: React.FC = () => {
-  // const { user: authUser } = useAuth();
-  // const isAdmin = authUser?.role === "REFTRAIL_ADMIN";
+  const { user: authUser } = useAuth();
+  const isAdmin = authUser?.role === "REFTRAIL_ADMIN";
 
   const [physiciansList, setPhysiciansList] = useState<ReferralPhysician[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10; // Aligned with Go backend defaults
+  const pageSize = 10;
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,6 +83,7 @@ export const ReferralPhysicians: React.FC = () => {
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
 
   return (
+
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
 
@@ -89,7 +95,19 @@ export const ReferralPhysicians: React.FC = () => {
               Showing {physiciansList.length} of {totalCount} total physicians
             </p>
           </div>
+
+          {/* ADMIN ACTION BUTTON */}
+          {isAdmin && (
+            <div className="shrink-0">
+              <Button variant="outline" onClick={() => setIsModalOpen(true)}>
+                <PlusIcon size={18} className="mr-2" />
+                Add Physician
+              </Button>
+            </div>
+          )}
+
         </div>
+
 
         {/* SEARCH BAR CONTAINER */}
         <div className="flex gap-4 mb-6">
@@ -140,17 +158,26 @@ export const ReferralPhysicians: React.FC = () => {
             <span className="text-sm font-medium text-slate-600">
               Page {currentPage} of {totalPages}
             </span>
+            {/*TODO: fix the pagination bug*/}
             <button
               disabled={currentPage === totalPages || loading}
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none transition-colors"
             >
-              Next
+              Next 
             </button>
           </div>
         )}
 
+        <AddReferralPhysicianDialog
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSuccess={refreshData} // Automatically re-polls your Go backend listing on success!
+        />
+
       </div>
     </div>
+
+
   );
 };

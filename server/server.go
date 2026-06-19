@@ -137,7 +137,7 @@ func (s *Server) registerReferralRoutes() {
 	admin.GET("/analytics/direct-booking-waiting-time", v1Service.GetDirectBookingWaitingTimeAnalyticsHandler)
 
 	// ------ PHYSICIANS -------
-	admin.POST("/physicians", v1Service.CreateReferralPhysicianHandler)
-	admin.PATCH("/physicians/:id", v1Service.UpdateReferralPhysicianHandler)
-	admin.DELETE("/physicians/:id", v1Service.DeleteReferralPhysicianHandler)
+	admin.POST("/physicians", v1Service.CreateReferralPhysicianHandler)       // Add a physician
+	admin.PATCH("/physicians/:id", v1Service.UpdateReferralPhysicianHandler)  // Update a physician
+	admin.DELETE("/physicians/:id", v1Service.DeleteReferralPhysicianHandler) // Delete a physician
 }
