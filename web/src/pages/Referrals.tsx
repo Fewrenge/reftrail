@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { SearchIcon, PlusIcon, UploadIcon, ChevronLeftIcon, ChevronRightIcon, FilterIcon } from "lucide-react";
-import ReferralEntryCard from '../components/ReferralEntry/ReferralEntryCard';
+import ReferralEntryCard from '@/components/ReferralEntry/ReferralEntryCard';
 import AddReferralEntryDialog from '@/components/Dialog/AddReferralEntryDialog';
 import type { ReferralEntry } from '@/components/ReferralEntry/ReferralEntryCard';
 import { Button } from "@/components/ui";

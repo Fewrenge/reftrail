@@ -3,6 +3,7 @@ import {
   HospitalIcon,
   ScrollTextIcon,
   ChartNoAxesCombinedIcon,
+  StethoscopeIcon,
   SettingsIcon,
   LogOutIcon
 } from "lucide-react";
@@ -54,8 +55,18 @@ export default function Sidebar() {
             <ChartNoAxesCombinedIcon size={20} strokeWidth={2.5} />
             <span>Analytics</span>
           </NavLink>
-
         }
+
+        <NavLink
+        to="/physicians"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
+              }`
+            }
+        >
+          <StethoscopeIcon size={20} strokeWidth={2.5} />
+            <span>Physicians</span>
+        </NavLink>
       </nav>
 
       {/* USER MENU SECTION */}
