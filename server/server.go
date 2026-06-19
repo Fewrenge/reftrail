@@ -70,6 +70,9 @@ func (s *Server) registerReferralRoutes() {
 	// List tags
 	protected.GET("/tags", v1Service.ListReferralTagsHandler)
 
+	protected.GET("/physicians", v1Service.FindReferralPhysiciansHandler)
+	protected.GET("/physicians/:id", v1Service.GetReferralPhysicianByIDHandler)
+
 	admin := protected.Group("")
 
 	admin.Use(auth.AdminOnlyMiddleware) // Add the extra gatekeeper
@@ -109,15 +112,32 @@ func (s *Server) registerReferralRoutes() {
 	// Delete a referral entry
 	admin.DELETE("/referrals/:id", v1Service.DeleteReferralEntryHandler)
 
-	// admin.PATCH("/referrals/:id/status", v1Service.UpdateReferralEntryHandler) // Gotta change the URL?
+	// Update a referral entry (admin use only, for miscellaneous updates like correcting a typo, changing urgency, etc.)
+	admin.PATCH("/referrals/:id", v1Service.UpdateReferralEntryHandler)
 
 	// ------ TAG MANAGEMENT ------
 
 	admin.POST("/tags", v1Service.CreateReferralTagHandler) // Add a tag to the database
+
+	admin.PATCH("/tags/:id", v1Service.UpdateReferralTagDefinitionHandler)
 
 	admin.DELETE("/tags/:id", v1Service.DeleteReferralTagHandler) // Delete a tag from the database
 
 	admin.POST("/referrals/:id/tags/:tagName", v1Service.AssignTagHandler) // Assign a tag to a referral
 
 	admin.DELETE("/referrals/:id/tags/:tagName", v1Service.RemoveTagHandler) // Remove a tag from a referral
+
+	// ------ ANALYTICS ------
+
+	// Get urgency distribution for pie chart
+	admin.GET("/analytics/urgency-distribution", v1Service.GetUrgencyDistributionAnalyticsHandler)
+
+	admin.GET("/analytics/referral-trend", v1Service.GetReferralVolumeAnalyticsHandler)
+
+	admin.GET("/analytics/direct-booking-waiting-time", v1Service.GetDirectBookingWaitingTimeAnalyticsHandler)
+
+	// ------ PHYSICIANS -------
+	admin.POST("/physicians", v1Service.CreateReferralPhysicianHandler)
+	admin.PATCH("/physicians/:id", v1Service.UpdateReferralPhysicianHandler)
+	admin.DELETE("/physicians/:id", v1Service.DeleteReferralPhysicianHandler)
 }

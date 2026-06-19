@@ -18,7 +18,8 @@ func TestReferralTag_Integration(t *testing.T) {
 	ref, err := s.CreateReferralEntry(ctx, &store.CreateReferralEntry{
 		PatientLastName:  "Tag Testing",
 		PatientFirstName: "Patient",
-		Urgency:          "Elective",
+		Urgency:          "ELECTIVE",
+		ConsultType:      "APP+LE",
 		Status:           "READY_TO_BOOK",
 		Source:           "REGULAR",
 		Complaints: []store.ReferralComplaint{
@@ -64,8 +65,5 @@ func TestReferralTag_Integration(t *testing.T) {
 			t.Errorf("Failed to delete tag definition: %v", err)
 		}
 
-		// NOTE: If you cannot access s.Driver, you should verify via
-		// a public method like s.GetTagsForReferral(ref.ID).
-		// If you MUST use SQL in the test, ensure store.Store has "Driver" capitalized.
 	})
 }

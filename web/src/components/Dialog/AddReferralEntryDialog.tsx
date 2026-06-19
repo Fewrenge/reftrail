@@ -1,4 +1,4 @@
-// TODO: move to Dialog folder?
+// TODO: add more fields
 
 import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
   const [firstName, setFirstName] = useState('');
   const [source, setSource] = useState('REGULAR');
   const [urgency, setUrgency] = useState('ELECTIVE');
+  const [consultType, setConsultType] = useState('');
   const [complaints, setComplaints] = useState<Complaint[]>([
     //{ bodyPart: 'KNEE', side: 'LEFT', details: '' }
   ]);
@@ -71,7 +72,8 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
           source: source,
           urgency: urgency,
           status: "READY_TO_BOOK",
-          complaints: complaints
+          complaints: complaints,
+          consultTYpe: "APP+SX",
         }),
       });
 

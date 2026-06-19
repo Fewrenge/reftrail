@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"reftrail/internal/domain"
@@ -22,6 +23,38 @@ func (s *APIV1Service) CreateReferralTagHandler(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, tag)
+}
+
+// UpdateReferralTagDefinitionHandler handles the tag configuration update request
+// PATCH /api/v1/tags/:id
+func (s *APIV1Service) UpdateReferralTagDefinitionHandler(c *echo.Context) error {
+	ctx := c.Request().Context()
+	var update store.UpdateReferralTagDefinition
+
+	if err := c.Bind(&update); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body format"})
+	}
+
+	// Capture the current name from path parameter
+	update.OldName = c.Param("id")
+	if update.OldName == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing identifier parameter"})
+	}
+
+	// Fallback mechanism: If newName wasn't changed/sent in JSON, protect the current value
+	if update.NewName == "" {
+		update.NewName = update.OldName
+	}
+
+	updatedTag, err := s.Store.UpdateReferralTagDefinition(ctx, &update)
+	if err != nil {
+		if errors.Is(err, domain.ErrForbidden) {
+			return c.JSON(http.StatusForbidden, map[string]string{"error": "Admin access denied"})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, updatedTag)
 }
 
 func (s *APIV1Service) ListReferralTagsHandler(c *echo.Context) error {

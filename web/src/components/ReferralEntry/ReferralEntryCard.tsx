@@ -1,8 +1,14 @@
 import { useState, useMemo } from 'react';
 import { UserRole } from "@/types/users";
-import { ALL_STATUSES, STATUS_RULES } from "@/helpers/constants";
+import {
+  ALL_STATUSES, STATUS_RULES,
+  type ReferralStatus,
+  type ReferralUrgency,
+  type ReferralSource,
+  type ReferralConsultType
+} from "@/types/referrals";
 import { useAuth } from "@/contexts/AuthContext";
-import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, ExternalLinkIcon } from "lucide-react";
+import { Trash2Icon, MessageSquareIcon, XIcon, LogsIcon, PlusIcon, WrenchIcon, FileUserIcon, FileTextIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,6 +19,7 @@ import {
   DropdownMenuLabel
 } from "@/components/ui/dropdown";
 import { useNavigate } from 'react-router-dom';
+import { UpdateReferralEntryDialog } from '../Dialog/UpdateReferralEntryDialog';
 
 interface Props {
   entry: ReferralEntry;
@@ -27,6 +34,14 @@ export interface Complaint {
   details: string;
 }
 
+export interface ReferringPhysician {
+  id: string;
+  cpsoNumber: string | null;
+  firstName: string;
+  lastName: string;
+  emrPhysicianId: string | null;
+}
+
 // This is the "Blueprint" for what data one entry needs
 export interface ReferralEntry {
   id: string; // UUID
@@ -35,18 +50,22 @@ export interface ReferralEntry {
   patientDob: string;
   patientHealthcardNumber: string;
   patientHealthcardVersionCode: string;
-  patientCell: string;   // Added
+  patientPhoneNumber: string;   // Added
   patientEmail: string;  // Added
   urgency: 'ASAP' | 'Urgent' | 'Elective';
   status: string;
-  referringPhysician: string;
+  referringPhysicianId: string;
+  referringPhysician: ReferringPhysician;
   referralDate: string;
   source: string;
   complaints: Complaint[];
   triageNote: string;
   tags: string[];
+  consultType: string;
+  consultTypeDetail?: string;
   emrPatientId?: string;
   emrReferralDocId?: string;
+  emrApptId?: string;
 }
 
 export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Props) {
@@ -59,16 +78,22 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
   const [allGlobalTags, setAllGlobalTags] = useState<any[]>([]);
   const { user } = useAuth();
   const isAdmin = user?.role === UserRole.REFTRAIL_ADMIN;
+  const [isUpdateReferralDialogOpen, setIsUpdateReferralDialogOpen] = useState(false);
+
 
   const navigate = useNavigate();
 
   const allowedStatuses = useMemo(() => {
     if (isAdmin) {
       // Admins can move to any status except the one they are currently in
-      return ALL_STATUSES.filter(s => s !== entry.status);
+      return ALL_STATUSES.filter(s => s.id !== entry.status);
     }
     // Booking team follows the matrix
-    return STATUS_RULES[entry.status] || [];
+
+    
+    const allowedStatusesForBookingTeam = STATUS_RULES[entry.status] || [];
+    return ALL_STATUSES.filter(s => allowedStatusesForBookingTeam.includes(s.id));
+    
   }, [isAdmin, entry.status]);
 
   const urgencyStyles = {
@@ -207,7 +232,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                 </h3>
               )}
 
-              {/* External Link */}
+              {/* Patient External Link */}
               <a
                 href={
                   `${import.meta.env?.VITE_EXTERNAL_PATIENT_URL}${entry.emrPatientId || ''}`
@@ -217,15 +242,24 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                 className="text-slate-400 hover:text-blue-600 transition-colors focus:outline-none p-1 rounded-md hover:bg-slate-100 shrink-0 self-center"
                 aria-label="Open external link"
               >
-                <ExternalLinkIcon size={20} />
+                <FileUserIcon size={20} />
               </a>
+
+              {/* Document External Link */}
+              <a
+                href={
+                  `${import.meta.env?.VITE_EXTERNAL_REFERRAL_DOC_URL}${entry.emrReferralDocId || ''}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-400 hover:text-blue-600 transition-colors focus:outline-none p-1 rounded-md hover:bg-slate-100 shrink-0 self-center"
+                aria-label="Open external link"
+              >
+                <FileTextIcon size={20} />
+              </a>
+
             </div>
 
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                DOB: {entry.patientDob || 'N/A'}
-              </p>
-            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -243,7 +277,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                     size="sm"
                     // Disable the button if the user has no allowed transitions
                     disabled={allowedStatuses.length === 0}
-                    className="h-6 px-2 text-[10px] font-black uppercase bg-blue-50 text-blue-700 border-blue-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-6 px-2 text-[10px] font-black uppercase bg-blue-50 text-blue-700 border-blue-100 rounded-md disabled:opacity-50
+                    disabled:cursor-not-allowed"
                   >
                     {entry.status.replace(/_/g, ' ')}
                   </Button>
@@ -256,11 +291,11 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                   <DropdownMenuSeparator />
                   {allowedStatuses.map((s) => (
                     <DropdownMenuItem
-                      key={s}
-                      onSelect={() => setSelectedStatus(s)}
+                      key={s.id}
+                      onSelect={() => setSelectedStatus(s.id)}
                       className="text-[11px] font-medium"
                     >
-                      {s.replace(/_/g, ' ')}
+                      {s.label}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -290,6 +325,18 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
                 {isAdmin && (
                   <DropdownMenuItem
+                    onSelect={() => {
+                      setIsUpdateReferralDialogOpen(true);
+                    }}
+                    className="text-yellow-500 hover:bg-amber-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
+                  >
+                    <WrenchIcon size={16} strokeWidth={2.5} />
+                    <span>Admin Update</span>
+                  </DropdownMenuItem>
+                )}
+
+                {isAdmin && (
+                  <DropdownMenuItem
                     onSelect={() => { handleDelete(); }}
                     className="text-red-600 hover:bg-red-50 font-bold flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-colors"
                   >
@@ -308,14 +355,42 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
 
         </div>
 
-        {/* 2. MIDDLE SECTION: Details Grid */}
-        <div className="grid grid-cols-2 gap-8 mb-4">
+        {/* 2. MIDDLE SECTION: Patient Info & Contact Details */}
+        <div className="grid grid-cols-3 gap-4 mb-5 pb-4 border-b border-slate-100">
+          {/* Patient DOB */}
           <div>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Referring Physician</p>
-            <p className="text-sm font-medium text-slate-700">{entry.referringPhysician || 'Unassigned'}</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">DOB</p>
+            <p className="text-sm font-medium text-slate-700">{entry.patientDob || 'N/A'}</p>
           </div>
+
+          {/* Health Card Number */}
           <div>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Complaints</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">HCN</p>
+            <p className="text-sm font-medium text-slate-700">{entry.patientHealthcardNumber || 'N/A'}{entry.patientHealthcardVersionCode}</p>
+          </div>
+
+          {/* Phone */}
+          <div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Phone</p>
+            <p className="text-sm font-medium text-slate-700">{entry.patientPhoneNumber || 'N/A'}</p>
+          </div>
+        </div>
+
+        {/* 3. REFERRING PHYSICIAN & COMPLAINTS */}
+        <div className="grid grid-cols-2 gap-6 mb-4">
+          {/* Referring Physician */}
+          <div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-2">Referring Physician</p>
+            <p className="text-sm font-medium text-slate-700">
+    {entry.referringPhysician?.firstName 
+      ? `${entry.referringPhysician.firstName} ${entry.referringPhysician.lastName}` 
+      : 'Unassigned'}
+  </p>
+          </div>
+
+          {/* Complaints */}
+          <div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-2">Complaints</p>
             <div className="space-y-1">
               {entry.complaints && entry.complaints.length > 0 ? (
                 entry.complaints.map((c, index) => {
@@ -334,8 +409,6 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               )}
             </div>
           </div>
-
-
         </div>
 
 
@@ -438,6 +511,14 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
           </div>
 
           <div>
+            <span>Consult Type: </span>
+            <span className="font-bold text-slate-600">
+              {entry.consultTypeDetail ? `${entry.consultType} - ${entry.consultTypeDetail}` : entry.consultType}
+            </span>
+          </div>
+
+
+          <div>
             <span>Referral Received: </span>
             <span className="font-bold text-slate-600">{entry.referralDate}</span>
           </div>
@@ -493,8 +574,6 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
                 }}
               />
 
-              {/* TODO: Quick note function */}
-
               <div className="flex gap-2">
                 <Button
                   variant="primary"
@@ -509,6 +588,53 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
           </>
         )}
 
+
+        <UpdateReferralEntryDialog
+          isOpen={isUpdateReferralDialogOpen}
+          onClose={() => setIsUpdateReferralDialogOpen(false)}
+          referralId={entry.id}
+          initialData={{
+            // --- FIXED: Explicitly cast fields to match union type expectations ---
+            status: entry.status as ReferralStatus,
+            urgency: entry.urgency as ReferralUrgency,
+            source: entry.source as ReferralSource,
+            consultType: entry.consultType as ReferralConsultType,
+
+            triageNote: entry.triageNote || "",
+            referringPhysicianID: entry.referringPhysician?.id || "",
+            referralDate: entry.referralDate || "",
+            emrPatientId: entry.emrPatientId || "",
+            emrReferralDocID: entry.emrReferralDocId || "",
+            emrApptId: entry.emrApptId || "",
+            complaints: entry.complaints ? entry.complaints.map((c: any) => ({
+              bodyPart: c.bodyPart,
+              side: c.side,
+              details: c.details || ""
+            })) : []
+          }}
+          onSave={async (formData) => {
+            try {
+              const response = await fetch(`/api/v1/referrals/${entry.id}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+              });
+
+              if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to apply updates');
+              }
+
+              console.log("Transaction committed successfully.");
+            } catch (err) {
+              console.error("API error during administrative override:", err);
+              alert(err instanceof Error ? err.message : "Internal system mutation error occurred");
+              throw err;
+            }
+          }}
+        />
 
 
       </div>

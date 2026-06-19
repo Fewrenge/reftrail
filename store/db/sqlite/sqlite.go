@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -73,13 +75,20 @@ type Driver struct {
 }
 
 func (d *Driver) Migrate(ctx context.Context) error {
-	// 1. Read your SQL file (Make sure the path is correct!)
-	script, err := os.ReadFile("store/migration/sqlite/00__init.sql")
+	// 1. Get the absolute path of this source code file
+	_, filename, _, _ := runtime.Caller(0)
+	baseDir := filepath.Dir(filename)
+
+	// 2. Build the absolute path to the SQL init script
+	scriptPath := filepath.Join(baseDir, "..", "..", "migration", "sqlite", "00__init.sql")
+
+	// 3. Read the SQL file using the absolute safe path
+	script, err := os.ReadFile(scriptPath)
 	if err != nil {
 		return err
 	}
 
-	// 2. Execute the SQL commands
+	// 4. Execute the SQL commands
 	_, err = d.db.ExecContext(ctx, string(script))
 	return err
 }
@@ -87,7 +96,7 @@ func (d *Driver) Migrate(ctx context.Context) error {
 // New opens the connection to the .db file
 func New(dbPath string) (*Driver, error) {
 	// 1. Tell Go to open (or create) the file
-	dsn := dbPath + "?_foreign_keys=on"
+	dsn := dbPath + "?_foreign_keys=on&_journal_mode=WAL&busy_timeout=5000"
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, err
@@ -97,7 +106,8 @@ func New(dbPath string) (*Driver, error) {
 }
 
 func NewWithDB(db *sql.DB) *Driver {
-	db.SetMaxOpenConns(1)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(2)
 	return &Driver{
 		db: db,
 	}

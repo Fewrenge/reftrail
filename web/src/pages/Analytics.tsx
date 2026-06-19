@@ -1,6 +1,38 @@
-import { ChartNoAxesCombinedIcon, } from 'lucide-react';
+import { ChartNoAxesCombinedIcon, TrendingUpIcon, ClockIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+// TODO: prettify this page, add source constraint
 
 export default function AnalyticsPage() {
+    const navigate = useNavigate();
+
+  // Unified configuration matrix for your dashboard collections
+  const reportCards = [
+      {
+      id: 'urgency-distribution',
+      title: 'Urgency Distribution',
+      description: 'Breakdown percentages of Elective, Urgent, and ASAP referral entries.',
+      path: '/analytics/urgency-distribution',
+    },
+     {
+      id: 'volume-over-time',
+      title: 'Referral Volume Trends',
+      description: 'Track incoming referral velocity trajectories over monthly timelines using chronological line charts.',
+      path: '/analytics/referral-trend',
+      icon: <TrendingUpIcon size={20} className="text-indigo-600" />,
+      badge: "Line Chart"
+    },
+    {
+    id: 'average-waiting-times',
+    title: 'Direct Processing Velocity',
+    description: 'Measure the clean baseline speed (in days) for referrals that pass directly from creation to booked without call obstacles.',
+    path: '/analytics/direct-booking-waiting-time',
+    icon: <ClockIcon size={20} className="text-emerald-600" />,
+    badge: "Line Chart"
+  },
+  ];
+
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
       {/* HEADER SECTION */}
@@ -14,10 +46,49 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* ALBUM VIEW GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {reportCards.map((card) => {
 
+          return (
+            <div
+              key={card.id}
+              onClick={() => ! navigate(card.path)}
+              className={`group border bg-white rounded-2xl p-5 flex flex-col justify-between h-56 transition-all duration-200 ${
+                  'border-slate-200 hover:border-blue-500 hover:shadow-md cursor-pointer'
+              }`}
+            >
+              <div className="flex items-start gap-4">
 
-      
-     
+                {/* Text Context */}
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors truncate">
+                      {card.title}
+                    </h3>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                       'bg-green-50 text-green-600'
+                    }`}>
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-normal line-clamp-3">
+                    {card.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Card Footer Action Label */}
+              <div className="flex items-center justify-between border-t border-slate-50 pt-3">
+                {
+                  <div className="flex items-center text-xs font-bold text-blue-600 gap-1 opacity-80 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-1 transition-all">
+                    Open Report
+                  </div>
+                }
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

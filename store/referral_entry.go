@@ -15,25 +15,28 @@ type ReferralEntry struct {
 	UpdatedTs       string            `json:"updatedTs"`
 
 	// 2. Patient Info
-	PatientLastName              string `json:"patientLastName"`
-	PatientFirstName             string `json:"patientFirstName"`
-	PatientDOB                   string `json:"patientDob"`
-	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
-	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
-	PatientPhoneNumber           string `json:"patientPhoneNumber"`
-	PatientEmail                 string `json:"patientEmail"`
+	PatientLastName              string  `json:"patientLastName"`
+	PatientFirstName             string  `json:"patientFirstName"`
+	PatientDOB                   string  `json:"patientDob"`
+	PatientHealthcardNumber      *string `json:"patientHealthcardNumber"`
+	PatientHealthcardVersionCode *string `json:"patientHealthcardVersionCode"`
+	PatientPhoneNumber           *string `json:"patientPhoneNumber"`
+	PatientEmail                 *string `json:"patientEmail"`
 
 	Complaints []*ReferralComplaint `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
 	Tags       []string             `json:"tags"`
 
 	// 3. EMR Integration
 	// Use string in case EMR updates their ID format in the future
-	EMRPatientID     string `json:"emrPatientId"`
-	EMRReferralDocID string `json:"emrReferralDocId"`
+	EMRPatientID     *string `json:"emrPatientId"`
+	EMRReferralDocID *string `json:"emrReferralDocId"`
 
 	// 4. Clinical Details
-	ReferringPhysician string `json:"referringPhysician"`
-	TriageNote         string `json:"triageNote"`
+	ReferringPhysicianID *string                    `json:"referringPhysicianId"`
+	ReferringPhysician   *ReferralPhysician         `json:"referringPhysician,omitempty"`
+	TriageNote           string                     `json:"triageNote"`
+	ConsultType          domain.ReferralConsultType `json:"consultType"`
+	ConsultTypeDetail    *string                    `json:"consultTypeDetail"`
 
 	// 5. Workflow & Urgency
 	Urgency      domain.ReferralUrgency `json:"urgency"` // Elective, Urgent, ASAP
@@ -42,43 +45,46 @@ type ReferralEntry struct {
 	ReferralDate string                 `json:"referralDate"`
 
 	// Appointment Info (If status is "Booked")
-	ApptDateAndTime string `json:"apptDateAndTime"`
-	Practitioner    string `json:"practitioner"`
-	EMRApptID       string `json:"emrApptId"` // e.g., #18752
+	ApptDateAndTime *string `json:"apptDateAndTime,omitempty"`
+	Practitioner    *string `json:"practitioner,omitempty"`
+	EMRApptID       *string `json:"emrApptId,omitempty"` // e.g., #18752
 }
 
 type ReferralComplaint struct {
-	ID         int64             `json:"-"`
+	ID         string            `json:"-"`
 	ReferralID domain.ReferralID `json:"-"`
 	BodyPart   string            `json:"bodyPart" validate:"required,oneof=SHOULDER KNEE HIP ELBOW WRIST ANKLE FOOT OTHER"`
 	Side       string            `json:"side"     validate:"required,oneof=LEFT RIGHT BILATERAL OTHER"`
-	Details    string            `json:"details"`
+	Details    *string           `json:"details"`
 }
 
 // Creation payload
 type CreateReferralEntry struct {
 	// Patient Info
-	PatientLastName              string `json:"patientLastName" validate:"required"`
-	PatientFirstName             string `json:"patientFirstName" validate:"required"`
-	PatientDOB                   string `json:"patientDob"`
-	PatientHealthcardNumber      string `json:"patientHealthcardNumber"`
-	PatientHealthcardVersionCode string `json:"patientHealthcardVersionCode"`
-	PatientPhoneNumber           string `json:"patientPhoneNumber"`
-	PatientEmail                 string `json:"patientEmail"`
-	EMRPatientID                 string `json:"emrPatientId"`
-	EMRReferralDocID             string `json:"emrReferralDocId"`
+	PatientLastName              string  `json:"patientLastName" validate:"required"`
+	PatientFirstName             string  `json:"patientFirstName" validate:"required"`
+	PatientDOB                   string  `json:"patientDob"`
+	PatientHealthcardNumber      *string `json:"patientHealthcardNumber"`
+	PatientHealthcardVersionCode *string `json:"patientHealthcardVersionCode"`
+	PatientPhoneNumber           *string `json:"patientPhoneNumber"`
+	PatientEmail                 *string `json:"patientEmail"`
+	EMRPatientID                 *string `json:"emrPatientId"`
+	EMRReferralDocID             *string `json:"emrReferralDocId"`
 
 	// Clinical Info
-	ReferringPhysician string              `json:"referringPhysician"`
-	Complaints         []ReferralComplaint `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
-	Tags               []string            `json:"tags"` // Optional free-form tags that will be validated against the database on the store level
-	TriageNote         string              `json:"triageNote"`
+	ReferringPhysicianID *string                    `json:"referringPhysicianId"`
+	Complaints           []ReferralComplaint        `json:"complaints" validate:"required,min=1,unique_complaints,dive"`
+	Tags                 []string                   `json:"tags"` // Optional free-form tags that will be validated against the database on the store level
+	TriageNote           string                     `json:"triageNote"`
+	ConsultType          domain.ReferralConsultType `json:"consultType"`
+	ConsultTypeDetail    *string                    `json:"consultTypeDetail"`
 
 	// Status
 	Urgency      domain.ReferralUrgency `json:"urgency"`
 	Status       domain.ReferralStatus  `json:"status"` // Usually defaults to "READY_TO_BOOK"
 	Source       domain.ReferralSource  `json:"source"`
 	ReferralDate string                 `json:"referralDate"`
+
 	// Accountability
 	CreatorUsername domain.Username `json:"creatorUsername"`
 }
@@ -94,24 +100,27 @@ type FindReferralEntry struct {
 	CreatorUsername *domain.Username   `json:"creatorUsername"`
 
 	// 2. Clinical Filters (Requirement #8 & #9)
-	// We use pointers (*) so we can tell the difference between
-	// "Filter by this" and "Don't filter at all" (nil).
-	Urgencies    []domain.ReferralUrgency `json:"urgencies" query:"urgencies"`
-	Statuses     []domain.ReferralStatus  `json:"statuses" query:"statuses"`
-	Sources      []domain.ReferralSource  `json:"sources" query:"sources"`
-	BodyParts    []string                 `json:"bodyParts" query:"bodyParts"`
-	ConsultTypes []string                 `json:"consultTypes" query:"consultTypes"`
-	TagNames     []string                 `json:"tagNames" query:"tagNames"`
+	// We use pointers (*) so we can tell the difference between "Filter by this" and "Don't filter at all" (nil).
+	Urgencies    []domain.ReferralUrgency     `json:"urgencies" query:"urgencies"`
+	Statuses     []domain.ReferralStatus      `json:"statuses" query:"statuses"`
+	Sources      []domain.ReferralSource      `json:"sources" query:"sources"`
+	BodyParts    []string                     `json:"bodyParts" query:"bodyParts"`
+	ConsultTypes []domain.ReferralConsultType `json:"consultTypes" query:"consultTypes"`
+	TagNames     []string                     `json:"tagNames" query:"tagNames"`
 
 	ReferralDateFrom *string `json:"referralDateFrom" query:"referralDateFrom"`
 	ReferralDateTo   *string `json:"referralDateTo" query:"referralDateTo"`
 
 	// 3. Search Filters (For Fuzzy Physician matching)
-	PatientLastName         *string `json:"patientLastName"`
-	PatientFirstName        *string `json:"patientFirstName"`
-	PatientDOB              *string `json:"patientDob"`
-	ReferringPhysician      *string `json:"referringPhysician"`
-	PatientHealthcardNumber *string `json:"patientHealthcardNumber"`
+	GeneralTerm      *string `json:"generalTerm" query:"generalTerm"`
+	PatientLastName  *string `json:"patientLastName" query:"patientLastName"`
+	PatientFirstName *string `json:"patientFirstName" query:"patientFirstName"`
+	PatientDOB       *string `json:"patientDob" query:"patientDob"`
+
+	ReferringPhysicianID    *string `json:"referringPhysicianId" query:"referringPhysicianId"`
+	ReferringPhysicianName  *string `json:"referringPhysicianName" query:"referringPhysicianName"`
+	PatientHealthcardNumber *string `json:"patientHealthcardNumber" query:"patientHealthcardNumber"`
+	PatientPhoneNumber      *string `json:"patientPhoneNumber" query:"patientPhoneNumber"`
 
 	// 4. Pagination (For when your list gets huge)
 	Limit  *int `json:"limit"`
@@ -123,20 +132,33 @@ type PaginatedReferralEntries struct {
 	TotalCount      int              `json:"totalCount"`
 }
 
-// Admin use only, for arbiturary updates (e.g., correcting a typo, changing urgency, etc.)
-// TODO: Determine what can be updated
+// Admin use only, for arbitrary updates (e.g., correcting a typo, overriding workflow rules, sync corrections)
 type UpdateReferralEntry struct {
-	ID domain.ReferralID `json:"id"`
+	ID domain.ReferralID `json:"id" validate:"required"`
 
-	// Fields that change during the workflow
+	// --- 1. Workflow & Core Triage ---
 	Status     *domain.ReferralStatus  `json:"status"`
-	TriageNote *string                 `json:"triageNote"`
 	Urgency    *domain.ReferralUrgency `json:"urgency"`
+	Source     *domain.ReferralSource  `json:"source"`
+	TriageNote *string                 `json:"triageNote"`
 
-	Note *string `json:"note"`
+	// --- 2. Clinical Data ---
+	ReferringPhysicianID *string                     `json:"referringPhysicianID"`
+	ConsultType          *domain.ReferralConsultType `json:"consultType"`
+	ReferralDate         *string                     `json:"referralDate"`
 
-	// Force flag
-	Force bool `json:"force"`
+	// --- 3. EMR Integration Links ---
+	EMRPatientID     *string `json:"emrPatientId"`
+	EMRReferralDocID *string `json:"emrReferralDocId"`
+	//EMRApptID        *string `json:"emrApptId"`
+
+	// --- 4. Deep Structs (Add, Modify, Delete arrays) ---
+	// If these fields are present in the payload, they replace the existing list entirely.
+	// If they are nil, the existing database complaints and tags are left untouched.
+	Complaints *[]*ReferralComplaint `json:"complaints" validate:"omitempty,min=1,unique_complaints,dive"`
+
+	// --- 5. Force Overrides ---
+	// Force bool `json:"force"` // Bypasses standard business logic validations if true
 }
 
 type UpdateReferralEntryStatus struct {
@@ -145,13 +167,14 @@ type UpdateReferralEntryStatus struct {
 	Note      string                `json:"note"`
 }
 
+/*
 // Only records initial appointment, not for rescheduling (which is the EMR's job)
 type UpdateReferralEntryAppointment struct {
 	// Appt details (Requirement #11)
 	ApptDateAndTime *string `json:"apptDateAndTime"`
 	Practitioner    *string `json:"practitioner"`
 	EMRApptID       *string `json:"emrApptId"`
-}
+}*/
 
 type DeleteReferralEntry struct {
 	ID domain.ReferralID `json:"id"`
@@ -223,7 +246,7 @@ func (s *Store) CreateReferralEntry(ctx context.Context, create *CreateReferralE
 		creationLog = &ReferralLog{
 			ReferralID:      referralEntry.ID,
 			CreatorUsername: user.Username,
-			OldStatus:       "",
+			OldStatus:       nil,
 			NewStatus:       referralEntry.Status,
 			Note:            "Referral entry created",
 		}
@@ -354,28 +377,31 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 			return domain.ErrReferralEntryNotFound
 		}
 
-		// Grab UserID from the context "mailbox" (set by the Bouncer)
-		userCtx, ok := domain.GetUserContext(ctx)
+		// 2. Grab UserID from the context
+		_, ok := domain.GetUserContext(ctx)
 		if !ok {
 			return domain.ErrUnauthorized
 		}
 
-		// 2. Tell the Worker to write the history
-		logPayload := &ReferralLog{
-			ReferralID:      update.ID,
-			CreatorUsername: domain.Username(userCtx.Username),
-			OldStatus:       current.Status,
-			NewStatus:       *update.Status,
-			Note:            *update.Note,
-		}
-
-		if _, err := s.driver.CreateReferralLog(txCtx, logPayload); err != nil {
-			return fmt.Errorf("failed to create referral history log during record update: %w", err)
-		}
-
-		// 3. Commit the changes to the primary referral entity record
+		// 3. Commit the changes to the primary referral entry
 		if err := s.driver.UpdateReferralEntry(txCtx, update); err != nil {
-			return fmt.Errorf("failed to execute referral entry update: %w", err)
+
+			return fmt.Errorf("failed to update referral entry: %w", err)
+		}
+
+		// 4. Complaints section, only runs if the update struct explicitly provided complaints
+		if update.Complaints != nil {
+			// Wipe out all existing complaints for this referral inside the transaction context
+			if err := s.driver.DeleteReferralComplaint(txCtx, update.ID); err != nil {
+				return fmt.Errorf("failed to delete old referral complaints: %w", err)
+			}
+
+			// Re-insert the fresh batch of complaints passed by the admin
+			for _, complaint := range *update.Complaints {
+				if err := s.driver.CreateReferralComplaint(txCtx, update.ID, complaint); err != nil {
+					return fmt.Errorf("failed to delete old referral complaints: %w", err)
+				}
+			}
 		}
 
 		return nil
@@ -420,7 +446,7 @@ func (s *Store) UpdateReferralEntryStatus(ctx context.Context, update *UpdateRef
 		logPayload := &ReferralLog{
 			ReferralID:      update.ID,
 			CreatorUsername: domain.Username(user.Username),
-			OldStatus:       oldStatus,
+			OldStatus:       &oldStatus,
 			NewStatus:       newStatus,
 			Note:            update.Note,
 		}

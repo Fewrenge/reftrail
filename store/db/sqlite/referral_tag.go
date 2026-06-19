@@ -18,6 +18,21 @@ func (d *Driver) CreateReferralTag(ctx context.Context, create *store.CreateRefe
 	return &tag, nil
 }
 
+func (d *Driver) UpdateReferralTagDefinition(ctx context.Context, update *store.UpdateReferralTagDefinition) (*store.ReferralTag, error) {
+	query := `UPDATE referral_tag_definition SET name = ?, description = ? WHERE name = ?`
+
+	_, err := d.conn(ctx).ExecContext(ctx, query, update.NewName, update.NewDescription, update.OldName)
+	if err != nil {
+		return nil, err
+	}
+
+	tag := store.ReferralTag{
+		Name:        update.NewName,
+		Description: update.NewDescription,
+	}
+	return &tag, nil
+}
+
 func (d *Driver) ListReferralTags(ctx context.Context) ([]*store.ReferralTag, error) {
 	query := `SELECT name, description
               FROM referral_tag_definition 

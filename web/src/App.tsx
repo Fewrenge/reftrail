@@ -9,7 +9,9 @@ import { AlertCircleIcon, LayoutDashboardIcon } from "lucide-react";
 import Referrals from './pages/Referrals';
 import ReferralDetails from './pages/ReferralDetails';
 import Analytics from './pages/Analytics';
-
+import UrgencyDistribution from './pages/Analytics/UrgencyDistribution';
+import ReferralVolume from './pages/Analytics/ReferralVolume'
+import DirectBookingWaitingTime from "./pages/Analytics/DirectBookingWaitingTime";
 
 export default function App() {
   const { user, isAuthenticating } = useAuth();
@@ -51,6 +53,9 @@ export default function App() {
             <Route path="/referrals" element={<Referrals />} />
             <Route element={<ProtectedRoute allowedRoles={[UserRole.REFTRAIL_ADMIN]} />}>
               <Route path="/analytics" element={<Analytics />} />
+              <Route path="/analytics/urgency-distribution" element={<UrgencyDistribution />} />
+              <Route path="/analytics/referral-trend" element={<ReferralVolume />} />
+              <Route path="/analytics/direct-booking-waiting-time" element={<DirectBookingWaitingTime />}/>
             </Route>
 
             <Route path="/referrals/:referralId" element={<ReferralDetails />} />

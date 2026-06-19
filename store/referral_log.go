@@ -7,13 +7,13 @@ import (
 )
 
 type ReferralLog struct {
-	ID              domain.ReferralLogID  `json:"id"`
-	ReferralID      domain.ReferralID     `json:"referralId"`
-	CreatorUsername domain.Username       `json:"-"`
-	OldStatus       domain.ReferralStatus `json:"oldStatus"`
-	NewStatus       domain.ReferralStatus `json:"newStatus"`
-	Note            string                `json:"note"`
-	CreatedTs       string                `json:"createdTs"`
+	ID              domain.ReferralLogID   `json:"id"`
+	ReferralID      domain.ReferralID      `json:"referralId"`
+	CreatorUsername domain.Username        `json:"creatorUserName"`
+	OldStatus       *domain.ReferralStatus `json:"oldStatus"`
+	NewStatus       domain.ReferralStatus  `json:"newStatus"`
+	Note            string                 `json:"note"`
+	CreatedTs       string                 `json:"createdTs"`
 }
 
 type ReferralLogWithUser struct {
@@ -39,7 +39,7 @@ func (s *Store) CreateReferralLog(ctx context.Context, create *ReferralLog) (*Re
 		}
 
 		// 4. Standalone notes do not alter state: Old == New
-		create.OldStatus = currentStatus
+		create.OldStatus = &currentStatus
 		create.NewStatus = currentStatus
 
 		// 5. Hand the work to the driver safely

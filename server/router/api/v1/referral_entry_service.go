@@ -15,7 +15,15 @@ import (
 	echo "github.com/labstack/echo/v5"
 )
 
-// Get all referrals
+func nullString(s string) *string {
+	cleaned := strings.TrimSpace(s)
+	if cleaned == "" {
+		return nil
+	}
+	return &cleaned
+}
+
+// Get all referrals that meet a set of criteria
 // GET /api/v1/referrals
 func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
@@ -27,12 +35,21 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid query filter parameters"})
 	}
 
-	// FIX: Explicitly pull repeated query slices that c.Bind skips natively by hardcoding the expected query keys
-	// TODO: make this more dynamic and reusable
-	if nameSearch := c.QueryParam("patient_name_search"); nameSearch != "" {
-		trimmed := strings.TrimSpace(nameSearch)
-		find.PatientLastName = &trimmed
-		find.PatientFirstName = &trimmed
+	if generalTerm := c.QueryParam("generalTerm"); generalTerm != "" {
+		trimmed := strings.TrimSpace(generalTerm)
+
+		// Regex patterns to check the characteristics of the universal input string
+		hasDigits := regexp.MustCompile(`\d`).MatchString(trimmed)
+		hasLetters := regexp.MustCompile(`[a-zA-Z]`).MatchString(trimmed)
+
+		if hasDigits && !hasLetters {
+			// Scenario A: Input contains ONLY numbers/hyphens (e.g., Health Card)
+			find.PatientHealthcardNumber = &trimmed
+		} else {
+			// Scenario B: Input contains letters (or mixed text like "John 123") -> Fallback to Names
+			find.PatientLastName = &trimmed
+			find.PatientFirstName = &trimmed
+		}
 	}
 
 	// Validate and clean Date Range URL Parameters
@@ -195,7 +212,6 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Failed to read file spreadsheet headers"})
 	}
 
-	//  PASTE THIS INSTEAD:
 	cleanRegex := regexp.MustCompile(`[\s\t\_\-]+`)
 
 	// Getting the header map for flexible column order
@@ -226,6 +242,14 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 
 	var batch store.BatchCreateReferralEntries
 	var healthCardRegex = regexp.MustCompile(`^(\d{10})([A-Za-z]{2})?$`)
+
+	masterPhysicians, err := s.Store.FindReferralPhysicians(ctx, &store.FindReferralPhysician{})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to load master physician list"})
+	}
+
+	// Session cache to eliminate redundant similarity algorithm passes on duplicate strings
+	sessionPhysicianCache := make(map[string]string)
 
 	// 4. Stream rows sequentially (One row = One referral entry)
 	for {
@@ -259,6 +283,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 		// Parse semicolon-separated text values inside matching cells
 		rawComplaints := strings.Split(row[headerMap["complaint"]], ";")
 		rawSides := strings.Split(row[headerMap["complaint side"]], ";")
+		rawDetail := strings.Split(row[headerMap["complaint detail"]], ";")
 
 		var complaints []store.ReferralComplaint
 		for i, part := range rawComplaints {
@@ -273,10 +298,22 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 				sideVal = strings.TrimSpace(strings.ToUpper(rawSides[i]))
 			}
 
+			var detailsPtr *string = nil
+
+			if i < len(rawDetail) {
+				cleanDetail := strings.TrimSpace(rawDetail[i])
+				// Only allocate memory if the string actually contains text
+				if cleanDetail != "" {
+					// Save to a local variable first so we can take its memory address
+					detailStr := cleanDetail
+					detailsPtr = &detailStr
+				}
+			}
+
 			complaints = append(complaints, store.ReferralComplaint{
 				BodyPart: cleanPart,
 				Side:     sideVal,
-				Details:  "",
+				Details:  detailsPtr,
 			})
 		}
 
@@ -313,25 +350,89 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 			slog.Warn("Skipping batch tokenization phase: Column lookup key 'tags' missing from spreadsheet template structure")
 		}
 
+		// TODO: parse the physician name with comma
+		var finalizedPhysicianID *string = nil
+		rawPhysicianText := strings.TrimSpace(row[headerMap["referring physician"]])
+
+		if rawPhysicianText != "" {
+			normalizedKey := strings.ToLower(rawPhysicianText)
+
+			// Step A: Check local batch loop run cache first
+			if cachedID, exists := sessionPhysicianCache[normalizedKey]; exists {
+				if cachedID != "" {
+					finalizedPhysicianID = &cachedID
+				}
+			} else {
+				// Step B: Calculate Jaro-Winkler string closeness against preloaded system master array
+				matchedID := s.Store.ResolvePhysicianID(rawPhysicianText, masterPhysicians)
+
+				if matchedID != "" {
+					// Confident Match found: Apply it
+					finalizedPhysicianID = &matchedID
+					sessionPhysicianCache[normalizedKey] = matchedID
+				} else {
+					// No Match found: Implicitly create profile on the fly
+					var firstName, lastName string
+					cleanText := strings.ReplaceAll(rawPhysicianText, "Dr. ", "")
+					cleanText = strings.ReplaceAll(cleanText, "dr. ", "")
+
+					if strings.Contains(cleanText, ",") {
+						parts := strings.SplitN(cleanText, ",", 2)
+						lastName = strings.TrimSpace(parts[0])
+						firstName = strings.TrimSpace(parts[1])
+					} else {
+						parts := strings.SplitN(cleanText, " ", 2)
+						firstName = strings.TrimSpace(parts[0])
+						if len(parts) > 1 {
+							lastName = strings.TrimSpace(parts[1])
+						} else {
+							lastName = "Unknown"
+						}
+					}
+
+					newDoc, createErr := s.Store.CreateReferralPhysician(ctx, &store.ReferralPhysician{
+						FirstName: firstName,
+						LastName:  lastName,
+					})
+					if createErr == nil {
+						finalizedPhysicianID = &newDoc.ID
+						sessionPhysicianCache[normalizedKey] = newDoc.ID
+
+						// Append back to active pool so sub-sequent rows match instantly
+						masterPhysicians = append(masterPhysicians, newDoc)
+					} else {
+						slog.Error("Implicit physician creation failed during batch processing loop", "rawName", rawPhysicianText, "error", createErr)
+					}
+				}
+			}
+		}
+
 		// Map spreadsheet elements into your exact structural schema
 		entry := store.CreateReferralEntry{
-			PatientLastName:              strings.TrimSpace(row[headerMap["last name"]]),
-			PatientFirstName:             strings.TrimSpace(row[headerMap["first name"]]),
-			PatientDOB:                   strings.TrimSpace(row[headerMap["dob"]]),
-			PatientHealthcardNumber:      healthCardNum,
-			PatientHealthcardVersionCode: versionCode,
-			PatientPhoneNumber:           strings.TrimSpace(row[headerMap["phone number"]]),
-			PatientEmail:                 strings.TrimSpace(row[headerMap["email"]]),
-			ReferringPhysician:           strings.TrimSpace(row[headerMap["referring physician"]]),
-			ReferralDate:                 strings.TrimSpace(row[headerMap["referral date"]]),
-			Urgency:                      domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),
-			Status:                       domain.ReferralStatus("READY_TO_BOOK"), // Workflow entry state default
-			Source:                       domain.ReferralSource("REGULAR"),
-			Complaints:                   complaints,
-			Tags:                         tags,
-			TriageNote:                   strings.TrimSpace(row[headerMap["triage note"]]),
-			EMRPatientID:                 emrPatientID,
-			EMRReferralDocID:             emrReferralDocID,
+			PatientLastName:  strings.TrimSpace(row[headerMap["last name"]]),
+			PatientFirstName: strings.TrimSpace(row[headerMap["first name"]]),
+			PatientDOB:       strings.TrimSpace(row[headerMap["dob"]]),
+
+			// Optional Fields: Wrapped to cleanly handle empty spreadsheet columns
+			PatientHealthcardNumber:      nullString(healthCardNum),
+			PatientHealthcardVersionCode: nullString(versionCode),
+			PatientPhoneNumber:           nullString(row[headerMap["phone number"]]),
+			PatientEmail:                 nullString(row[headerMap["email"]]),
+			ConsultTypeDetail:            nullString(row[headerMap["consult type detail"]]),
+			EMRPatientID:                 nullString(emrPatientID),
+			EMRReferralDocID:             nullString(emrReferralDocID),
+
+			ReferringPhysicianID: finalizedPhysicianID,
+
+			// Required Workflow Structural Fields
+			ReferralDate: strings.TrimSpace(row[headerMap["referral date"]]),
+			Urgency:      domain.ReferralUrgency(strings.TrimSpace(row[headerMap["urgency"]])),
+			Status:       domain.ReferralStatus("READY_TO_BOOK"),
+			Source:       domain.ReferralSource("REGULAR"),
+			Complaints:   complaints,
+			Tags:         tags,
+			TriageNote:   strings.TrimSpace(row[headerMap["triage note"]]),
+			ConsultType:  domain.ReferralConsultType(strings.TrimSpace(row[headerMap["consult type"]])),
 		}
 
 		// Run validator on this entry
@@ -366,17 +467,28 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 }
 
 func (s *APIV1Service) UpdateReferralEntryHandler(c *echo.Context) error {
-	// 1. Get the ID from the URL
-	idStr := c.Param("id")
-	refID := domain.ReferralID(idStr)
+	update := &store.UpdateReferralEntry{}
 
-	update := &store.UpdateReferralEntry{ID: refID}
 	if err := c.Bind(update); err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
 	}
 
+	idStr := c.Param("id")
+	update.ID = domain.ReferralID(idStr)
+
 	if err := s.Store.UpdateReferralEntry(c.Request().Context(), update); err != nil {
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		switch err {
+		case domain.ErrUnauthorized:
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Authentication required"})
+		case domain.ErrForbidden:
+			return c.JSON(http.StatusForbidden, map[string]string{"error": "Administrative privileges required"})
+		case domain.ErrReferralEntryNotFound:
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Referral entry not found"})
+		default:
+			//return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal server processing error when updating referral entry"})
+			//---DEBUG---
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
 	}
 
 	return c.JSON(http.StatusOK, true)

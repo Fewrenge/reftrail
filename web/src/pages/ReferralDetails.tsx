@@ -69,7 +69,7 @@ export default function ReferralDetails() {
 
   // Helper 1: Determines the visual colors of the timeline bullet dots
   const getTimelineAnchorStyles = (oldStatus: string, newStatus: string) => {
-    if (oldStatus === "") {
+    if (oldStatus === null) {
       return "border-blue-500 bg-blue-50 text-blue-500"; // Blue for Initial Creation
     }
     if (newStatus === "BOOKED") {
@@ -79,16 +79,16 @@ export default function ReferralDetails() {
   };
 
   // Helper 2: Formats cleanly readable message structures based on event tracking types
-  const renderTimelineContent = (oldStatus: string, newStatus: string) => {
+  const renderTimelineContent = (oldStatus: string | null, newStatus: string) => {
     // Case A: System Creation Event
-    if (oldStatus === "") {
+    if (oldStatus === null) {
       return (
         <div className="space-y-1">
           <p className="text-sm text-blue-900 font-bold flex items-center gap-1.5">
             Referral Created
           </p>
           <p className="text-xs text-slate-500 font-medium">
-            Status: {" "}
+            Status: {""}
             <span className="px-1.5 py-0.5 bg-blue-50 border border-blue-100 rounded text-[11px] text-blue-700 font-bold font-mono">
               {newStatus.replace(/_/g, ' ')}
             </span>
@@ -184,7 +184,7 @@ export default function ReferralDetails() {
 
               return (
                 <div key={log.id} className="relative group">
-                  {/* 💡 Timeline Bullet Anchor (Dynamically styled using our clean helper mapping function) */}
+                  {/* Timeline Bullet Anchor (Dynamically styled using our clean helper mapping function) */}
                   <div className={`absolute -left-5.25 top-1 w-3 h-3 rounded-full border-2 ${anchorColorStyle}`} />
 
                   <div className="space-y-1">
@@ -197,7 +197,7 @@ export default function ReferralDetails() {
                       <span>{formatTime(log.createdTs)}</span>
                     </div>
 
-                    {/* 💡 Operational Event Content Block (Rendered using our switch helper block strategy) */}
+                    {/* Operational Event Content Block (Rendered using our switch helper block strategy) */}
                     {renderTimelineContent(log.oldStatus, log.newStatus)}
 
                     {/* Associated Note Box */}
