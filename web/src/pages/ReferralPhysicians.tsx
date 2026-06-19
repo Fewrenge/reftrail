@@ -36,10 +36,10 @@ export const ReferralPhysicians: React.FC = () => {
       params.append("limit", pageSize.toString());
       params.append("offset", offset.toString());
 
-      // Passes a single search token to backend FindReferralPhysician generalSearch binding
+      // Passes a single search token to backend FindReferralPhysician generalTerm binding
       const cleanSearch = debouncedSearch.trim();
       if (cleanSearch !== "") {
-        params.append("generalSearch", cleanSearch);
+        params.append("generalTerm", cleanSearch);
       }
 
       const response = await fetch(`/api/v1/physicians?${params.toString()}`, {

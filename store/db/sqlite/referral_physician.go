@@ -61,9 +61,10 @@ func (d *Driver) ListReferralPhysicians(ctx context.Context, find *store.FindRef
 		args = append(args, *find.EMRPhysicianID)
 	}
 
-	// 2. Fuzzy generalized term filter (maps across names or CPSO sequence)
-	if find.GeneralSearch != nil && *find.GeneralSearch != "" {
-		term := "%" + *find.GeneralSearch + "%"
+	// 2. Left anchored term filter (maps across names or CPSO sequence)
+	if find.GeneralTerm != nil && *find.GeneralTerm != "" {
+		// term := "%" + *find.GeneralTerm + "%" // Fuzzy match
+		term := *find.GeneralTerm + "%"
 		query += " AND (first_name LIKE ? OR last_name LIKE ? OR cpso_number LIKE ?)"
 		args = append(args, term, term, term)
 	}
@@ -152,9 +153,10 @@ func (d *Driver) GetReferralPhysiciansCount(ctx context.Context, find *store.Fin
 		args = append(args, *find.EMRPhysicianID)
 	}
 
-	// 2. Fuzzy generalized term filter matching the search bar keyword constraints
-	if find.GeneralSearch != nil && *find.GeneralSearch != "" {
-		term := "%" + *find.GeneralSearch + "%"
+	// 2. Left anchored term filter (maps across names or CPSO sequence)
+	if find.GeneralTerm != nil && *find.GeneralTerm != "" {
+		// term := "%" + *find.GeneralTerm + "%" // Fuzzy match
+		term := *find.GeneralTerm + "%"
 		query += " AND (first_name LIKE ? OR last_name LIKE ? OR cpso_number LIKE ?)"
 		args = append(args, term, term, term)
 	}

@@ -385,7 +385,6 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 
 		// 3. Commit the changes to the primary referral entry
 		if err := s.driver.UpdateReferralEntry(txCtx, update); err != nil {
-
 			return fmt.Errorf("failed to update referral entry: %w", err)
 		}
 

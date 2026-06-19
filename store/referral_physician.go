@@ -36,7 +36,7 @@ type FindReferralPhysician struct {
 	FirstName      *string `json:"firstName"`
 	LastName       *string `json:"lastName"`
 	EMRPhysicianID *string `json:"emrPhysicianId"`
-	GeneralSearch  *string `json:"generalSearch"`
+	GeneralTerm    *string `json:"generalTerm"`
 
 	Limit  *int `json:"limit"`
 	Offset *int `json:"offset"`

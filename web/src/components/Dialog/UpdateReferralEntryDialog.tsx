@@ -18,6 +18,7 @@ import type {
   ReferralSource
 } from "@/types/referrals"
 
+// TODO: integrate find physicians functionality in dialog, finalize note taking logic and UI 
 
 export interface FrontEndComplaint {
   bodyPart: string
@@ -70,7 +71,6 @@ const URGENCY_OPTIONS: ReferralUrgency[] = ['ELECTIVE', 'URGENT', 'ASAP']
 const CONSULT_OPTIONS: ReferralConsultType[] = ['APP+LE', 'APP+UE', 'APP+SX', 'SX', 'OTHER']
 const SOURCE_OPTIONS: ReferralSource[] = ['REGULAR', 'FRACTURE_CLINIC', 'OTHER']
 
-// TODO: physician search
 export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initialData, onSave }: UpdateReferralEntryDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -337,7 +337,6 @@ export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initial
             />
           </div>
 
-          {/*TODO: change this*/}
           {/* Section 6: Mandatory Audit Tracking & Force Checks */}
           <div className="bg-red-50/50 p-4 rounded-lg border border-red-200/60 space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-red-800">Administrative Log Accountability</h3>

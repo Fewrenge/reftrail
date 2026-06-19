@@ -29,8 +29,8 @@ func (s *APIV1Service) FindReferralPhysiciansHandler(c *echo.Context) error {
 	if emrID := c.QueryParam("emrPhysicianId"); emrID != "" {
 		find.EMRPhysicianID = &emrID
 	}
-	if search := c.QueryParam("generalSearch"); search != "" {
-		find.GeneralSearch = &search
+	if search := c.QueryParam("generalTerm"); search != "" {
+		find.GeneralTerm = &search
 	}
 
 	list, err := s.Store.ListReferralPhysicians(ctx, find)

@@ -1,4 +1,4 @@
-// TODO: add more fields
+// TODO: add more fields like update referral entry dialog
 
 import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
@@ -222,6 +222,16 @@ export default function AddReferralEntryDialog({ isOpen, onClose, onSuccess }: P
                 <option value="ELECTIVE">Elective</option>
                 <option value="URGENT">Urgent</option>
                 <option value="ASAP">ASAP</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Consult Type</label>
+              <select className="border rounded-md p-2 bg-white text-sm" value={consultType} onChange={e => setConsultType(e.target.value)}>
+                <option value="APP+LE">APP+LE</option>
+                <option value="APP+UE">APP+UE</option>
+                <option value="APP+SX">APP+SX</option>
+                <option value="SX">SX</option>
+                <option value="OTHER">OTHER</option>
               </select>
             </div>
           </div>
