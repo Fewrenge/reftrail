@@ -36,11 +36,11 @@ CREATE TABLE IF NOT EXISTS referral_entry (
     emr_referral_doc_id TEXT,
     referring_physician_id TEXT,
     referral_date TEXT NOT NULL,
-    FOREIGN KEY (referring_physician_id) REFERENCES physicians (id) ON UPDATE CASCADE ON DELETE SET NULL,
+    FOREIGN KEY (referring_physician_id) REFERENCES referral_physician (id) ON UPDATE CASCADE ON DELETE SET NULL,
     FOREIGN KEY (creator_id) REFERENCES user(username) ON UPDATE CASCADE -- ON DELETE SET NULL?
 );
 
-CREATE TABLE IF NOT EXISTS physicians (
+CREATE TABLE IF NOT EXISTS referral_physician (
     id TEXT PRIMARY KEY NOT NULL,
     cpso_number TEXT UNIQUE,
     first_name TEXT NOT NULL,
