@@ -60,9 +60,10 @@ type Driver interface {
 	GetDirectBookingWaitingTime(ctx context.Context, find *FindReferralEntry) (*WaitingTimeTrendResponse, error)
 
 	// 8. Physicians methods
-	CreateReferralPhysician(ctx context.Context, p *ReferralPhysician) (*ReferralPhysician, error)
-	FindReferralPhysicians(ctx context.Context, find *FindReferralPhysician) ([]*ReferralPhysician, error)
+	CreateReferralPhysician(ctx context.Context, create *CreateReferralPhysician) (*ReferralPhysician, error)
+	ListReferralPhysicians(ctx context.Context, find *FindReferralPhysician) ([]*ReferralPhysician, error)
+	GetReferralPhysiciansCount(ctx context.Context, find *FindReferralPhysician) (int, error)
 	GetReferralPhysicianByID(ctx context.Context, id string) (*ReferralPhysician, error)
-	UpdateReferralPhysician(ctx context.Context, p *ReferralPhysician) error
-	DeleteReferralPhysician(ctx context.Context, payload *DeleteReferralPhysician) error
+	UpdateReferralPhysician(ctx context.Context, update *UpdateReferralPhysician) error
+	DeleteReferralPhysician(ctx context.Context, delete *DeleteReferralPhysician) error
 }

@@ -19,7 +19,7 @@ func TestReferralPhysician_CRUD_And_Validations(t *testing.T) {
 	t.Run("Create and Get Happy Path", func(t *testing.T) {
 		s := setupTestStore(t)
 
-		docPayload := &store.ReferralPhysician{
+		docPayload := &store.CreateReferralPhysician{
 			CPSONumber:     ptr("12345"),
 			FirstName:      "John",
 			LastName:       "Smith",
@@ -48,7 +48,7 @@ func TestReferralPhysician_CRUD_And_Validations(t *testing.T) {
 	t.Run("Validation enforces mandatory name fields", func(t *testing.T) {
 		s := setupTestStore(t)
 
-		badPayload := &store.ReferralPhysician{
+		badPayload := &store.CreateReferralPhysician{
 			FirstName: "", // Empty names must be rejected by store level business validations
 			LastName:  "Smith",
 		}
@@ -65,16 +65,17 @@ func TestReferralPhysician_CRUD_And_Validations(t *testing.T) {
 	t.Run("Update Happy Path", func(t *testing.T) {
 		s := setupTestStore(t)
 
-		created, _ := s.CreateReferralPhysician(ctx, &store.ReferralPhysician{
+		created, _ := s.CreateReferralPhysician(ctx, &store.CreateReferralPhysician{
 			FirstName: "Jane",
 			LastName:  "Doe",
 		})
 
 		// Modify details
-		created.FirstName = "Janet"
-		created.CPSONumber = ptr("99999")
+		var updated store.UpdateReferralPhysician
+		updated.FirstName = ptr("Janet")
+		updated.CPSONumber = ptr("99999")
 
-		err := s.UpdateReferralPhysician(ctx, created)
+		err := s.UpdateReferralPhysician(ctx, &updated)
 		if err != nil {
 			t.Fatalf("Expected clean update execution, got: %v", err)
 		}
@@ -93,7 +94,7 @@ func TestReferralPhysician_Delete_Constraints(t *testing.T) {
 	t.Run("Delete unreferenced physician succeeds cleanly", func(t *testing.T) {
 		s := setupTestStore(t)
 
-		created, _ := s.CreateReferralPhysician(ctx, &store.ReferralPhysician{
+		created, _ := s.CreateReferralPhysician(ctx, &store.CreateReferralPhysician{
 			FirstName: "Isolated",
 			LastName:  "Doctor",
 		})
@@ -104,7 +105,7 @@ func TestReferralPhysician_Delete_Constraints(t *testing.T) {
 		}
 	})
 
-	// NOTE: Once you finish your ReferralEntry store methods, you should add a test case here that:
+	// ADD TEST CASE:
 	// 1. Creates a physician
 	// 2. Creates a referral_entry linked to that physician's ID
 	// 3. Asserts that calling s.DeleteReferralPhysician returns your custom error:

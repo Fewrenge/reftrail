@@ -33,14 +33,17 @@ func (s *APIV1Service) FindReferralPhysiciansHandler(c *echo.Context) error {
 		find.GeneralSearch = &search
 	}
 
-	list, err := s.Store.FindReferralPhysicians(ctx, find)
+	list, err := s.Store.ListReferralPhysicians(ctx, find)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to look up physician list"})
 	}
 
 	// Always return an empty array instead of null if the database has no records
 	if list == nil {
-		list = make([]*store.ReferralPhysician, 0)
+		list = &store.PaginatedReferralPhysicians{
+			ReferralPhysicians: []*store.ReferralPhysician{},
+			TotalCount:         0,
+		}
 	}
 
 	return c.JSON(http.StatusOK, list)
@@ -70,7 +73,7 @@ func (s *APIV1Service) GetReferralPhysicianByIDHandler(c *echo.Context) error {
 // POST /api/v1/physicians (Admin Only)
 func (s *APIV1Service) CreateReferralPhysicianHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
-	var payload store.ReferralPhysician
+	var payload store.CreateReferralPhysician
 
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Malformed JSON payload payload data"})
@@ -92,7 +95,7 @@ func (s *APIV1Service) UpdateReferralPhysicianHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 	id := c.Param("id")
 
-	var payload store.ReferralPhysician
+	var payload store.UpdateReferralPhysician
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Malformed JSON payload details"})
 	}

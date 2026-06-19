@@ -243,13 +243,18 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 	var batch store.BatchCreateReferralEntries
 	var healthCardRegex = regexp.MustCompile(`^(\d{10})([A-Za-z]{2})?$`)
 
-	masterPhysicians, err := s.Store.FindReferralPhysicians(ctx, &store.FindReferralPhysician{})
+	allPhysiciansFilter := &store.FindReferralPhysician{
+		Limit:  nil, // skip LIMIT constraints
+		Offset: nil, // skip OFFSET windows
+	}
+
+	masterPhysiciansResponse, err := s.Store.ListReferralPhysicians(ctx, allPhysiciansFilter)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to load master physician list"})
 	}
-
 	// Session cache to eliminate redundant similarity algorithm passes on duplicate strings
 	sessionPhysicianCache := make(map[string]string)
+	masterPhysicians := masterPhysiciansResponse.ReferralPhysicians
 
 	// 4. Stream rows sequentially (One row = One referral entry)
 	for {
@@ -390,7 +395,7 @@ func (s *APIV1Service) BatchCreateReferralEntriesHandler(c *echo.Context) error 
 						}
 					}
 
-					newDoc, createErr := s.Store.CreateReferralPhysician(ctx, &store.ReferralPhysician{
+					newDoc, createErr := s.Store.CreateReferralPhysician(ctx, &store.CreateReferralPhysician{
 						FirstName: firstName,
 						LastName:  lastName,
 					})

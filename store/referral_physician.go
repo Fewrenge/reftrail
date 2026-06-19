@@ -15,6 +15,21 @@ type ReferralPhysician struct {
 	EMRPhysicianID *string `json:"emrPhysicianId"`
 }
 
+type CreateReferralPhysician struct {
+	CPSONumber     *string `json:"cpsoNumber"`
+	FirstName      string  `json:"firstName"`
+	LastName       string  `json:"lastName"`
+	EMRPhysicianID *string `json:"emrPhysicianId"`
+}
+
+type UpdateReferralPhysician struct {
+	ID             string  `json:"id"`
+	CPSONumber     *string `json:"cpsoNumber"`
+	FirstName      *string `json:"firstName"`
+	LastName       *string `json:"lastName"`
+	EMRPhysicianID *string `json:"emrPhysicianId"`
+}
+
 type FindReferralPhysician struct {
 	ID             *string `json:"id"`
 	CPSONumber     *string `json:"cpsoNumber"`
@@ -31,14 +46,46 @@ type DeleteReferralPhysician struct {
 	ID string `json:"id"`
 }
 
-func (s *Store) CreateReferralPhysician(ctx context.Context, p *ReferralPhysician) (*ReferralPhysician, error) {
-	if strings.TrimSpace(p.FirstName) == "" || strings.TrimSpace(p.LastName) == "" {
-		return nil, fmt.Errorf("business validation failed: physician first and last names are mandatory fields")
-	}
-	return s.driver.CreateReferralPhysician(ctx, p)
+type PaginatedReferralPhysicians struct {
+	ReferralPhysicians []*ReferralPhysician `json:"referralPhysicians"`
+	TotalCount         int                  `json:"totalCount"`
 }
 
-// GetReferralPhysicianByID fetches an isolated individual record by its primary key
+func (s *Store) CreateReferralPhysician(ctx context.Context, create *CreateReferralPhysician) (*ReferralPhysician, error) {
+	if strings.TrimSpace(create.FirstName) == "" || strings.TrimSpace(create.LastName) == "" {
+		return nil, fmt.Errorf("business validation failed: physician first and last names are mandatory fields")
+	}
+	return s.driver.CreateReferralPhysician(ctx, create)
+}
+
+func (s *Store) ListReferralPhysicians(ctx context.Context, find *FindReferralPhysician) (*PaginatedReferralPhysicians, error) {
+	// 1. Get the un-paginated total count for your frontend pagination math
+	totalCount, err := s.driver.GetReferralPhysiciansCount(ctx, find)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching referral physicians count: %w", err)
+	}
+
+	// 2. Fetch the windowed list of physicians from your driver layer
+	physicians, err := s.driver.ListReferralPhysicians(ctx, find)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching list of referral physicians: %w", err)
+	}
+
+	// 3. Prevent null values in JSON array returns by outputting an empty initialized slice
+	if len(physicians) == 0 {
+		return &PaginatedReferralPhysicians{
+			ReferralPhysicians: []*ReferralPhysician{},
+			TotalCount:         totalCount,
+		}, nil
+	}
+
+	// 4. Return the packed response mapping payload back to the handler endpoint
+	return &PaginatedReferralPhysicians{
+		ReferralPhysicians: physicians,
+		TotalCount:         totalCount,
+	}, nil
+}
+
 func (s *Store) GetReferralPhysicianByID(ctx context.Context, id string) (*ReferralPhysician, error) {
 	if strings.TrimSpace(id) == "" {
 		return nil, fmt.Errorf("business validation failed: query target id cannot be blank")
@@ -46,30 +93,20 @@ func (s *Store) GetReferralPhysicianByID(ctx context.Context, id string) (*Refer
 	return s.driver.GetReferralPhysicianByID(ctx, id)
 }
 
-// UpdateReferralPhysician handles modification updates down to database driver
-func (s *Store) UpdateReferralPhysician(ctx context.Context, p *ReferralPhysician) error {
-	if p == nil || strings.TrimSpace(p.ID) == "" {
+func (s *Store) UpdateReferralPhysician(ctx context.Context, update *UpdateReferralPhysician) error {
+	if update == nil || strings.TrimSpace(update.ID) == "" {
 		return fmt.Errorf("business validation failed: a valid physician structure containing an ID is required for updates")
 	}
-	return s.driver.UpdateReferralPhysician(ctx, p)
+	return s.driver.UpdateReferralPhysician(ctx, update)
 }
 
-func (s *Store) FindReferralPhysicians(ctx context.Context, find *FindReferralPhysician) ([]*ReferralPhysician, error) {
-	if find == nil {
-		find = &FindReferralPhysician{}
-	}
-	return s.driver.FindReferralPhysicians(ctx, find)
-}
-
-// DeleteReferralPhysician inspects foreign constraint responses to return cleaner domain errors
-func (s *Store) DeleteReferralPhysician(ctx context.Context, payload *DeleteReferralPhysician) error {
-	if payload == nil || strings.TrimSpace(payload.ID) == "" {
+func (s *Store) DeleteReferralPhysician(ctx context.Context, delete *DeleteReferralPhysician) error {
+	if delete == nil || strings.TrimSpace(delete.ID) == "" {
 		return fmt.Errorf("business validation failed: valid delete request structure containing an ID required")
 	}
 
-	err := s.driver.DeleteReferralPhysician(ctx, payload)
+	err := s.driver.DeleteReferralPhysician(ctx, delete)
 	if err != nil {
-		// Formats SQLite standard error strings into clean text messages for your API handlers
 		if strings.Contains(strings.ToUpper(err.Error()), "FOREIGN KEY") {
 			return fmt.Errorf("cannot remove physician: doctor is actively linked to ongoing patient referral records")
 		}

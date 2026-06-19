@@ -601,7 +601,8 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             consultType: entry.consultType as ReferralConsultType,
 
             triageNote: entry.triageNote || "",
-            referringPhysicianID: entry.referringPhysician?.id || "",
+            //referringPhysicianID: entry.referringPhysician?.id || "",
+            referringPhysicianID: null,
             referralDate: entry.referralDate || "",
             emrPatientId: entry.emrPatientId || "",
             emrReferralDocID: entry.emrReferralDocId || "",

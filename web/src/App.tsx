@@ -9,7 +9,7 @@ import { AlertCircleIcon, LayoutDashboardIcon } from "lucide-react";
 import Referrals from './pages/Referrals';
 import ReferralDetails from './pages/ReferralDetails';
 import Analytics from './pages/Analytics';
-import Physicians from './pages/Physicians'
+import {ReferralPhysicians } from './pages/ReferralPhysicians'
 import UrgencyDistribution from './pages/Analytics/UrgencyDistribution';
 import ReferralVolume from './pages/Analytics/ReferralVolume'
 import DirectBookingWaitingTime from "./pages/Analytics/DirectBookingWaitingTime";
@@ -58,7 +58,7 @@ export default function App() {
               <Route path="/analytics/referral-trend" element={<ReferralVolume />} />
               <Route path="/analytics/direct-booking-waiting-time" element={<DirectBookingWaitingTime />}/>
             </Route>
-            <Route path="/physicians" element={<Physicians/>}/>
+            <Route path="/physicians" element={<ReferralPhysicians/>}/>
 
             <Route path="/referrals/:referralId" element={<ReferralDetails />} />
             <Route path="/settings/*" element={<Settings />} />

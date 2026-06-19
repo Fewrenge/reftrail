@@ -31,7 +31,7 @@ export interface AdminUpdatePayload {
   urgency?: ReferralUrgency
   source?: ReferralSource
   triageNote?: string
-  referringPhysician?: string
+  referringPhysicianID?: string
   consultType?: ReferralConsultType
   referralDate?: string
   emrPatientId?: string
@@ -80,7 +80,7 @@ export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initial
   const [source, setSource] = useState<ReferralSource>('REGULAR')
   const [consultType, setConsultType] = useState<ReferralConsultType>('OTHER')
   const [triageNote, setTriageNote] = useState("")
-  const [referringPhysician, setReferringPhysician] = useState("")
+  const [referringPhysicianID, setReferringPhysicianID] = useState("")
   const [referralDate, setReferralDate] = useState("")
   const [emrPatientId, setEmrPatientId] = useState("")
   const [emrReferralDocID, setEmrReferralDocID] = useState("")
@@ -100,7 +100,7 @@ export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initial
       setSource(initialData.source)
       setConsultType(initialData.consultType)
       setTriageNote(initialData.triageNote || "")
-      setReferringPhysician(initialData.referringPhysician || "")
+      setReferringPhysicianID(initialData.referringPhysician || "")
       setReferralDate(initialData.referralDate || "")
       setEmrPatientId(initialData.emrPatientId || "")
       setEmrReferralDocID(initialData.emrReferralDocID || "")
@@ -145,7 +145,7 @@ export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initial
         source,
         consultType,
         triageNote,
-        referringPhysician,
+        referringPhysicianID,
         referralDate,
         emrPatientId,
         emrReferralDocID,
@@ -210,8 +210,8 @@ export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initial
               <input
                 type="text"
                 className="w-full text-sm border rounded-md p-2 bg-white"
-                value={referringPhysician}
-                onChange={e => setReferringPhysician(e.target.value)}
+                value={referringPhysicianID}
+                onChange={e => setReferringPhysicianID(e.target.value)}
               />
             </div>
             <div>
