@@ -16,7 +16,7 @@ func (d *Driver) CreateReferralPhysician(ctx context.Context, p *store.ReferralP
 	}
 	idStr := newID.String()
 
-	query := `INSERT INTO physicians (id, cpso_number, first_name, last_name, emr_physician_id) 
+	query := `INSERT INTO referral_physician (id, cpso_number, first_name, last_name, emr_physician_id) 
 	          VALUES (?, ?, ?, ?, ?)`
 
 	_, err = d.conn(ctx).ExecContext(ctx, query, idStr, p.CPSONumber, p.FirstName, p.LastName, p.EMRPhysicianID)
@@ -35,7 +35,7 @@ func (d *Driver) CreateReferralPhysician(ctx context.Context, p *store.ReferralP
 }
 
 func (d *Driver) ListReferralPhysicians(ctx context.Context) ([]*store.ReferralPhysician, error) {
-	query := `SELECT id, cpso_number, first_name, last_name, emr_physician_id FROM physicians`
+	query := `SELECT id, cpso_number, first_name, last_name, emr_physician_id FROM referral_physician`
 
 	rows, err := d.conn(ctx).QueryContext(ctx, query)
 	if err != nil {
@@ -83,7 +83,7 @@ func (d *Driver) ListReferralPhysicians(ctx context.Context) ([]*store.ReferralP
 // GetPhysicianByID fetches an individual doctor record by its unique database ID.
 func (d *Driver) GetReferralPhysicianByID(ctx context.Context, id string) (*store.ReferralPhysician, error) {
 	query := `SELECT id, cpso_number, first_name, last_name, emr_physician_id 
-	          FROM physicians WHERE id = ?`
+	          FROM referral_physician WHERE id = ?`
 
 	var p store.ReferralPhysician
 	var cpsoTarget any
@@ -117,7 +117,7 @@ func (d *Driver) GetReferralPhysicianByID(ctx context.Context, id string) (*stor
 
 // UpdatePhysician allows managing a physician's record (e.g., adding an EMR link or CPSO number).
 func (d *Driver) UpdateReferralPhysician(ctx context.Context, p *store.ReferralPhysician) error {
-	query := `UPDATE physicians 
+	query := `UPDATE referral_physician 
 	          SET cpso_number = ?, first_name = ?, last_name = ?, emr_physician_id = ? 
 	          WHERE id = ?`
 
@@ -139,7 +139,7 @@ func (d *Driver) UpdateReferralPhysician(ctx context.Context, p *store.ReferralP
 
 // FindReferralPhysicians searches and filters the physicians table dynamically
 func (d *Driver) FindReferralPhysicians(ctx context.Context, find *store.FindReferralPhysician) ([]*store.ReferralPhysician, error) {
-	query := `SELECT id, cpso_number, first_name, last_name, emr_physician_id FROM physicians WHERE 1 = 1`
+	query := `SELECT id, cpso_number, first_name, last_name, emr_physician_id FROM referral_physician WHERE 1 = 1`
 	var args []any
 
 	if find.ID != nil && *find.ID != "" {
@@ -214,7 +214,7 @@ func (d *Driver) DeleteReferralPhysician(ctx context.Context, delete *store.Dele
 		return fmt.Errorf("cannot delete referral physician: target ID is missing")
 	}
 
-	query := `DELETE FROM physicians WHERE id = ?`
+	query := `DELETE FROM referral_physician WHERE id = ?`
 
 	res, err := d.conn(ctx).ExecContext(ctx, query, delete.ID)
 	if err != nil {

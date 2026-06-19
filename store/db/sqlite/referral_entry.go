@@ -119,7 +119,7 @@ func (d *Driver) ListReferralEntries(ctx context.Context, find *store.FindReferr
 		re.consult_type, re.consult_type_detail,
 		p.id, p.cpso_number, p.first_name, p.last_name, p.emr_physician_id
 	FROM referral_entry re
-	LEFT JOIN physicians p ON re.referring_physician_id = p.id
+	LEFT JOIN referral_physician p ON re.referring_physician_id = p.id
 	WHERE 1 = 1`
 	var args []any
 
@@ -367,7 +367,7 @@ func (d *Driver) GetReferralEntriesCount(ctx context.Context, find *store.FindRe
 	// 1. Target the base rows using a COUNT query
 	query := `SELECT COUNT(1) 
 	          FROM referral_entry re
-	          LEFT JOIN physicians p ON re.referring_physician_id = p.id 
+	          LEFT JOIN referral_physician p ON re.referring_physician_id = p.id 
 	          WHERE 1 = 1`
 	var args []any
 
