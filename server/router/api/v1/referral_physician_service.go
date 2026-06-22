@@ -1,17 +1,24 @@
 package v1
 
 import (
+	"log/slog"
 	"net/http"
 	"reftrail/store"
+	"strconv"
 	"strings"
 
 	echo "github.com/labstack/echo/v5"
 )
 
 // GET /api/v1/physicians (Protected)
-func (s *APIV1Service) FindReferralPhysiciansHandler(c *echo.Context) error {
+func (s *APIV1Service) ListReferralPhysiciansHandler(c *echo.Context) error {
 	ctx := c.Request().Context()
 	find := &store.FindReferralPhysician{}
+
+	if err := c.Bind(find); err != nil {
+		slog.Warn("Failed parsing list query parameters for referral physicians", "error", err.Error())
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid query filter parameters"})
+	}
 
 	// Map optional query parameters from the request URL
 	if id := c.QueryParam("id"); id != "" {
@@ -33,20 +40,41 @@ func (s *APIV1Service) FindReferralPhysiciansHandler(c *echo.Context) error {
 		find.GeneralTerm = &search
 	}
 
-	list, err := s.Store.ListReferralPhysicians(ctx, find)
+	if limitQuery := c.QueryParam("limit"); limitQuery != "" {
+		if val, err := strconv.Atoi(limitQuery); err == nil {
+			find.Limit = &val
+		}
+	}
+	if offsetQuery := c.QueryParam("offset"); offsetQuery != "" {
+		if val, err := strconv.Atoi(offsetQuery); err == nil {
+			find.Offset = &val
+		}
+	}
+
+	// Apply business defaults if the frontend didn't pass pagination bounds
+	if find.Limit == nil {
+		defaultLimit := 10
+		find.Limit = &defaultLimit
+	}
+	if find.Offset == nil {
+		defaultOffset := 0
+		find.Offset = &defaultOffset
+	}
+
+	paginated, err := s.Store.ListReferralPhysicians(ctx, find)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to look up physician list"})
 	}
 
 	// Always return an empty array instead of null if the database has no records
-	if list == nil {
-		list = &store.PaginatedReferralPhysicians{
+	if paginated == nil {
+		paginated = &store.PaginatedReferralPhysicians{
 			ReferralPhysicians: []*store.ReferralPhysician{},
 			TotalCount:         0,
 		}
 	}
 
-	return c.JSON(http.StatusOK, list)
+	return c.JSON(http.StatusOK, paginated)
 }
 
 // GET /api/v1/physicians/:id (Protected)

@@ -132,3 +132,6 @@ CREATE INDEX IF NOT EXISTS idx_referral_entry_referring_physician_id ON referral
 -- Physician left-anchored name lookups
 CREATE INDEX IF NOT EXISTS idx_referral_physician_last_name_first_name 
 ON referral_physician (last_name COLLATE NOCASE, first_name COLLATE NOCASE);
+
+CREATE INDEX IF NOT EXISTS idx_referral_entry_urgency_referral_date 
+ON referral_entry(urgency, referral_date);

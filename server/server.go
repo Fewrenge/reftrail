@@ -70,7 +70,7 @@ func (s *Server) registerReferralRoutes() {
 	// List tags
 	protected.GET("/tags", v1Service.ListReferralTagsHandler)
 
-	protected.GET("/physicians", v1Service.FindReferralPhysiciansHandler)
+	protected.GET("/physicians", v1Service.ListReferralPhysiciansHandler)
 	protected.GET("/physicians/:id", v1Service.GetReferralPhysicianByIDHandler)
 
 	admin := protected.Group("")

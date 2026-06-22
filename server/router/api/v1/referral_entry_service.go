@@ -31,7 +31,7 @@ func (s *APIV1Service) ListReferralEntriesHandler(c *echo.Context) error {
 
 	// Let Echo automatically extract all query strings and arrays into the find struct
 	if err := c.Bind(find); err != nil {
-		slog.Warn("Failed parsing list query parameters", "error", err.Error())
+		slog.Warn("Failed parsing list query parameters for referral entries", "error", err.Error())
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid query filter parameters"})
 	}
 

@@ -3,7 +3,7 @@ import { ReferralPhysicianCard } from '@/components/ReferralPhysician/ReferralPh
 import type { ReferralPhysician } from '@/components/ReferralPhysician/ReferralPhysicianCard';
 
 import AddReferralPhysicianDialog from '@/components/Dialog/AddReferralPhysicianDialog';
-import { SearchIcon, PlusIcon } from 'lucide-react'
+import { SearchIcon, PlusIcon, ChevronRightIcon, ChevronLeftIcon } from 'lucide-react'
 import { Button } from "@/components/ui";
 import { useAuth } from '../contexts/AuthContext';
 
@@ -91,9 +91,6 @@ export const ReferralPhysicians: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Physicians Directory</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Showing {physiciansList.length} of {totalCount} total physicians
-            </p>
           </div>
 
           {/* ADMIN ACTION BUTTON */}
@@ -145,30 +142,41 @@ export const ReferralPhysicians: React.FC = () => {
         </div>
 
 
-        {/* PAGINATION PANEL FOOTER */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-slate-200 mt-8 pt-4">
-            <button
-              disabled={currentPage === 1 || loading}
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-            >
-              Previous
-            </button>
-            <span className="text-sm font-medium text-slate-600">
-              Page {currentPage} of {totalPages}
-            </span>
-            {/*TODO: fix the pagination bug*/}
-            <button
-              disabled={currentPage === totalPages || loading}
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-            >
-              Next 
-            </button>
-          </div>
-        )}
+        
+      {/* PAGINATION CONTROLS FOOTER PANEL BAR */}
+      {totalCount > 0 && (
+        <div className="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
+          {/* This summary metric panel will now remain visible for all filter sets! */}
+          <p className="text-sm text-slate-500">
+            Showing Page <span className="font-semibold text-slate-700">{currentPage}</span> of{" "}
+            <span className="font-semibold text-slate-700">{Math.max(totalPages, 1)}</span> ({totalCount} total records)
+          </p>
 
+          {/* Only show the page toggle buttons if there is more than 1 page to browse */}
+          {totalPages > 1 && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeftIcon size={16} className="mr-1" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRightIcon size={16} className="ml-1" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
         <AddReferralPhysicianDialog
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}

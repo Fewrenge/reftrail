@@ -2,8 +2,9 @@
 1. Urgency distribution
 2. Physicians
 3. Referral Trend changes
-4. Average waiting times
-5. Complaint distribution
+4. Average waiting times (Referral Date to Booked Date)
+5. Average triage times (Referral Date to Created ts)
+6. Complaint distribution
 */
 
 package store
