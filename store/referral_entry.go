@@ -383,12 +383,7 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 			return domain.ErrUnauthorized
 		}
 
-		// 3. Commit the changes to the primary referral entry
-		if err := s.driver.UpdateReferralEntry(txCtx, update); err != nil {
-			return fmt.Errorf("failed to update referral entry: %w", err)
-		}
-
-		// 4. Complaints section, only runs if the update struct explicitly provided complaints
+		// 3. Complaints section, only runs if the update struct explicitly provided complaints
 		if update.Complaints != nil {
 			// Wipe out all existing complaints for this referral inside the transaction context
 			if err := s.driver.DeleteReferralComplaint(txCtx, update.ID); err != nil {
@@ -401,6 +396,11 @@ func (s *Store) UpdateReferralEntry(ctx context.Context, update *UpdateReferralE
 					return fmt.Errorf("failed to delete old referral complaints: %w", err)
 				}
 			}
+		}
+
+		// 4. Commit the changes to the primary referral entry
+		if err := s.driver.UpdateReferralEntry(txCtx, update); err != nil {
+			return fmt.Errorf("failed to update referral entry when commiting: %w", err)
 		}
 
 		return nil

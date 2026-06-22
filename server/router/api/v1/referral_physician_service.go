@@ -42,12 +42,14 @@ func (s *APIV1Service) ListReferralPhysiciansHandler(c *echo.Context) error {
 
 	if limitQuery := c.QueryParam("limit"); limitQuery != "" {
 		if val, err := strconv.Atoi(limitQuery); err == nil {
-			find.Limit = &val
+			limitVal := val // Create a unique local copy
+			find.Limit = &limitVal
 		}
 	}
 	if offsetQuery := c.QueryParam("offset"); offsetQuery != "" {
 		if val, err := strconv.Atoi(offsetQuery); err == nil {
-			find.Offset = &val
+			offsetVal := val // Create a unique local copy
+			find.Offset = &offsetVal
 		}
 	}
 

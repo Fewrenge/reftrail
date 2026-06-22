@@ -90,10 +90,10 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
     }
     // Booking team follows the matrix
 
-    
+
     const allowedStatusesForBookingTeam = STATUS_RULES[entry.status] || [];
     return ALL_STATUSES.filter(s => allowedStatusesForBookingTeam.includes(s.id));
-    
+
   }, [isAdmin, entry.status]);
 
   const urgencyStyles = {
@@ -356,7 +356,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
         </div>
 
         {/* 2. MIDDLE SECTION: Patient Info & Contact Details */}
-        <div className="grid grid-cols-3 gap-4 mb-5 pb-4 border-b border-slate-100">
+        <div className="grid grid-cols-4 gap-4 mb-5 pb-4 border-slate-100">
           {/* Patient DOB */}
           <div>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">DOB</p>
@@ -374,6 +374,12 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Phone</p>
             <p className="text-sm font-medium text-slate-700">{entry.patientPhoneNumber || 'N/A'}</p>
           </div>
+
+          {/* Email */}
+          <div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-1">Email</p>
+            <p className="text-sm font-medium text-slate-700">{entry.patientEmail || 'N/A'}</p>
+          </div>
         </div>
 
         {/* 3. REFERRING PHYSICIAN & COMPLAINTS */}
@@ -382,10 +388,10 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
           <div>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-2">Referring Physician</p>
             <p className="text-sm font-medium text-slate-700">
-    {entry.referringPhysician?.firstName 
-      ? `${entry.referringPhysician.firstName} ${entry.referringPhysician.lastName}` 
-      : 'Unassigned'}
-  </p>
+              {entry.referringPhysician?.firstName
+                ? `${entry.referringPhysician.lastName}, ${entry.referringPhysician.firstName}`
+                : 'Unassigned'}
+            </p>
           </div>
 
           {/* Complaints */}
@@ -501,7 +507,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
         </div>
 
         {/* 3. CARD LOWER FOOTER: Soft Timeline Bar */}
-        <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
+        <div className="mt-4 pt-3.5 border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
           <div className="flex items-center gap-2">
             <span>Source:</span>
             <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase border tracking-wider ${sourceStyles[entry.source as keyof typeof sourceStyles] || sourceStyles.REGULAR
@@ -601,8 +607,7 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             consultType: entry.consultType as ReferralConsultType,
 
             triageNote: entry.triageNote || "",
-            //referringPhysicianID: entry.referringPhysician?.id || "",
-            referringPhysicianID: null,
+            referringPhysicianID: entry.referringPhysicianId,
             referralDate: entry.referralDate || "",
             emrPatientId: entry.emrPatientId || "",
             emrReferralDocID: entry.emrReferralDocId || "",

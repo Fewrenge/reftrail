@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { SearchIcon, PlusIcon, UploadIcon, ChevronLeftIcon, ChevronRightIcon, FilterIcon } from "lucide-react";
+import { SearchIcon, PlusIcon, UploadIcon, ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, FilterIcon } from "lucide-react";
 import ReferralEntryCard from '@/components/ReferralEntry/ReferralEntryCard';
 import AddReferralEntryDialog from '@/components/Dialog/AddReferralEntryDialog';
 import type { ReferralEntry } from '@/components/ReferralEntry/ReferralEntryCard';
 import { Button } from "@/components/ui";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem } from "@/components/ui/dropdown";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem
+} from "@/components/ui/dropdown";
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types/users';
 import { ALL_STATUSES, ALL_CONSULT_TYPES, ALL_URGENCIES, ALL_SOURCES } from '@/types/referrals';
@@ -37,6 +39,8 @@ export default function Referrals() {
 
   const { user: authUser } = useAuth();
   const isAdmin = authUser?.role === UserRole.REFTRAIL_ADMIN;
+
+  const [isCollapsibleSectionOpen, setIsCollapsibleSectionOpen] = useState(true);
 
   const [patients, setPatients] = useState<ReferralEntry[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -448,202 +452,230 @@ export default function Referrals() {
       </div>
 
       {/* METRIC MODULAR FILTERS PANEL (URGENCIES & TAGS) */}
-      <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6 space-y-4">
-        {/* Header with Global Reset Trigger */}
-        <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          <div className="flex items-center gap-2">
-            <FilterIcon size={14} />
+      <div className="w-full bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden my-4">
+
+        {/* The Core Collapse Header Row */}
+        <button
+          type="button"
+          onClick={() => setIsCollapsibleSectionOpen(!isCollapsibleSectionOpen)}
+          className="w-full flex justify-between items-center px-4 py-3 bg-slate-50 border-b border-slate-200 hover:bg-slate-100/70 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm">
+            <FilterIcon size={14} className="h-4 w-4 text-slate-500" />
             <span>Active View Parameters</span>
           </div>
-          {(selectedStatuses.length > 0 || selectedUrgencies.length > 0 || selectedTags.length > 0) && (
-            <button
-              onClick={() => {
-                setSelectedStatuses([]); // Resets back to team default baseline queue
-                setSelectedUrgencies([]);
-                setSelectedTags([]);
-                setSelectedConsultTypes([]);
-                setSelectedSources([]);
-              }}
-              className="text-blue-600 hover:text-blue-700 font-normal normal-case transition-colors cursor-pointer"
-            >
-              Clear Filters
-            </button>
-          )}
-        </div>
 
-        {/* 1. PRIORITIES ROW (HIGH VISIBILITY SEMANTIC COLOR-CODED PILLS) */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-20">Urgency:</span>
-          <div className="flex flex-wrap gap-2">
-            {ALL_URGENCIES.map((urgencyId) => {
-              const isSelected = selectedUrgencies.includes(urgencyId);
-              // Make the label pretty (e.g., 'URGENT' -> 'Urgent', 'ASAP' remains 'ASAP')
-              const label = urgencyId === "ASAP" ? "ASAP" : urgencyId.charAt(0) + urgencyId.slice(1).toLowerCase();
+          <div className="flex items-center gap-4">
+            {/* FORCE RENDER: This check covers every variable hook so it always appears if anything is clicked */}
+            {(selectedStatuses?.length > 0 ||
+              selectedUrgencies?.length > 0 ||
+              selectedTags?.length > 0 ||
+              selectedConsultTypes?.length > 0 ||
+              selectedSources?.length > 0) && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation(); // Stops the button click from toggling the section shut
+                    setSelectedStatuses?.([]);
+                    setSelectedUrgencies?.([]);
+                    setSelectedTags?.([]);
+                    setSelectedConsultTypes?.([]);
+                    setSelectedSources?.([]);
+                  }}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors cursor-pointer px-2 py-1"
+                >
+                  Clear Filters
+                </span>
+              )}
 
-              return (
-                <button
-                  key={urgencyId}
-                  type="button"
-                  onClick={() => {
-                    setSelectedUrgencies(prev =>
-                      prev.includes(urgencyId) ? prev.filter(id => id !== urgencyId) : [...prev, urgencyId]
+            <div className="text-slate-400 hover:text-slate-600 transition-colors">
+              {isCollapsibleSectionOpen ? (
+                <ChevronDownIcon className="h-4 w-4 stroke-[2.5]" />
+              ) : (
+                <ChevronRightIcon className="h-4 w-4 stroke-[2.5]" />
+              )}
+            </div>
+          </div>
+        </button>
+
+
+        {isCollapsibleSectionOpen && (
+
+          <div className="bg-slate-50 border border-slate-100 p-4 space-y-4">
+
+            {/* 1. PRIORITIES ROW (HIGH VISIBILITY SEMANTIC COLOR-CODED PILLS) */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-slate-200/60">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-20">Urgency:</span>
+              <div className="flex flex-wrap gap-2">
+                {ALL_URGENCIES.map((urgencyId) => {
+                  const isSelected = selectedUrgencies.includes(urgencyId);
+                  // Make the label pretty (e.g., 'URGENT' -> 'Urgent', 'ASAP' remains 'ASAP')
+                  const label = urgencyId === "ASAP" ? "ASAP" : urgencyId.charAt(0) + urgencyId.slice(1).toLowerCase();
+
+                  return (
+                    <button
+                      key={urgencyId}
+                      type="button"
+                      onClick={() => {
+                        setSelectedUrgencies(prev =>
+                          prev.includes(urgencyId) ? prev.filter(id => id !== urgencyId) : [...prev, urgencyId]
+                        );
+                      }}
+                      className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
+                        ? URGENCY_STYLES[urgencyId]
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                        }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+
+            {/* 2. TAGS ROW (NEUTRAL INTERACTION PILLS) */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2 border-t border-slate-200/60">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-20">Tags:</span>
+              <div className="flex flex-wrap gap-2">
+                {availableTags.length > 0 ? (
+                  availableTags.map((tagName) => {
+                    const isSelected = selectedTags.includes(tagName);
+                    return (
+                      <button
+                        key={tagName}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTags(prev => {
+                            // If the clicked tag is already active, clear the array entirely to deselect it
+                            if (prev.includes(tagName)) {
+                              return [];
+                            }
+                            // Otherwise, kick out all other tags and keep only this newly selected tag
+                            return [tagName];
+                          });
+                        }}
+                        className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
+                          ? 'bg-purple-50 text-purple-700 border-purple-200 ring-2 ring-purple-500/10 font-semibold shadow-sm'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                          }`}
+                      >
+                        {tagName}
+                      </button>
                     );
-                  }}
-                  className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
-                    ? URGENCY_STYLES[urgencyId]
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
-                    }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                  })
+                ) : (
+                  <span className="text-xs italic text-slate-400">No tag definitions configured.</span>
+                )}
+              </div>
+            </div>
+
+            {/* 3. Consult Types Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2 border-t border-slate-200/60">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-24">Consult Type:</span>
+              <div className="flex flex-wrap gap-2">
+                {ALL_CONSULT_TYPES.map((consultId) => {
+                  const isSelected = selectedConsultTypes.includes(consultId);
+
+                  return (
+                    <button
+                      key={consultId}
+                      type="button"
+                      onClick={() => {
+                        setSelectedConsultTypes(prev => {
+                          if (prev.includes(consultId)) {
+                            return [];
+                          }
+                          return [consultId];
+                        });
+                      }}
+                      className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
+                        ? CONSULT_STYLES[consultId]
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                        }`}
+                    >
+                      {consultId}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 4. Referral Source Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2 border-t border-slate-200/60">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-24">Source:</span>
+              <div className="flex flex-wrap gap-2">
+                {ALL_SOURCES.map((sourceId) => {
+                  const isSelected = selectedSources.includes(sourceId);
+
+                  // Clean up the text labels for the UI (e.g., "FRACTURE_CLINIC" -> "Fracture Clinic")
+                  const label = sourceId
+                    .replace(/_/g, " ")
+                    .toLowerCase()
+                    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+                  return (
+                    <button
+                      key={sourceId}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSources(prev => {
+                          if (prev.includes(sourceId)) {
+                            return [];
+                          }
+                          return [sourceId];
+                        });
+                      }}
+                      className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
+                        ? SOURCE_STYLES[sourceId]
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                        }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
 
-        {/* 2. TAGS ROW (NEUTRAL INTERACTION PILLS) */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-20">Tags:</span>
-          <div className="flex flex-wrap gap-2">
-            {availableTags.length > 0 ? (
-              availableTags.map((tagName) => {
-                const isSelected = selectedTags.includes(tagName);
-                return (
-                  <button
-                    key={tagName}
-                    type="button"
-                    onClick={() => {
-                      setSelectedTags(prev => {
-                        // If the clicked tag is already active, clear the array entirely to deselect it
-                        if (prev.includes(tagName)) {
-                          return [];
-                        }
-                        // Otherwise, kick out all other tags and keep only this newly selected tag
-                        return [tagName];
-                      });
-                    }}
-                    className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
-                      ? 'bg-purple-50 text-purple-700 border-purple-200 ring-2 ring-purple-500/10 font-semibold shadow-sm'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
-                      }`}
-                  >
-                    {tagName}
-                  </button>
-                );
-              })
-            ) : (
-              <span className="text-xs italic text-slate-400">No tag definitions configured.</span>
-            )}
-          </div>
-        </div>
 
-        {/* 3. Consult Types Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-24">Consult Type:</span>
-          <div className="flex flex-wrap gap-2">
-            {ALL_CONSULT_TYPES.map((consultId) => {
-              const isSelected = selectedConsultTypes.includes(consultId);
 
-              return (
+            {/* DATE FILTERING ROW */}
+            <div className="flex items-center gap-4 my-4 p-3 pt-2 bg-gray-50 border-t border-gray-200">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">From Date</label>
+                <input
+                  type="date"
+                  max="9999-12-31"
+                  value={referralDateFrom}
+                  onChange={(e) => setReferralDateFrom(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">To Date</label>
+                <input
+                  type="date"
+                  max="9999-12-31"
+                  value={referralDateTo}
+                  onChange={(e) => setReferralDateTo(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+
+              {(referralDateFrom || referralDateTo) && (
                 <button
-                  key={consultId}
-                  type="button"
-                  onClick={() => {
-                    setSelectedConsultTypes(prev => {
-                      if (prev.includes(consultId)) {
-                        return [];
-                      }
-                      return [consultId];
-                    });
-                  }}
-                  className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
-                    ? CONSULT_STYLES[consultId]
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
-                    }`}
+                  onClick={() => { setReferralDateFrom(""); setReferralDateTo(""); }}
+                  className="mt-5 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors border border-red-200"
                 >
-                  {consultId}
+                  Clear Dates
                 </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 4. Referral Source Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 border-t border-slate-200/60">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-24">Source:</span>
-          <div className="flex flex-wrap gap-2">
-            {ALL_SOURCES.map((sourceId) => {
-              const isSelected = selectedSources.includes(sourceId);
-
-              // Clean up the text labels for the UI (e.g., "FRACTURE_CLINIC" -> "Fracture Clinic")
-              const label = sourceId
-                .replace(/_/g, " ")
-                .toLowerCase()
-                .replace(/\b\w/g, (char) => char.toUpperCase());
-
-              return (
-                <button
-                  key={sourceId}
-                  type="button"
-                  onClick={() => {
-                    setSelectedSources(prev => {
-                      if (prev.includes(sourceId)) {
-                        return [];
-                      }
-                      return [sourceId];
-                    });
-                  }}
-                  className={`px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer active:scale-95 ${isSelected
-                    ? SOURCE_STYLES[sourceId]
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
-                    }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+              )}
+            </div>
 
 
-
-
-
-        <div className="flex items-center gap-4 my-4 p-3 bg-gray-50 rounded-md border border-gray-200">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">From Date</label>
-            <input
-              type="date"
-              max="9999-12-31"
-              value={referralDateFrom}
-              onChange={(e) => setReferralDateFrom(e.target.value)}
-              className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">To Date</label>
-            <input
-              type="date"
-              max="9999-12-31"
-              value={referralDateTo}
-              onChange={(e) => setReferralDateTo(e.target.value)}
-              className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-          </div>
-
-          {(referralDateFrom || referralDateTo) && (
-            <button
-              onClick={() => { setReferralDateFrom(""); setReferralDateTo(""); }}
-              className="mt-5 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors border border-red-200"
-            >
-              Clear Dates
-            </button>
-          )}
-        </div>
-
-
+          </div>)}
       </div>
 
       {/* PATIENT LIST */}

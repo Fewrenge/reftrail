@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { PlusIcon, Trash2Icon, ShieldAlertIcon } from "lucide-react"
 import {
   Dialog,
@@ -18,7 +18,176 @@ import type {
   ReferralSource
 } from "@/types/referrals"
 
-// TODO: integrate find physicians functionality in dialog, finalize note taking logic and UI 
+// TODO: finalize note taking logic and UI 
+
+interface ReferralPhysician {
+  id: string;
+  cpsoNumber?: string | null;
+  firstName: string;
+  lastName: string;
+  emrPhysicianId?: string | null;
+}
+
+interface GetReferralPhysicianAPIResponse {
+  referralPhysicians: ReferralPhysician[];
+  totalCount: number;
+}
+
+interface ReferralPhysicianSelectProps {
+  selectedValue: string | null;
+  onSelect: (id: string) => void;
+}
+
+export function ReferralPhysicianSelect({ selectedValue, onSelect }: ReferralPhysicianSelectProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [results, setResults] = useState<ReferralPhysician[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Tracks if changes are coming from API/click selection to block manual clear hooks
+  const isResolvingRef = useRef(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // 1. Resolve existing ID from parent/backend on load or edit
+  useEffect(() => {
+    if (!selectedValue) {
+      setSearchTerm('');
+      return;
+    }
+
+    async function resolveInitialPhysician() {
+      try {
+        isResolvingRef.current = true;
+        const queryParams = new URLSearchParams({ id: selectedValue as string });
+        const response = await fetch(`/api/v1/physicians?${queryParams.toString()}`);
+        
+        if (response.ok) {
+          const data: GetReferralPhysicianAPIResponse = await response.json();
+          if (data.referralPhysicians && data.referralPhysicians.length > 0) {
+            const physician = data.referralPhysicians[0];
+            setSearchTerm(`${physician.lastName}, ${physician.firstName}`);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to resolve initial physician details:', error);
+      } finally {
+        // Yield execution lock back to the browser
+        setTimeout(() => { isResolvingRef.current = false; }, 50);
+      }
+    }
+
+    resolveInitialPhysician();
+  }, [selectedValue]);
+
+  // 2. Click outside listener to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // 3. Main Search & Manual Type Clear Trigger Interceptor
+  useEffect(() => {
+    // Stop running entirely if we are programmatically updating the box text value
+    if (isResolvingRef.current) return;
+
+    // If user backspaces to blank, clear the state out directly
+    if (searchTerm.trim() === '') {
+      setResults([]);
+      if (selectedValue) {
+        onSelect('');
+      }
+      return;
+    }
+
+    setIsLoading(true);
+
+    const delayDebounceTimer = setTimeout(async () => {
+      try {
+        const queryParams = new URLSearchParams({
+          generalTerm: searchTerm,
+          limit: '10',
+          offset: '0'
+        });
+
+        const response = await fetch(`/api/v1/physicians?${queryParams.toString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+          const data: GetReferralPhysicianAPIResponse = await response.json();
+          setResults(data.referralPhysicians || []);
+        }
+      } catch (error) {
+        console.error('Failed fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceTimer);
+  }, [searchTerm, onSelect, selectedValue]);
+
+  return (
+    <div ref={dropdownRef} className="relative w-full">
+      <label className="block text-xs font-medium text-slate-700 mb-1">
+        Referring Physician
+      </label>
+      <input 
+        type="text" 
+        value={searchTerm} 
+        onFocus={() => setIsOpen(true)}
+        onChange={(e) => {
+          // Break lock because the user is actively making an manual modification typing adjustment
+          isResolvingRef.current = false;
+          setSearchTerm(e.target.value);
+        }} 
+        placeholder="Type to search..."
+        className="p-2 w-full text-sm border rounded outline-none bg-white"
+      />
+      
+      {isOpen && (searchTerm.trim() !== '' || results.length > 0) && (
+        <div className="absolute border bg-white w-full z-50 shadow-lg max-h-60 overflow-y-auto mt-1 rounded text-sm">
+          {isLoading && <div className="p-2 text-gray-500 italic">Searching...</div>}
+          
+          {!isLoading && results.length === 0 && (
+            <div className="p-2 text-gray-400 italic">No physicians found</div>
+          )}
+
+          <ul className="divide-y divide-gray-100">
+            {results.map(physician => {
+              const displayName = `${physician.lastName}, ${physician.firstName}`;
+              return (
+                <li 
+                  key={physician.id} 
+                  className={`p-2 cursor-pointer hover:bg-gray-100 transition-colors ${physician.id === selectedValue ? 'bg-blue-50 font-bold' : ''}`}
+                  onMouseDown={(e) => e.preventDefault()} // Blocks focus stealing blur issues
+                  onClick={() => {
+                    isResolvingRef.current = true;
+                    setSearchTerm(displayName);
+                    onSelect(physician.id);
+                    setIsOpen(false);
+                  }}
+                >
+                  {displayName}
+                  {physician.cpsoNumber && (
+                    <span className="text-gray-400 text-xs ml-2">(CPSO: {physician.cpsoNumber})</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 export interface FrontEndComplaint {
   bodyPart: string
@@ -52,7 +221,7 @@ interface UpdateReferralEntryDialogProps {
     urgency: ReferralUrgency
     source: ReferralSource
     triageNote: string
-    referringPhysician: string
+    referringPhysicianID: string
     consultType: ReferralConsultType
     referralDate: string
     emrPatientId: string
@@ -100,7 +269,7 @@ export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initial
       setSource(initialData.source)
       setConsultType(initialData.consultType)
       setTriageNote(initialData.triageNote || "")
-      setReferringPhysicianID(initialData.referringPhysician || "")
+      setReferringPhysicianID(initialData.referringPhysicianID || "")
       setReferralDate(initialData.referralDate || "")
       setEmrPatientId(initialData.emrPatientId || "")
       setEmrReferralDocID(initialData.emrReferralDocID || "")
@@ -162,6 +331,7 @@ export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initial
     }
   }
 
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-red-200 bg-white text-slate-900 shadow-2xl">
@@ -205,15 +375,11 @@ export function UpdateReferralEntryDialog({ isOpen, onClose, referralId, initial
 
           {/* Section 2: Clinical Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Referring Physician</label>
-              <input
-                type="text"
-                className="w-full text-sm border rounded-md p-2 bg-white"
-                value={referringPhysicianID}
-                onChange={e => setReferringPhysicianID(e.target.value)}
-              />
-            </div>
+            <ReferralPhysicianSelect
+              selectedValue={referringPhysicianID}
+              onSelect={(id) => setReferringPhysicianID(id)}
+            />
+
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Consult Type</label>
               <select
