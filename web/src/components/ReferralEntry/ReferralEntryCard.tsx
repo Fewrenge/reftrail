@@ -21,7 +21,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { UpdateReferralEntryDialog } from '../Dialog/UpdateReferralEntryDialog';
 
-interface Props {
+interface ReferralEntryCardProps {
   entry: ReferralEntry;
   onRefresh: () => void;
   isClickable?: boolean; // Optional prop to control if the card is clickable
@@ -68,7 +68,7 @@ export interface ReferralEntry {
   emrApptId?: string;
 }
 
-export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Props) {
+export default function ReferralEntryCard({ entry, onRefresh, isClickable }: ReferralEntryCardProps) {
 
   // --- States ---
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
@@ -382,17 +382,38 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
           </div>
         </div>
 
-        {/* 3. REFERRING PHYSICIAN & COMPLAINTS */}
-        <div className="grid grid-cols-2 gap-6 mb-4">
+        {/* 3. REFERRING PHYSICIAN & CONSULT TYPE & COMPLAINTS */}
+        <div className="grid grid-cols-4 gap-6 mb-4">
           {/* Referring Physician */}
           <div>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-2">Referring Physician</p>
             <p className="text-sm font-medium text-slate-700">
               {entry.referringPhysician?.firstName
                 ? `${entry.referringPhysician.lastName}, ${entry.referringPhysician.firstName}`
-                : 'Unassigned'}
+                : 'N/A'}
             </p>
           </div>
+
+          {/* Consult Type */}
+          <div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mb-2">Consult Type</p>
+            <div className="space-y-1">
+              {entry.consultType || entry.consultTypeDetail ? (
+                <p className="text-sm font-medium text-slate-700">
+                  {entry.consultType}
+                  {entry.consultTypeDetail && (
+                    <span className="text-xs text-slate-400 block font-normal">
+                      {entry.consultTypeDetail}
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-sm font-medium text-slate-400 italic">None reported</p>
+              )}
+            </div>
+          </div>
+
+
 
           {/* Complaints */}
           <div>
@@ -415,6 +436,9 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
               )}
             </div>
           </div>
+
+
+
         </div>
 
 
@@ -513,13 +537,6 @@ export default function ReferralEntryCard({ entry, onRefresh, isClickable }: Pro
             <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase border tracking-wider ${sourceStyles[entry.source as keyof typeof sourceStyles] || sourceStyles.REGULAR
               }`}>
               {entry.source ? entry.source.replace(/_/g, ' ') : 'REGULAR'}
-            </span>
-          </div>
-
-          <div>
-            <span>Consult Type: </span>
-            <span className="font-bold text-slate-600">
-              {entry.consultTypeDetail ? `${entry.consultType} - ${entry.consultTypeDetail}` : entry.consultType}
             </span>
           </div>
 

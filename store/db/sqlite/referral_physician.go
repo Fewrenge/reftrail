@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reftrail/store"
+	"strings"
 
 	uuid "github.com/google/uuid"
 )
@@ -63,10 +64,25 @@ func (d *Driver) ListReferralPhysicians(ctx context.Context, find *store.FindRef
 
 	// 2. Left anchored term filter (maps across names or CPSO sequence)
 	if find.GeneralTerm != nil && *find.GeneralTerm != "" {
-		// term := "%" + *find.GeneralTerm + "%" // Fuzzy match
-		term := *find.GeneralTerm + "%"
-		query += " AND (first_name LIKE ? OR last_name LIKE ? OR cpso_number LIKE ?)"
-		args = append(args, term, term, term)
+		// Clean and split the input string into individual word tokens
+		trimmedTerm := strings.TrimSpace(*find.GeneralTerm)
+		words := strings.Fields(trimmedTerm)
+
+		if len(words) > 0 {
+			query += " AND ("
+			var subConditions []string
+
+			// term := "%" + *find.GeneralTerm + "%" // Fuzzy match
+			for _, word := range words {
+				term := word + "%"
+				subConditions = append(subConditions, "(first_name LIKE ? OR last_name LIKE ? OR cpso_number LIKE ?)")
+				args = append(args, term, term, term)
+			}
+
+			// Join conditions with AND so EVERY word token must match somewhere in the row
+			query += strings.Join(subConditions, " AND ")
+			query += ")"
+		}
 	}
 
 	// 3. Sorting (Consistent deterministic sorting layout)

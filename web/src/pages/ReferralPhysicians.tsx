@@ -132,6 +132,7 @@ export const ReferralPhysicians: React.FC = () => {
                 key={physician.id}
                 physician={physician}
                 onClick={handleSelect}
+                onRefresh={refreshData}
               />
             ))
           ) : (
